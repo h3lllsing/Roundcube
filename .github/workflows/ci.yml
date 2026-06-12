@@ -1,0 +1,82 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        php-version: [8.1, 8.2, 8.3]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php-version }}
+          extensions: mbstring, pdo_sqlite, xml, zip, gd
+          coverage: none
+
+      - run: composer install --no-interaction --prefer-dist
+
+      - run: cp .env.example .env
+        name: Prepare environment
+
+      - run: php artisan key:generate
+        name: Generate app key
+
+      - run: vendor/bin/phpunit
+        name: Tests
+
+  static-analysis:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: 8.2
+          extensions: mbstring, pdo_sqlite, xml, zip, gd
+          coverage: none
+      - run: composer install --no-interaction --prefer-dist
+      - run: cp .env.example .env
+      - run: php artisan key:generate
+      - run: vendor/bin/phpstan analyse --memory-limit=512M --no-progress
+        name: PHPStan
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: 8.2
+          coverage: none
+      - run: composer install --no-interaction --prefer-dist
+      - run: vendor/bin/pint --test
+        name: Pint lint
+
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: 8.2
+          extensions: mbstring, pdo_sqlite, xml, zip, gd
+          coverage: pcov
+      - run: composer install --no-interaction --prefer-dist
+      - run: cp .env.example .env
+        name: Prepare environment
+      - run: php artisan key:generate
+        name: Generate app key
+      - run: vendor/bin/phpunit --coverage-text --coverage-clover=coverage.xml
+        name: Coverage
+      - uses: codecov/codecov-action@v5
+        with:
+          file: coverage.xml

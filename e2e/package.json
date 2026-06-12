@@ -1,0 +1,5 @@
+{
+    "scripts": {
+        "e2e": "php artisan serve --port=8000 --env=testing --quiet >nul 2>&1 & npx playwright test --config=e2e/playwright.config.ts"
+    }
+}
