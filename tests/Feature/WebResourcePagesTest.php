@@ -15,8 +15,11 @@ use App\Models\User;
 use App\Models\VaultEntry;
 use App\Models\Voip;
 use App\Models\Vps;
+use Database\Seeders\FeatureModuleSeeder;
+use HasinHayder\Tyro\Database\Seeders\TyroSeeder;
 use HasinHayder\Tyro\Models\Role;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class WebResourcePagesTest extends TestCase
@@ -28,8 +31,8 @@ class WebResourcePagesTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->seed(\HasinHayder\Tyro\Database\Seeders\TyroSeeder::class);
-        $this->seed(\Database\Seeders\FeatureModuleSeeder::class);
+        $this->seed(TyroSeeder::class);
+        $this->seed(FeatureModuleSeeder::class);
 
         $this->user = User::factory()->create();
         $adminRole = Role::where('slug', 'admin')->firstOrFail();
@@ -42,6 +45,7 @@ class WebResourcePagesTest extends TestCase
         $entry = new VaultEntry($attributes);
         $entry->encryptPassword('test_password');
         $entry->save();
+
         return $entry;
     }
 
@@ -58,9 +62,9 @@ class WebResourcePagesTest extends TestCase
             Feature::class => Feature::factory()->create($attributes),
             Module::class => Module::factory()->create($attributes + ['feature_id' => Feature::first()->id]),
             Task::class => Task::create($attributes + $defaults + ['title' => 'Test Task', 'priority' => 'medium', 'created_by' => $this->user->id, 'updated_by' => $this->user->id]),
-            Domain::class => Domain::create($attributes + $defaults + ['name' => 'example.com', 'registrar' => 'Test']),
-            Hosting::class => Hosting::create($attributes + $defaults + ['name' => 'Test Hosting', 'provider' => 'Test']),
-            Vps::class => Vps::create($attributes + $defaults + ['name' => 'Test VPS', 'provider' => 'Test']),
+            Domain::class => Domain::create($attributes + $defaults + ['name' => 'example.com', 'service_provider_id' => \App\Models\ServiceProvider::factory()->create()->id]),
+            Hosting::class => Hosting::create($attributes + $defaults + ['name' => 'Test Hosting', 'service_provider_id' => \App\Models\ServiceProvider::factory()->create()->id]),
+            Vps::class => Vps::create($attributes + $defaults + ['name' => 'Test VPS', 'service_provider_id' => \App\Models\ServiceProvider::factory()->create()->id]),
             Voip::class => Voip::create($attributes + $defaults + ['name' => 'Test VoIP', 'provider' => 'Test']),
             VaultEntry::class => $this->createVaultEntry($attributes + $defaults + ['service_name' => 'Test Service', 'username' => 'test']),
             Note::class => Note::create($attributes + ['content' => 'Test note', 'user_id' => $this->user->id, 'notable_type' => Module::class, 'notable_id' => Module::first()->id]),
@@ -85,11 +89,10 @@ class WebResourcePagesTest extends TestCase
             'vault' => ['vault', VaultEntry::class],
             'notes' => ['notes', Note::class],
             'service-providers' => ['service-providers', ServiceProvider::class],
-            'users' => ['users', null],
         ];
     }
 
-    /** @dataProvider resourceRoutesProvider */
+    #[DataProvider('resourceRoutesProvider')]
     public function test_resource_page_loads(string $route, ?string $modelClass): void
     {
         if ($modelClass) {
@@ -103,7 +106,11 @@ class WebResourcePagesTest extends TestCase
 
     public function test_activity_logs_page_loads(): void
     {
-        $this->actingAs($this->user);
+        $superAdmin = User::factory()->create();
+        $superAdminRole = Role::where('slug', 'super-admin')->firstOrFail();
+        $superAdmin->assignRole($superAdminRole);
+
+        $this->actingAs($superAdmin);
         $response = $this->get(route('activity-logs.index'));
         $response->assertStatus(200);
     }
@@ -134,7 +141,10 @@ class WebResourcePagesTest extends TestCase
 
     public function test_user_search_and_role_filter_work(): void
     {
-        $this->actingAs($this->user);
+        $superAdmin = User::factory()->create();
+        $superAdmin->assignRole(Role::where('slug', 'super-admin')->firstOrFail());
+
+        $this->actingAs($superAdmin);
         $response = $this->get(route('users.index', ['search' => 'test']));
         $response->assertStatus(200);
 
@@ -150,5 +160,47 @@ class WebResourcePagesTest extends TestCase
 
         $response = $this->get(route('tasks.index'));
         $response->assertStatus(200);
+    }
+
+    public function test_feature_index_filters(): void
+    {
+        Feature::factory()->create(['name' => 'SearchFeature', 'is_active' => true]);
+        Feature::factory()->create(['name' => 'InactiveFeature', 'is_active' => false]);
+
+        $this->actingAs($this->user);
+        $this->get(route('features.index', ['search' => 'Search']))->assertStatus(200);
+        $this->get(route('features.index', ['status' => 'active']))->assertStatus(200);
+        $this->get(route('features.index', ['status' => 'inactive']))->assertStatus(200);
+    }
+
+    public function test_module_index_filters(): void
+    {
+        $feature = Feature::factory()->create();
+        Module::factory()->create(['name' => 'SearchModule', 'is_active' => true, 'feature_id' => $feature->id]);
+        Module::factory()->create(['name' => 'InactiveMod', 'is_active' => false, 'feature_id' => $feature->id]);
+
+        $this->actingAs($this->user);
+        $this->get(route('modules.index', ['search' => 'Search']))->assertStatus(200);
+        $this->get(route('modules.index', ['status' => 'active']))->assertStatus(200);
+        $this->get(route('modules.index', ['status' => 'inactive']))->assertStatus(200);
+    }
+
+    public function test_feature_index_trashed_filter(): void
+    {
+        $feature = Feature::factory()->create();
+        $feature->delete();
+
+        $this->actingAs($this->user);
+        $this->get(route('features.index', ['trashed' => '1']))->assertStatus(200);
+    }
+
+    public function test_module_index_trashed_filter(): void
+    {
+        $feature = Feature::factory()->create();
+        $module = Module::factory()->create(['feature_id' => $feature->id]);
+        $module->delete();
+
+        $this->actingAs($this->user);
+        $this->get(route('modules.index', ['trashed' => '1']))->assertStatus(200);
     }
 }

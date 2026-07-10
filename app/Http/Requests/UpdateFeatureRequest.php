@@ -15,9 +15,11 @@ class UpdateFeatureRequest extends FormRequest
     public function rules(): array
     {
         $feature = $this->route('feature');
+
         return [
+            'updated_at' => 'required|date',
             'name' => 'sometimes|string|max:255',
-            'slug' => 'nullable|string|max:255|unique:features,slug,' . ($feature->id ?? 'NULL'),
+            'slug' => 'nullable|string|max:255|unique:features,slug,'.($feature->id ?? 'NULL'),
             'description' => 'nullable|string',
             'icon' => 'nullable|string|max:100',
             'is_active' => 'boolean',

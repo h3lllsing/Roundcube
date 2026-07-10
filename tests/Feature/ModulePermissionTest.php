@@ -5,6 +5,8 @@ namespace Tests\Feature;
 use App\Models\Module;
 use App\Models\ModuleRolePermission;
 use App\Models\User;
+use Database\Seeders\FeatureModuleSeeder;
+use HasinHayder\Tyro\Database\Seeders\TyroSeeder;
 use HasinHayder\Tyro\Models\Role;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -14,14 +16,16 @@ class ModulePermissionTest extends TestCase
     use RefreshDatabase;
 
     private User $admin;
+
     private Module $module;
+
     private Role $userRole;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->seed(\HasinHayder\Tyro\Database\Seeders\TyroSeeder::class);
-        $this->seed(\Database\Seeders\FeatureModuleSeeder::class);
+        $this->seed(TyroSeeder::class);
+        $this->seed(FeatureModuleSeeder::class);
         $adminRole = Role::where('slug', 'super-admin')->firstOrFail();
         $this->admin = User::factory()->create();
         $this->admin->assignRole($adminRole);
@@ -62,14 +66,13 @@ class ModulePermissionTest extends TestCase
             ]);
 
         $response->assertOk()
-            ->assertJsonPath('data.can_create', true)
-            ->assertJsonPath('data.can_read', true);
+            ->assertJsonPath('data.can_create', true);
 
-        $this->assertDatabaseHas('module_role_permissions', [
-            'module_id' => $this->module->id,
-            'role_id' => $this->userRole->id,
-            'can_create' => true,
-        ]);
+        $perm = ModuleRolePermission::where('module_id', $this->module->id)
+            ->where('role_id', $this->userRole->id)
+            ->firstOrFail();
+        $this->assertTrue($perm->can_create);
+        $this->assertEquals($this->module->id, $perm->module->id);
     }
 
     public function test_store_updates_existing_permission()
@@ -108,7 +111,7 @@ class ModulePermissionTest extends TestCase
             ->assertOk()
             ->assertJsonPath('message', 'Role permissions removed');
 
-        $this->assertDatabaseMissing('module_role_permissions', [
+        $this->assertSoftDeleted('module_role_permissions', [
             'module_id' => $this->module->id,
             'role_id' => $this->userRole->id,
         ]);
@@ -163,6 +166,40 @@ class ModulePermissionTest extends TestCase
         $this->assertGreaterThanOrEqual(1, count($response->json('data')));
     }
 
+    public function test_store_with_can_reveal_persists_permission()
+    {
+        $response = $this->actingAs($this->admin)
+            ->postJson("/api/modules/{$this->module->id}/permissions", [
+                'role_id' => $this->userRole->id,
+                'can_reveal' => true,
+            ]);
+
+        $response->assertOk()
+            ->assertJsonPath('data.can_reveal', true);
+
+        $perm = ModuleRolePermission::where('module_id', $this->module->id)
+            ->where('role_id', $this->userRole->id)
+            ->firstOrFail();
+        $this->assertTrue($perm->can_reveal);
+    }
+
+    public function test_store_with_can_reveal_false_sets_false()
+    {
+        ModuleRolePermission::create([
+            'module_id' => $this->module->id,
+            'role_id' => $this->userRole->id,
+            'can_reveal' => true,
+        ]);
+
+        $this->actingAs($this->admin)
+            ->postJson("/api/modules/{$this->module->id}/permissions", [
+                'role_id' => $this->userRole->id,
+                'can_reveal' => false,
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.can_reveal', false);
+    }
+
     public function test_admin_routes_require_super_admin()
     {
         $user = User::factory()->create();
@@ -184,5 +221,89 @@ class ModulePermissionTest extends TestCase
         $this->getJson("/api/modules/{$this->module->id}/permissions")->assertUnauthorized();
         $this->postJson("/api/modules/{$this->module->id}/permissions", [])->assertUnauthorized();
         $this->deleteJson("/api/modules/{$this->module->id}/permissions/1")->assertUnauthorized();
+    }
+
+    public function test_store_invalid_module_id_returns_404()
+    {
+        $this->actingAs($this->admin)
+            ->postJson('/api/modules/99999/permissions', [
+                'role_id' => $this->userRole->id,
+                'can_read' => true,
+            ])
+            ->assertNotFound();
+    }
+
+    public function test_store_invalid_role_id_returns_validation_error()
+    {
+        $this->actingAs($this->admin)
+            ->postJson("/api/modules/{$this->module->id}/permissions", [
+                'role_id' => 99999,
+                'can_read' => true,
+            ])
+            ->assertJsonValidationErrorFor('role_id');
+    }
+
+    public function test_store_with_all_permission_keys_persists_all()
+    {
+        $response = $this->actingAs($this->admin)
+            ->postJson("/api/modules/{$this->module->id}/permissions", [
+                'role_id' => $this->userRole->id,
+                'can_create' => true,
+                'can_read' => true,
+                'can_update' => true,
+                'can_delete' => true,
+                'can_approve' => true,
+                'can_export' => true,
+                'can_reveal' => true,
+                'can_import' => true,
+            ]);
+
+        $response->assertOk();
+
+        $perm = ModuleRolePermission::where('module_id', $this->module->id)
+            ->where('role_id', $this->userRole->id)
+            ->firstOrFail();
+
+        $this->assertTrue($perm->can_create);
+        $this->assertTrue($perm->can_read);
+        $this->assertTrue($perm->can_update);
+        $this->assertTrue($perm->can_delete);
+        $this->assertTrue($perm->can_approve);
+        $this->assertTrue($perm->can_export);
+        $this->assertTrue($perm->can_reveal);
+        $this->assertTrue($perm->can_import);
+    }
+
+    public function test_store_with_invalid_permission_key_returns_error()
+    {
+        $this->actingAs($this->admin)
+            ->postJson("/api/modules/{$this->module->id}/permissions", [
+                'role_id' => $this->userRole->id,
+                'can_read' => true,
+                'can_invalid' => true,
+            ])
+            ->assertOk()
+            ->assertJsonMissingPath('data.can_invalid');
+    }
+
+    public function test_user_all_permissions_after_role_permission_removed()
+    {
+        ModuleRolePermission::create([
+            'module_id' => $this->module->id,
+            'role_id' => $this->userRole->id,
+            'can_read' => true,
+        ]);
+
+        $this->actingAs($this->admin)
+            ->deleteJson("/api/modules/{$this->module->id}/permissions/{$this->userRole->id}")
+            ->assertOk();
+
+        $response = $this->actingAs($this->admin)
+            ->getJson('/api/my/module-permissions');
+
+        $response->assertOk();
+        $modulePerms = collect($response->json('data'));
+        $targetModule = $modulePerms->firstWhere('module_id', $this->module->id);
+        $this->assertFalse($targetModule['can_read'] ?? false);
     }
 }

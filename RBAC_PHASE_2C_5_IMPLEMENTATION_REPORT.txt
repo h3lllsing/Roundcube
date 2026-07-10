@@ -1,0 +1,77 @@
+RBAC Phase 2C-5: Dashboard Quick Actions Visibility
+====================================================
+Date: 2026-06-25
+
+1. OBJECTIVE
+   Dashboard quick action buttons should show only when the user has the
+   corresponding can_create permission. Super-admin always sees all buttons.
+
+2. FILES MODIFIED
+   - app/Http/Controllers/Web/DashboardController.php
+     Added 7 permission flags to computeDashboardData() output:
+       $canCreateDomain  - can_create on domains module
+       $canCreateHosting - can_create on hostings module
+       $canCreateVps     - can_create on vps module
+       $canCreateVoip    - can_create on voip module
+       $canCreateVault   - can_create on vault module
+       $canManageSystem  - super-admin only (controls +Feature, +Module, +User)
+       $canCreateTask    - always true (tasks are user-owned, no can_create check)
+     Flags are computed once per dashboard load and cached via the existing
+     Cache::remember() mechanism.
+
+   - resources/views/dashboard/index.blade.php
+     Wrapped each quick action <a> button in @if($canXxx) conditions:
+       + Feature   -> @if($canManageSystem)
+       + Module    -> @if($canManageSystem)
+       + User      -> @if($canManageSystem)
+       + Domain    -> @if($canCreateDomain)
+       + Hosting   -> @if($canCreateHosting)
+       + VPS       -> @if($canCreateVps)
+       + VoIP      -> @if($canCreateVoip)
+       + Vault Entry -> @if($canCreateVault)
+       + Task      -> @if($canCreateTask)  (always true, kept for consistency)
+
+   - tests/Feature/RbacPhase2C5Test.php (NEW)
+     7 tests covering all visibility scenarios.
+
+3. DASHBOARD BUTTONS AFFECTED
+   All 9 quick action buttons in the "Quick Actions" section:
+   + Feature, + Module, + User  -> super-admin only ($canManageSystem)
+   + Domain  -> can_create on domains
+   + Hosting -> can_create on hostings
+   + VPS     -> can_create on vps
+   + VoIP    -> can_create on voip
+   + Vault Entry -> can_create on vault
+   + Task    -> always visible (no permission check)
+
+   NOT affected:
+   - Stat cards (Features, Modules, Tasks, Notes, My Vault, Services, etc.)
+   - Dashboard charts, recent activity, vault reveals
+   - Sidebar navigation links
+
+4. TEST RESULTS (RbacPhase2C5Test only)
+   7 passed, 30 assertions
+
+5. FULL TEST SUITE (all RbacPhase* test files)
+   157 passed, 338 assertions
+
+6. TESTS COVERED
+   - Super-admin sees all 9 quick action buttons
+   - Admin with can_create on domains/hostings sees +Domain and +Hosting
+   - Admin without can_create on vps/voip/vault does NOT see +VPS, +VoIP, +Vault Entry
+   - Admin without super-admin does NOT see +Feature, +Module, +User
+   - User override (can_create=true) shows button when role denies
+   - User override (can_create=false) hides button when role allows
+   - Normal user without roles/permissions sees only +Task
+   - Dashboard loads successfully for all authenticated users
+
+7. ARCHITECTURE
+   - Flags are computed inside computeDashboardData() alongside existing stats,
+     using a single batch query to load all 5 permission-gated modules.
+   - Super-admin check short-circuits all flag computations ($isSuperAdmin || ...).
+   - Uses existing canOnModule() which respects user-level overrides via
+     UserModulePermission table automatically.
+   - No changes to server-side guards, routes, or RBAC logic.
+
+8. CONFIRMATION
+   Only the dashboard quick action buttons were changed. No other files modified.

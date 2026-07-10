@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\UpdateProfileRequest;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use OpenApi\Attributes as OA;
 
@@ -18,9 +19,10 @@ class ProfileController extends Controller
             new OA\Response(response: 200, description: 'Profile details', content: new OA\JsonContent(ref: '#/components/schemas/UserData')),
         ]
     )]
-    public function show(Request $request): \Illuminate\Http\JsonResponse
+    public function show(Request $request): JsonResponse
     {
         $user = $request->user()->load('roles');
+
         return $this->success([
             'id' => $user->id,
             'name' => $user->name,
@@ -50,18 +52,20 @@ class ProfileController extends Controller
             new OA\Response(response: 422, description: 'Validation error', content: new OA\JsonContent(ref: '#/components/schemas/ValidationErrorResponse')),
         ]
     )]
-    public function update(UpdateProfileRequest $request): \Illuminate\Http\JsonResponse
+    public function update(UpdateProfileRequest $request): JsonResponse
     {
-        $user = $request->user();
-        $data = $request->only(['name', 'email']);
+    $user = $request->user();
+    $this->checkOptimisticLock($user, $request);
+    $data = $request->only(['name', 'email']);
 
-        if ($request->filled('password')) {
+    if ($request->filled('password')) {
             $data['password'] = $request->password;
         }
 
         $user->update($data);
 
         $user->load('roles');
+
         return $this->success([
             'id' => $user->id,
             'name' => $user->name,

@@ -1,0 +1,481 @@
+ROLE TEMPLATES — MASTER PLAN
+============================
+Date: 2026-06-25
+Depends on: RBAC v1.0 (frozen)
+
+This document defines the Role Templates feature. Templates are pre-configured
+permission blueprints that a Super Admin can apply to any role in one click.
+They do NOT replace ModuleRolePermission — they only pre-fill it.
+
+============================================
+ARCHITECTURE RULE
+============================================
+
+Templates do NOT create a new permission layer. Applying a template copies
+permission values into the existing ModuleRolePermission table. The RBAC
+resolution logic (canOnModule, getEffectiveModulePermissions, etc.) is
+completely unchanged. All existing RBAC v1.0 rules continue to apply.
+
+============================================
+DB CHANGES REQUIRED
+============================================
+
+=== Table: role_templates ===
+
+  id              bigIncrements
+  name            string(255)
+  slug            string(255), unique
+  description     text, nullable
+  is_protected    boolean, default false
+                    true = cannot be edited or deleted via UI
+  created_at      timestamp
+  updated_at      timestamp
+
+=== Table: role_template_modules ===
+
+  id              bigIncrements
+  role_template_id  FK -> role_templates (cascade)
+  module_id         FK -> modules (cascade)
+  can_create      boolean, not null, default false
+  can_read        boolean, not null, default false
+  can_update      boolean, not null, default false
+  can_delete      boolean, not null, default false
+  can_approve     boolean, not null, default false
+  can_export      boolean, not null, default false
+  can_reveal      boolean, not null, default false
+  can_import      boolean, not null, default false
+  created_at      timestamp
+  updated_at      timestamp
+
+  UNIQUE: role_template_id, module_id
+
+No changes to existing RBAC tables (module_role_permissions,
+user_module_permissions, users, roles).
+
+============================================
+BUILT-IN TEMPLATE DEFINITIONS
+============================================
+
+The 4 built-in templates are seeded via a new RoleTemplateSeeder.
+All are is_protected = true (cannot be modified or deleted via UI).
+
+Modules reference: 26 modules organized by Feature group.
+
+Feature: Infrastructure (8 modules)
+  domains, hostings, vps, voip, service-providers,
+  domain-emails, other-services, expiry-trackers
+
+Feature: Productivity (5 modules)
+  tasks, notes, vault, monitor, calendar
+
+Feature: Administration (8 modules)
+  users, roles, privileges, module-permissions,
+  activity-logs, login-audits, notifications, attachments
+
+Feature: Integration (5 modules)
+  webhooks, tokens, import, export, reports
+
+------------------------------------------------
+TEMPLATE 1: SUPER ADMIN
+------------------------------------------------
+
+  ALL modules:
+    can_create  = true
+    can_read    = true
+    can_update  = true
+    can_delete  = true
+    can_approve = true
+    can_export  = true
+    can_reveal  = true
+    can_import  = true
+
+  Purpose: Baseline for the super-admin role. Since super-admin bypasses
+  all permission checks, this template is provided for consistency and
+  as a reference. Applying it to a non-super-admin role grants every
+  conceivable permission — use with extreme caution.
+
+------------------------------------------------
+TEMPLATE 2: ADMIN
+------------------------------------------------
+
+  ALL modules:
+    can_create  = true
+    can_read    = true
+    can_update  = true
+    can_delete  = true
+    can_approve = true
+    can_export  = true
+    can_reveal  = true
+    can_import  = true
+
+  Purpose: Full operational access to every module. Used for day-to-day
+  system administrators who are not super-admins (no super-admin bypass).
+  All 8 permissions true on all 26 modules.
+
+  Note: Identical to Super Admin in permission values, but the role itself
+  is NOT super-admin — server-side guards still apply (canOnModule checks
+  return true for all modules). The difference is that super-admin
+  bypasses all checks entirely, while Admin passes them via role grants.
+
+------------------------------------------------
+TEMPLATE 3: IT SUPPORT
+------------------------------------------------
+
+  Feature: Infrastructure (8 modules)
+    domains           R  U  E     Rev
+    hostings          R  U  E     Rev
+    vps               R  U  E     Rev
+    voip              R  U  E     Rev
+    service-providers R     E     Rev
+    domain-emails     R  U  E     Rev
+    other-services    R        E  Rev
+    expiry-trackers   R
+
+  Feature: Productivity (5 modules)
+    tasks             R  U
+    notes             R
+    vault             R           Rev
+    monitor           R
+    calendar          R
+
+  Feature: Administration (8 modules)
+    users             R
+    roles             —  (no access)
+    privileges        —  (no access)
+    module-permissions — (no access)
+    activity-logs     R
+    login-audits      R
+    notifications     R
+    attachments       R
+
+  Feature: Integration (5 modules)
+    webhooks          R
+    tokens            R
+    import            —
+    export            —
+    reports           R
+
+  Plus: features, modules — no access
+
+  Legend:
+    R    = can_read
+    C    = can_create
+    U    = can_update
+    D    = can_delete
+    A    = can_approve
+    E    = can_export
+    Rev  = can_reveal
+    Imp  = can_import
+    —    = all false
+
+  Purpose: Help desk / support staff who troubleshoot infrastructure
+  issues, reset passwords (reveal), and view user information. They
+  can update service configurations but cannot create or delete records.
+  No access to RBAC administration (roles, permissions, users except read).
+
+------------------------------------------------
+TEMPLATE 4: READ ONLY
+------------------------------------------------
+
+  Feature: Infrastructure (8 modules)
+    domains           R
+    hostings          R
+    vps               R
+    voip              R
+    service-providers R
+    domain-emails     R
+    other-services    R
+    expiry-trackers   R
+
+  Feature: Productivity (5 modules)
+    tasks             R
+    notes             R
+    vault             R
+    monitor           R
+    calendar          R
+
+  Feature: Administration (8 modules)
+    users             R
+    roles             —
+    privileges        —
+    module-permissions —
+    activity-logs     R
+    login-audits      —
+    notifications     R
+    attachments       R
+
+  Feature: Integration (5 modules)
+    webhooks          R
+    tokens            —
+    import            —
+    export            —
+    reports           R
+
+  Plus: features, modules — no access
+
+  Purpose: Auditors, managers, or compliance personnel who need to view
+  system data but must not create, update, delete, or reveal anything.
+  Only can_read is true on operational modules. RBAC administration
+  and sensitive operations are fully denied.
+
+============================================
+APPLY TEMPLATE TO ROLE — LOGIC
+============================================
+
+When a Super Admin applies a template to a role:
+
+  1. Fetch all rows from role_template_modules for the template.
+  2. For each module row:
+     a. UPSERT into module_role_permissions:
+        role_id = target role's id
+        module_id = template module's id
+        All 8 permission columns = template values
+  3. If the role already has permission rows for some modules,
+     they are OVERWRITTEN (upsert by unique key module_id + role_id).
+  4. Existing permission rows for modules NOT in the template
+     are UNCHANGED (template only touches its defined modules).
+  5. No changes to any user_module_permissions rows (user overrides
+     are preserved and continue to take precedence per RBAC rules).
+
+Implementation: single DB transaction, batch upsert.
+
+Option — "Strict Apply" (future enhancement):
+  If enabled, after step 4, DELETE any module_role_permissions rows
+  for the role where the template has no entry. This ensures the
+  role's permissions exactly match the template. Default: off.
+
+============================================
+UI CHANGES
+============================================
+
+=== New Pages ===
+
+  1. Role Templates Index
+     Route: GET /admin/role-templates
+     Sidebar: under RBAC group, between "Roles" and "Privileges"
+     Content:
+       - Search bar (name, slug)
+       - "Create Template" button
+       - Table: Name, Slug, Description, Modules Count, Protected badge,
+         Actions (View, Apply, Edit, Delete)
+       - Protected templates show lock icon and disabled Edit/Delete buttons
+
+  2. Role Template Create/Edit
+     Route: GET/POST /admin/role-templates/create
+            GET/PUT /admin/role-templates/{id}/edit
+     Form:
+       - Name (required)
+       - Slug (auto-generated from name, editable)
+       - Description (textarea, optional)
+       - Permission matrix (same Allow/Deny layout as user create page)
+         grouped by Feature, collapsible sections
+       - "Select All Read" quick-action button
+       - "Copy from existing role" dropdown (pre-fills from a role's current
+         ModuleRolePermission values)
+       - Protected templates: Edit is blocked; view-only display
+
+  3. Role Template Show
+     Route: GET /admin/role-templates/{id}
+     Content:
+       - Template name, slug, description, protected badge
+       - Permission matrix (read-only display with ✓/✕ per cell)
+       - Action buttons: "Apply to Role" (opens role selector modal)
+       - "Create Role from Template" (redirects to role create with
+         pre-filled permissions)
+
+  4. Apply Template Modal / Page
+     Trigger: from template show page or role edit page
+     Flow:
+       - Select target role (dropdown of all roles except super-admin)
+       - Preview: summary of what will change (modules added, modules
+         overwritten, modules unchanged)
+       - Confirm: "Apply [Template Name] to [Role Name]"
+       - Result: success toast, redirect to role show page
+
+=== Existing Page Modifications ===
+
+  5. Role Edit Page
+     Add "Apply Template" button in the header section.
+     Opens the Apply Template modal.
+     Below the existing permission matrix, show "Applied template" label
+     if the role was created from a template (stored as optional metadata
+     or log).
+
+  6. Role Show Page
+     Add "Applied Template" field if a template was used.
+     Add "Last Applied" timestamp.
+
+  7. Role Create Page
+     Add "Start from template" dropdown at the top.
+     Selecting a template pre-fills the permission matrix and may suggest
+     a role name based on the template.
+
+============================================
+SEEDER
+============================================
+
+New seeder: database/seeders/RoleTemplateSeeder.php
+
+Seeds the 4 protected templates defined above. Uses Module model to
+look up each module by slug. Idempotent: checks if slug exists before
+inserting.
+
+Called in: DatabaseSeeder.php after FeatureModuleSeeder.
+
+============================================
+FILES TOUCHED (planned)
+============================================
+
+New files:
+  app/Models/RoleTemplate.php
+  app/Models/RoleTemplateModule.php
+  app/Http/Controllers/Web/RoleTemplateController.php
+  database/migrations/xxxx_xx_xx_create_role_templates_tables.php
+  database/seeders/RoleTemplateSeeder.php
+  resources/views/role-templates/index.blade.php
+  resources/views/role-templates/create.blade.php
+  resources/views/role-templates/edit.blade.php
+  resources/views/role-templates/show.blade.php
+  tests/Feature/RoleTemplateTest.php
+
+Modified files:
+  resources/views/layouts/admin.blade.php    (sidebar link)
+  resources/views/roles/create.blade.php     (template dropdown)
+  resources/views/roles/edit.blade.php       (apply button)
+  resources/views/roles/show.blade.php       (template info)
+  routes/web.php                             (new routes)
+  database/seeders/DatabaseSeeder.php        (call RoleTemplateSeeder)
+
+NOT modified:
+  app/Traits/HasModulePermissions.php
+  app/Models/ModuleRolePermission.php
+  app/Models/UserModulePermission.php
+  Any controller with RBAC guards
+  Any existing test file
+
+============================================
+RISKS
+============================================
+
+1. Template Drift
+   New modules added after template creation are not included. When
+   applied, the template won't touch those modules, leaving whatever
+   permissions the role already has (or none).
+   Mitigation: "Sync to current modules" button on template edit that
+   adds missing modules with default-denied permissions.
+
+2. Overwriting Without Recovery
+   Apply overwrites existing ModuleRolePermission rows. There is no
+   undo. Mitigation: show diff preview before apply; optionally add
+   a "backup" feature that saves current role permissions to a JSON
+   log before overwriting.
+
+3. Protected Template Bypass
+   is_protected is a DB flag, not an absolute guarantee. Anyone with
+   direct DB access can change it. Mitigation: enforce in the controller
+   (abort 403 for edit/delete on protected) and in validation.
+
+4. Permissions Not Reflecting Reality
+   A template grants maximum possible permissions, but user overrides
+   can restrict individual users. Super Admin must understand that
+   applying a template to a role is not the same as applying it to
+   every user with that role.
+
+============================================
+TESTS
+============================================
+
+Test file: tests/Feature/RoleTemplateTest.php
+
+=== Core Tests ===
+
+1. test_super_admin_can_create_template
+   - Login as super-admin, create a template with name + permissions.
+   - Assert template exists in DB.
+
+2. test_super_admin_can_view_template_index
+   - Assert index page loads with seeded templates.
+
+3. test_super_admin_can_apply_template_to_role
+   - Create a role with no permissions.
+   - Apply a template to it.
+   - Assert ModuleRolePermission rows match template values.
+
+4. test_apply_template_overwrites_existing_role_permissions
+   - Create a role with custom permissions on domain module.
+   - Apply a Read Only template.
+   - Assert domain module now has only can_read = true, others false.
+
+5. test_apply_template_preserves_user_overrides
+   - Create user with role, user override on vault module.
+   - Apply template to role.
+   - Assert user override on vault module is unchanged.
+
+6. test_protected_template_cannot_be_edited
+   - Assert edit route for protected template returns 403 or redirect.
+
+7. test_protected_template_cannot_be_deleted
+   - Assert delete route for protected template returns 403 or redirect.
+
+8. test_non_super_admin_cannot_manage_templates
+   - Login as admin, try template CRUD.
+   - Assert 403 on all routes.
+
+=== Integration Tests ===
+
+9. test_seeded_templates_exist
+   - Assert the 4 built-in templates are present after running seeder.
+
+10. test_apply_template_does_not_affect_other_roles
+    - Apply template to Role A.
+    - Assert Role B's permissions are unchanged.
+
+11. test_template_index_shows_module_count
+    - Assert index page displays the correct count of modules per template.
+
+12. test_apply_template_with_empty_template
+    - Create a template with no module permissions set.
+    - Apply to a role.
+    - Assert no ModuleRolePermission rows are created/removed beyond
+      existing (template only touches its defined modules).
+
+=== Edge Case Tests ===
+
+13. test_apply_template_to_nonexistent_role_returns_404
+14. test_create_template_with_duplicate_slug_returns_validation_error
+15. test_apply_template_is_idempotent
+    - Apply same template twice.
+    - Assert results are identical (no duplicate rows, same values).
+
+============================================
+IMPLEMENTATION PHASES
+============================================
+
+PHASE A — Foundation (estimated: 2-3 days)
+  - Create migration for role_templates + role_template_modules tables
+  - Create RoleTemplate and RoleTemplateModule models
+  - Create RoleTemplateSeeder with 4 built-in templates
+  - Run migrations + seeder, verify data
+
+PHASE B — CRUD (estimated: 2-3 days)
+  - Create RoleTemplateController with index, create, store, show,
+    edit, update, destroy methods (super-admin middleware)
+  - Create index, create/edit, show views with permission matrix
+  - Add sidebar link under RBAC group
+  - Add routes to web.php
+  - Protect built-in templates (is_protected → abort 403 on edit/delete)
+
+PHASE C — Apply Template (estimated: 2 days)
+  - Implement apply logic: batch upsert into ModuleRolePermission
+  - Add "Apply to Role" button with role selector modal
+  - Add diff preview before confirmation
+  - Modify role create page: "Start from template" dropdown
+  - Modify role edit page: "Apply Template" button
+  - Modify role show page: display applied template name
+
+PHASE D — Testing (estimated: 2 days)
+  - Write all 15 tests in RoleTemplateTest.php
+  - Run full RBAC test suite (all 167 existing + 15 new = 182 tests)
+  - Fix any regressions
+
+Total estimated effort: 8-10 days

@@ -1,0 +1,887 @@
+================================================================================
+  PHASE 6A — ENTERPRISE DASHBOARD
+  SIMPLIFIED IMPLEMENTATION PLAN
+================================================================================
+  Project: Tyro / Unknow
+  Status: Planning Only — No Code Implementation
+================================================================================
+
+TABLE OF CONTENTS
+  1. Executive Summary
+  2. Current State Analysis
+  3. Architecture
+  4. Widget Specifications
+  5. Role-Based Visibility Matrix
+  6. Query Optimization Plan
+  7. Cache Strategy
+  8. Layout & Responsive Design
+  9. Implementation Order
+ 10. Performance Impact Analysis
+
+================================================================================
+1. EXECUTIVE SUMMARY
+================================================================================
+
+Replace the monolithic DashboardController::computeDashboardData() (~42 queries)
+with 10 flat widget classes in app/Dashboard/. Each widget has a single method:
+
+    public function data(User $user): array
+
+DashboardController instantiates all authorized widgets, calls data(), passes the
+merged results to the view. Per-widget caching with independent TTLs. No abstract
+classes, no interfaces, no registry, no service layer — just plain PHP objects.
+
+New file count: 10 widget classes + 10 Blade partials = 20 files
+Modified files: DashboardController + dashboard/index.blade.php = 2 files
+Zero database migrations. Zero Composer dependencies.
+
+================================================================================
+2. CURRENT STATE ANALYSIS
+================================================================================
+
+See PHASE_6A_ENTERPRISE_DASHBOARD_MASTER_PLAN.txt Section 2 for full analysis.
+
+Key problems:
+  a) Monolithic computeDashboardData() — all-or-nothing caching
+  b) Service loop hits 8 models with 3-4 queries each = 24-32 queries
+  c) 3 separate asset count queries instead of 1 GROUP BY
+  d) No fine-grained cache TTL
+  e) No server/renewal/asset daily metrics
+
+================================================================================
+3. ARCHITECTURE
+================================================================================
+
+3.1  Directory Structure
+
+     app/Dashboard/
+     +-- OperationsWidget.php
+     +-- RenewalsWidget.php
+     +-- AssetsWidget.php
+     +-- TasksWidget.php
+     +-- VaultWidget.php
+     +-- SmtpWidget.php
+     +-- ActivityWidget.php
+     +-- QuickActionsWidget.php
+     +-- ChartsWidget.php
+     +-- ServerHealthWidget.php
+
+     resources/views/dashboard/
+     +-- index.blade.php                  # Rewritten
+     +-- widgets/
+         +-- operations.blade.php
+         +-- renewals.blade.php
+         +-- assets.blade.php
+         +-- tasks.blade.php
+         +-- vault.blade.php
+         +-- smtp.blade.php
+         +-- activity.blade.php
+         +-- quick-actions.blade.php
+         +-- charts.blade.php
+         +-- server-health.blade.php
+
+3.2  Widget Contract (Convention, Not Interface)
+
+     Every widget class follows this convention:
+     ```php
+     class XxxWidget
+     {
+         public function data(User $user): array
+         {
+             // 1. Determine role scope
+             // 2. Compute or cache-hit widget data
+             // 3. Return associative array
+         }
+     }
+     ```
+
+     No base class, no interface, no registry. Each widget is responsible for:
+     - Its own cache key and TTL (via private methods)
+     - Its own authorization check (first line of data(), return [] if denied)
+     - Its own data shape
+
+3.3  DashboardController
+
+     ```php
+     class DashboardController extends Controller
+     {
+         public function index(): View
+         {
+             $user = Auth::user();
+             $version = Cache::get('dashboard:version', 0);
+
+             // Ordered widget instances — controls display order
+             $widgets = [
+                 new OperationsWidget(),
+                 new RenewalsWidget(),
+                 new AssetsWidget(),
+                 new TasksWidget(),
+                 new VaultWidget(),
+                 new ServerHealthWidget(),
+                 new SmtpWidget(),
+                 new ChartsWidget(),
+                 new ActivityWidget(),
+                 new QuickActionsWidget(),
+             ];
+
+             $data = [];
+             foreach ($widgets as $widget) {
+                 $widgetData = $this->resolveWidget($widget, $user, $version);
+                 $data = array_merge($data, $widgetData);
+             }
+
+             return view('dashboard.index', $data);
+         }
+
+         private function resolveWidget(object $widget, User $user, int $version): array
+         {
+             $ref = new ReflectionClass($widget);
+             $slug = Str::kebab($ref->getShortName());    // e.g., "operations-widget"
+             $key = "dashboard:w:{$slug}:{$user->id}:v{$version}";
+
+             try {
+                 return Cache::remember($key, $widget->cacheTtl(),
+                     fn() => $widget->data($user));
+             } catch (\Throwable $e) {
+                 Log::warning("Dashboard widget {$slug} failed", [
+                     'error' => $e->getMessage(),
+                 ]);
+                 return [];   // Widget fails silently — page still renders
+             }
+         }
+     }
+     ```
+
+    Widgets handle their own cacheTtl() via a private method. No interface needed.
+
+    The view receives flat variables (same as current approach). The Blade
+    template checks for existence before rendering each section:
+
+    ```blade
+    @if (!empty($operations))
+        @include('dashboard.widgets.operations')
+    @endif
+    @if (!empty($renewals))
+        @include('dashboard.widgets.renewals')
+    @endif
+    ...
+    ```
+
+================================================================================
+4. WIDGET SPECIFICATIONS
+================================================================================
+
+4.1  OperationsWidget
+     ------------------------------------------------------------------
+     File: app/Dashboard/OperationsWidget.php
+     View: resources/views/dashboard/widgets/operations.blade.php
+     Cache TTL: 300s
+     Cache key: dashboard:w:operations:{user_id}:v{version}
+     ------------------------------------------------------------------
+     Data returned:
+       [
+         'operations' => [
+           'total_active_services' => int,
+           'services_by_type'      => ['domains' => int, 'hostings' => int, ...],
+           'total_monthly_cost'    => float,
+           'active_providers'      => int,
+           'services_expiring_30d' => int,
+           'services_expired'      => int,
+         ],
+       ]
+
+     Query plan:
+       For each of the 8 service models, a single aggregate query:
+       SELECT
+         COUNT(*)                                                            AS total,
+         SUM(CASE WHEN status = 'active'  THEN 1 ELSE 0 END)                AS active,
+         SUM(CASE WHEN status = 'expired' THEN 1 ELSE 0 END)                AS expired,
+         COALESCE(SUM(CASE WHEN status = 'active' AND expiry_date IS NOT NULL
+                           THEN cost ELSE 0 END), 0)                        AS monthly_cost,
+         SUM(CASE WHEN status IN ('active','pending_renewal')
+                   AND expiry_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY)
+                  THEN 1 ELSE 0 END)                                         AS expiring_30d
+       FROM {table}
+       [(WHERE module_id IN (?) OR user_id = ?) if not Super Admin]
+
+       → 8 queries (reduced from 24-32). Cannot UNION due to different column sets.
+       Each is a single sequential scan on indexed status column.
+
+4.2  RenewalsWidget
+     ------------------------------------------------------------------
+     File: app/Dashboard/RenewalsWidget.php
+     View: resources/views/dashboard/widgets/renewals.blade.php
+     Cache TTL: 300s
+     ------------------------------------------------------------------
+     Data returned:
+       [
+         'renewals' => [
+           'total_trackers'           => int,
+           'trackers_by_status'       => ['active' => int, 'expired' => int, ...],
+           'upcoming_renewals'        => Collection(10),  // with module slug
+           'notifications_sent_30d'   => int,
+           'notifications_failed_30d' => int,
+           'manual_sends_today'       => int,    // trigger_source = 'manual', created_at = today
+           'automatic_sends_today'    => int,    // trigger_source = 'cron', created_at = today
+           'failed_today'             => int,    // status = 'failed', created_at = today
+           'total_smtp_profiles'      => int,    // SA only
+         ],
+       ]
+
+     NEW METRICS (daily):
+       Manual Sends Today:
+         ExpiryTrackerNotification::where('trigger_source', 'manual')
+           ->whereDate('created_at', today())->count()
+
+       Automatic Sends Today:
+         ExpiryTrackerNotification::where('trigger_source', 'cron')
+           ->whereDate('created_at', today())->count()
+
+       Failed Today:
+         ExpiryTrackerNotification::where('status', 'failed')
+           ->whereDate('created_at', today())->count()
+
+     Query plan:
+       1. ExpiryTracker::selectRaw('status, COUNT(*)')->groupBy('status')
+       2. ExpiryTracker::where('expiry_date', '>=', today())
+              ->where('expiry_date', '<=', today()->addDays(30))
+              ->whereIn('status', ['active', 'pending_renewal'])
+              ->with('module:id,slug')->orderBy('expiry_date')->take(10)
+       3. ExpiryTrackerNotification::where('created_at', '>=', now()->subDays(30))
+              ->selectRaw("COUNT(*) as total,
+                           SUM(CASE WHEN status='failed' THEN 1 ELSE 0 END) as failed")
+              ->first()
+       4. ExpiryTrackerNotification::where('trigger_source', 'manual')
+              ->whereDate('created_at', today())->count()
+       5. ExpiryTrackerNotification::where('trigger_source', 'cron')
+              ->whereDate('created_at', today())->count()
+       6. ExpiryTrackerNotification::where('status', 'failed')
+              ->whereDate('created_at', today())->count()
+       7. SmtpProfile::count()  (SA only)
+       → 6-7 queries
+
+4.3  AssetsWidget
+     ------------------------------------------------------------------
+     File: app/Dashboard/AssetsWidget.php
+     View: resources/views/dashboard/widgets/assets.blade.php
+     Cache TTL: 300s
+     ------------------------------------------------------------------
+     Data returned:
+       [
+         'assets' => [
+           'assets_by_status'     => ['available' => int, 'assigned' => int,
+                                       'lost' => int, 'decommissioned' => int],
+           'total_assets'         => int,
+           'recent_assignments'   => Collection(5),  // with asset_tag, assignee name
+           'recent_returns'       => Collection(5),
+           'assigned_today'       => int,
+           'returned_today'       => int,
+         ],
+       ]
+
+     NEW METRICS (daily):
+       Assigned Today:
+         AssetAssignment::whereDate('assigned_at', today())->count()
+
+       Returned Today:
+         AssetAssignment::whereDate('returned_at', today())->count()
+
+     Query plan:
+       1. Asset::selectRaw('status, COUNT(*)')->groupBy('status')
+       2. AssetAssignment::with('asset:id,asset_tag', 'assignee:id,name')
+              ->whereNull('returned_at')
+              ->latest('assigned_at')->take(5)
+       3. AssetAssignment::with('asset:id,asset_tag', 'assignee:id,name')
+              ->whereNotNull('returned_at')
+              ->latest('returned_at')->take(5)
+       4. AssetAssignment::whereDate('assigned_at', today())->count()
+       5. AssetAssignment::whereDate('returned_at', today())->count()
+       → 5 queries (currently 4, but adds daily metrics)
+
+4.4  TasksWidget
+     ------------------------------------------------------------------
+     File: app/Dashboard/TasksWidget.php
+     View: resources/views/dashboard/widgets/tasks.blade.php
+     Cache TTL: 300s
+     ------------------------------------------------------------------
+     Data returned:
+       [
+         'tasks' => [
+           'tasks_by_status' => ['pending' => int, 'in_progress' => int,
+                                  'completed' => int, 'cancelled' => int],
+           'total_tasks'     => int,
+           'overdue_tasks'   => int,
+           'due_this_week'   => int,
+           'my_pending'      => int,
+           'my_total'        => int,
+         ],
+       ]
+
+     Query plan:
+       1. Task::selectRaw('status, COUNT(*)')->groupBy('status')
+       2. Task::where('due_date', '<', today())
+              ->where('status', '!=', 'completed')->count()
+       3. Task::whereBetween('due_date', [today(), today()->addWeek()])->count()
+       4. Task::whereHas('assignees', fn($q) => $q->where('user_id', $user->id))
+              ->where('status', '!=', 'completed')->count()  // my_pending
+       5. Task::whereHas('assignees', fn($q) => $q->where('user_id', $user->id))
+              ->count()  // my_total
+       → 5 queries
+
+4.5  VaultWidget
+     ------------------------------------------------------------------
+     File: app/Dashboard/VaultWidget.php
+     View: resources/views/dashboard/widgets/vault.blade.php
+     Cache TTL: 300s
+     ------------------------------------------------------------------
+     Data returned:
+       [
+         'vault' => [
+           'total_entries'      => int,
+           'my_entries'         => int,
+           'recent_reveals'     => Collection(5),
+           'total_reveals_30d'  => int,
+           'revealed_today'     => int,   // Activity where event='revealed', created_at = today
+         ],
+       ]
+
+     NEW METRIC:
+       Credentials Revealed Today:
+         Activity::where('event', 'revealed')
+           ->whereDate('created_at', today())->count()
+
+     Query plan:
+       1. VaultEntry::when(!$isSA, fn($q) => $q->where('user_id', $user->id))->count()
+       2. Activity::where('event', 'revealed')
+              ->with('causer:id,name')->latest()->take(5)
+       3. Activity::where('event', 'revealed')
+              ->where('created_at', '>=', now()->subDays(30))->count()
+       4. Activity::where('event', 'revealed')
+              ->whereDate('created_at', today())->count()
+       → 4 queries
+
+4.6  SmtpWidget (Super Admin only)
+     ------------------------------------------------------------------
+     File: app/Dashboard/SmtpWidget.php
+     View: resources/views/dashboard/widgets/smtp.blade.php
+     Cache TTL: 300s
+     ------------------------------------------------------------------
+     Data returned:
+       [
+         'smtp' => [
+           'total_profiles'     => int,
+           'active_profiles'    => int,
+           'failed_profiles'    => int,
+           'usage_count'        => int,  // ExpiryTrackers using SMTP
+           'last_test_statuses' => Collection,  // profile name + last_test_status
+         ],
+       ]
+
+     Query plan:
+       1. SmtpProfile::selectRaw(
+              "COUNT(*) as total,
+               SUM(CASE WHEN is_active THEN 1 ELSE 0 END) as active,
+               SUM(CASE WHEN last_test_status = 'failed' THEN 1 ELSE 0 END) as failed"
+          )->first()
+       2. ExpiryTracker::whereNotNull('smtp_profile_id')->count()
+       3. SmtpProfile::where('is_active', true)
+              ->get(['name', 'last_test_status', 'last_tested_at'])
+       → 3 queries
+
+4.7  ActivityWidget
+     ------------------------------------------------------------------
+     File: app/Dashboard/ActivityWidget.php
+     View: resources/views/dashboard/widgets/activity.blade.php
+     Cache TTL: 60s
+     ------------------------------------------------------------------
+     Data returned:
+       [
+         'activity' => [
+           'activities' => Collection(10),  // with causer name
+           'route_map'  => ['Feature' => 'features.show', 'Task' => 'tasks.show', ...],
+         ],
+       ]
+
+     Query plan:
+       1. Activity::with('causer:id,name')
+              ->when(!$isSA, fn($q) => $q->where('causer_id', $user->id))
+              ->latest()->take(10)
+       → 1 query
+
+     Route map (same as current, for subject linking):
+       Feature → features.show | Module → modules.show | Task → tasks.show
+       Note → notes.show | VaultEntry → vault.show | User → users.show
+       Domain → domains.show | Hosting → hostings.show | Vps → vps.show
+       Voip → voip.show | ServiceProvider → service-providers.show
+       DomainEmail → domain-emails.show | OtherService → other-services.show
+       ExpiryTracker → expiry-trackers.show | Asset → assets.show
+
+4.8  QuickActionsWidget
+     ------------------------------------------------------------------
+     File: app/Dashboard/QuickActionsWidget.php
+     View: resources/views/dashboard/widgets/quick-actions.blade.php
+     Cache TTL: 300s
+     ------------------------------------------------------------------
+     Data returned:
+       [
+         'quick_actions' => [
+           'can_manage_system'  => bool,  // SA only
+           'can_create_domain'  => bool,
+           'can_create_hosting' => bool,
+           'can_create_vps'     => bool,
+           'can_create_voip'    => bool,
+           'can_create_vault'   => bool,
+           'can_create_asset'   => bool,
+           'can_create_task'    => bool,  // always true
+         ],
+       ]
+
+     Query plan:
+       1. Module::whereIn('slug', ['domains','hostings','vps','voip','vault','assets'])
+              ->get()->keyBy('slug')
+       2. Permission checks use $user->canOnModule() (no extra queries — cached
+          role IDs from HasModulePermissions trait)
+       → 1 query
+
+4.9  ChartsWidget
+     ------------------------------------------------------------------
+     File: app/Dashboard/ChartsWidget.php
+     View: resources/views/dashboard/widgets/charts.blade.php
+     Cache TTL: 300s
+     ------------------------------------------------------------------
+     Data returned:
+       [
+         'charts' => [
+           'tasks_by_status'       => ['pending' => int, ...],  // from TasksWidget
+           'services_by_type'      => ['domains' => int, ...],  // from OperationsWidget
+           'asset_status_breakdown'=> ['available' => int, ...],
+           'monthly_expiry'        => [['month' => '2026-06', 'count' => int], ...],
+           'notification_success'  => [['date' => '2026-06-25', 'sent' => int,
+                                         'failed' => int], ...],
+         ],
+       ]
+
+     NOTE: Widgets are independent. ChartsWidget re-computes data that overlaps
+     with OperationsWidget and TasksWidget. This is intentional — it avoids
+     coupling between widgets. The cache ensures no duplicate DB hits within
+     the same TTL window.
+
+     Query plan:
+       1. Asset::selectRaw('status, COUNT(*) as count')->groupBy('status')
+          → Returns asset_status_breakdown
+       2. For monthly expiry: run 8 lightweight queries grouped by month,
+          merge in PHP. Simplified:
+          foreach service models:
+            SELECT DATE_FORMAT(expiry_date, '%Y-%m') as month, COUNT(*) as count
+            FROM {table}
+            WHERE status NOT IN ('expired','cancelled')
+              AND expiry_date >= ? AND expiry_date <= ?
+            GROUP BY month ORDER BY month
+          → 8 queries, merged by month key in PHP
+       3. ExpiryTrackerNotification::selectRaw(
+              "DATE(created_at) as date,
+               COUNT(*) as total,
+               SUM(CASE WHEN status='sent' THEN 1 ELSE 0 END) as sent,
+               SUM(CASE WHEN status='failed' THEN 1 ELSE 0 END) as failed"
+          )->where('created_at', '>=', now()->subDays(7))
+          ->groupBy('date')->orderBy('date')
+          → 1 query
+       → ~10 queries for all chart data
+
+4.10 ServerHealthWidget (NEW)
+     ------------------------------------------------------------------
+     File: app/Dashboard/ServerHealthWidget.php
+     View: resources/views/dashboard/widgets/server-health.blade.php
+     Cache TTL: 300s (disk space can be expensive on some hosts)
+     Visibility: Super Admin only
+     ------------------------------------------------------------------
+     Data returned:
+       [
+         'server_health' => [
+           'php_version'          => string,     // PHP_VERSION
+           'disk_free'            => string,     // human-readable, e.g., "12.5 GB"
+           'disk_total'           => string,     // human-readable
+           'disk_used_pct'        => int,        // percentage used, 0-100
+           'storage_path'         => string,     // base_path()
+           'db_connection'        => string,     // config('database.default')
+           'db_status'            => string,     // 'OK' or 'ERROR'
+           'db_size_mb'           => float,      // approximate DB size in MB
+           'scheduler_last_run'   => string|null,// Cache::get('scheduler:last_run')
+           'mail_status'          => string,     // 'Configured' / 'No working profiles'
+         ],
+       ]
+
+     Implementation notes:
+       - PHP_VERSION: PHP built-in constant
+       - Disk usage: disk_free_space(base_path()), disk_total_space(base_path())
+       - DB size: MySQL — SELECT ROUND(SUM(data_length+index_length)/1024/1024,2)
+         FROM information_schema.tables WHERE table_schema = DB_NAME
+         PostgreSQL/SQLite — alternative queries or null
+       - Scheduler last run: Requires adding Cache::put('scheduler:last_run', now())
+         to the handle() method of SendEmailReminders command (modify one line)
+       - Mail status: Check if any SmtpProfile with is_active=true AND
+         last_test_status='success' exists. If none, check if any profile
+         exists at all.
+
+     Query plan:
+       1. DB::select("SELECT ROUND(SUM(data_length+index_length)/1024/1024,2)
+              AS size_mb FROM information_schema.tables
+              WHERE table_schema = ?", [config('database.connections.mysql.database')])
+          → wrapped in try-catch, returns null on failure
+       2. SmtpProfile::where('is_active', true)
+              ->where('last_test_status', 'success')->exists()
+       → 2 queries (both lightweight)
+
+     No new database tables or migrations required.
+
+================================================================================
+5. ROLE-BASED VISIBILITY MATRIX
+================================================================================
+
+     Widget           | Super Admin | Admin | IT Support | Read Only
+     -----------------+-------------+-------+------------+-----------
+     Operations       | ALL         | ALL   | ALL        | ALL
+     Renewals         | ALL         | ALL   | ALL        | LIMITED
+     Assets           | ALL         | ALL   | IF ACCESS  | —
+     Tasks            | ALL         | ALL   | OWN        | OWN
+     Vault            | ALL         | OWN   | OWN        | OWN
+     Smtp             | ALL         | —     | —          | —
+     Activity         | ALL         | ALL   | OWN        | OWN
+     Quick Actions    | ALL         | SCOPED| SCOPED     | —
+     Charts           | ALL         | ALL   | LIMITED    | —
+     Server Health    | ALL         | —     | —          | —
+
+     Ownership key prefix for cache (NOT IMPLEMENTED — placeholder for future):
+       Each widget's data() method receives the full User object and can
+       scope queries however needed. No shared state between widgets.
+
+     Implementation in each widget's data() method:
+       ```php
+       public function data(User $user): array
+       {
+           $isSA = $user->hasRole('super-admin');
+
+           // SmtpWidget: early return for non-SA
+           if (!$isSA) {
+               return [];
+           }
+           // ... compute
+       }
+       ```
+
+================================================================================
+6. QUERY OPTIMIZATION PLAN
+================================================================================
+
+6.1  Aggregate Query Consolidation
+
+     Before: 8 models × 3-4 queries = 24-32 queries
+     After:  8 models × 1 query      = 8 queries
+
+     Each model gets a single aggregate with CASE expressions:
+     ```php
+     $stats = $modelClass::selectRaw("
+         COUNT(*)                                        AS total,
+         SUM(CASE WHEN status='active'  THEN 1 ELSE 0 END) AS active,
+         SUM(CASE WHEN status='expired' THEN 1 ELSE 0 END) AS expired,
+         COALESCE(SUM(CASE WHEN status='active' AND expiry_date IS NOT NULL
+                           THEN cost ELSE 0 END), 0)       AS monthly_cost,
+         SUM(CASE WHEN status IN ('active','pending_renewal')
+                   AND expiry_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY)
+                  THEN 1 ELSE 0 END)                       AS expiring_30d
+     ")->first();
+     ```
+
+6.2  GROUP BY for Status Counts
+
+     Before: 3 separate Asset::where('status', 'X')->count()
+     After:  Asset::selectRaw('status, COUNT(*) as count')->groupBy('status')
+
+     Same pattern for: Task, ExpiryTracker
+
+6.3  Accessible Module IDs Preloaded Once
+
+     The DashboardController::index() method computes $accessibleModuleIds once
+     and passes it as a constructor argument or second parameter. Widgets that
+     need it receive it:
+
+     ```php
+     // In DashboardController
+     $accessibleIds = $isSA ? null : $user->getAccessibleModuleIds('read');
+     $version = Cache::get('dashboard:version', 0);
+
+     foreach ($widgets as $widget) {
+         $key = "dashboard:w:{$slug}:{$user->id}:v{$version}";
+         $data = Cache::remember($key, 300,
+             fn() => $widget->data($user, $accessibleIds));
+     }
+     ```
+
+     This eliminates N+1 module permission lookups across widgets.
+
+6.4  Target Query Count by Role
+
+     Role         | Current | Target | Reduction
+     -------------+---------+--------+----------
+     Super Admin  | 42-48   | 16-18  | ~62%
+     Admin        | 35-40   | 14-16  | ~60%
+     IT Support   | 25-30   | 10-12  | ~60%
+     Read Only    | 20-25   | 8-10   | ~60%
+
+     Note: More total queries than the earlier design (16-18 vs 14-16) because
+     ChartsWidget is independent and re-computes overlapping data. The trade-off
+     is simpler code with no shared state between widgets.
+
+================================================================================
+7. CACHE STRATEGY
+================================================================================
+
+7.1  Cache Key Design
+
+     Global version (existing, preserved unchanged):
+       Key:  dashboard:version
+       TTL:  permanent (incremented on model events)
+       Used: by all widget cache keys as version suffix
+
+     Per-widget keys (new):
+       Key:  dashboard:w:{kebab_class}:{user_id}:v{version}
+       TTL:  per widget (60s for activity, 300s for others)
+
+     Examples:
+       dashboard:w:operations-widget:1:v42
+       dashboard:w:renewals-widget:1:v42
+       dashboard:w:activity-widget:1:v42
+
+     Resolved in DashboardController::resolveWidget():
+     ```php
+     $slug = Str::kebab((new ReflectionClass($widget))->getShortName());
+     // OperationsWidget → 'operations-widget'
+     // ServerHealthWidget → 'server-health-widget'
+     ```
+
+7.2  Cache Invalidation
+
+     Existing global invalidation preserved:
+       AppServiceProvider listens to created/updated/deleted on all service
+       models, tasks, notes, vault entries. Each event calls:
+         Cache::increment('dashboard:version')
+       This busts ALL widget caches for ALL users.
+
+     Why this is acceptable:
+       - Single atomic INCR operation (microseconds)
+       - All widgets re-populate on next request via Cache::remember()
+       - Total cache entries: ~10 widgets × N active users = <500 entries
+       - File/database cache handles this trivially
+
+     Scheduler last run (NEW tracking, one-line change):
+       In app/Console/Commands/SendEmailReminders.php::handle():
+         Add: Cache::put('scheduler:last_run', now(), 86400)
+       This is a 1-line addition. Not a new table or migration.
+
+7.3  Cache TTLs
+
+     Widget          | TTL  | Rationale
+     ----------------+------+------------------------------------------
+     Operations      | 300s | Aggregate counts, changes slowly
+     Renewals        | 300s | Expiry dates, daily metrics
+     Assets          | 300s | Asset status, assignments
+     Tasks           | 300s | Task status updates
+     Vault           | 300s | Vault entries, reveals
+     Smtp            | 300s | SMTP configs, rare changes
+     Activity        |  60s | Real-time feed
+     Quick Actions   | 300s | Module permissions, rare changes
+     Charts          | 300s | Aggregate chart data
+     Server Health   | 300s | Disk/filesystem, moderate cost
+
+================================================================================
+8. LAYOUT & RESPONSIVE DESIGN
+================================================================================
+
+8.1  Desktop (≥1024px) — Tailwind: grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4
+
+     Row 1:  Operations (col-span-2)   | Renewals (col-span-2)
+     Row 2:  Assets (col-span-2)        | Tasks (col-span-1) | Vault (col-span-1)
+     Row 3:  Server Health (col-span-4) [Super Admin only]
+     Row 4:  SMTP (col-span-4)          [Super Admin only]
+     Row 5:  Charts (4 cards in col-span-1 each)
+     Row 6:  Activity (col-span-4)
+     Row 7:  Quick Actions (col-span-4)
+
+8.2  Tablet (640-1023px) — grid grid-cols-1 md:grid-cols-2
+
+     Row 1: Operations | Renewals
+     Row 2: Assets     | Tasks
+     Row 3: Vault      | [spacer]
+     Row 4: Server Health (col-span-2)
+     Row 5: SMTP (col-span-2)
+     Row 6: Charts (stacked)
+     Row 7: Activity (col-span-2)
+     Row 8: Quick Actions (col-span-2)
+
+8.3  Mobile (<640px) — grid grid-cols-1
+
+     All widgets stacked vertically in order.
+
+8.4  Blade Template Pattern
+
+     dashboard/index.blade.php:
+     ```blade
+     @extends('layouts.admin')
+     @section('title', 'Dashboard')
+     @section('content')
+     <div class="max-w-7xl mx-auto fade-in-up">
+         <x-page-header title="Dashboard" subtitle="Enterprise Overview" />
+
+         <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
+             @if(!empty($operations))
+                 @include('dashboard.widgets.operations')
+             @endif
+             @if(!empty($renewals))
+                 @include('dashboard.widgets.renewals')
+             @endif
+             @if(!empty($assets))
+                 @include('dashboard.widgets.assets')
+             @endif
+             @if(!empty($tasks))
+                 @include('dashboard.widgets.tasks')
+             @endif
+             @if(!empty($vault))
+                 @include('dashboard.widgets.vault')
+             @endif
+         </div>
+
+         @if(!empty($server_health))
+             @include('dashboard.widgets.server-health')
+         @endif
+
+         @if(!empty($smtp))
+             @include('dashboard.widgets.smtp')
+         @endif
+
+         @if(!empty($charts))
+             @include('dashboard.widgets.charts')
+         @endif
+
+         @if(!empty($activity))
+             @include('dashboard.widgets.activity')
+         @endif
+
+         @if(!empty($quick_actions))
+             @include('dashboard.widgets.quick-actions')
+         @endif
+     </div>
+     @endsection
+     ```
+
+     Each widget partial is responsible for its own layout, responsive classes,
+     and empty state.
+
+================================================================================
+9. IMPLEMENTATION ORDER
+================================================================================
+
+     These phases define the build order. Each phase is self-contained with
+     its own files and tests.
+
+9.1  Phase A: Foundation + Core Widgets
+     Create:
+       - app/Dashboard/OperationsWidget.php
+       - app/Dashboard/RenewalsWidget.php
+       - app/Dashboard/QuickActionsWidget.php
+       - resources/views/dashboard/widgets/operations.blade.php
+       - resources/views/dashboard/widgets/renewals.blade.php
+       - resources/views/dashboard/widgets/quick-actions.blade.php
+     Modify:
+       - app/Http/Controllers/Web/DashboardController.php
+       - resources/views/dashboard/index.blade.php
+     Test:
+       - Feature: dashboard loads, operations stats correct, renewals show daily metrics
+
+9.2  Phase B: Assets + Tasks + Vault
+     Create:
+       - app/Dashboard/AssetsWidget.php
+       - app/Dashboard/TasksWidget.php
+       - app/Dashboard/VaultWidget.php
+       - resources/views/dashboard/widgets/assets.blade.php
+       - resources/views/dashboard/widgets/tasks.blade.php
+       - resources/views/dashboard/widgets/vault.blade.php
+     Test:
+       - Feature: assigned today, returned today, vault reveals today
+       - Verify no regressions in existing AssetManagementTest
+
+9.3  Phase C: Server Health + SMTP
+     Create:
+       - app/Dashboard/ServerHealthWidget.php
+       - app/Dashboard/SmtpWidget.php
+       - resources/views/dashboard/widgets/server-health.blade.php
+       - resources/views/dashboard/widgets/smtp.blade.php
+     Modify:
+       - app/Console/Commands/SendEmailReminders.php (add Cache::put for last run)
+     Test:
+       - Feature: SA sees both widgets, Admin sees neither
+
+9.4  Phase D: Activity + Charts
+     Create:
+       - app/Dashboard/ActivityWidget.php
+       - app/Dashboard/ChartsWidget.php
+       - resources/views/dashboard/widgets/activity.blade.php
+       - resources/views/dashboard/widgets/charts.blade.php
+     Modify:
+       - resources/js/charts.js (add new chart registrations)
+     Test:
+       - Feature: charts render, activity shows, subject links correct
+
+================================================================================
+10. PERFORMANCE IMPACT ANALYSIS
+================================================================================
+
+10.1 Query Count Reduction (Super Admin)
+
+     Widget              | Queries | Data
+     --------------------+---------+-----------------------------------
+     Operations          |   8     | 8 service model aggregates
+     Renewals            |   6     | status, upcoming, notifications, daily
+     Assets              |   5     | status GROUP BY, assignments, daily
+     Tasks               |   5     | status GROUP BY, overdue, weekly, my
+     Vault               |   4     | count, reveals, daily
+     Smtp                |   3     | aggregates, usage, statuses
+     Activity            |   1     | latest 10
+     Quick Actions       |   1     | module lookup
+     Charts              |  10     | asset status, 8x monthly expiry, notif success
+     Server Health       |   2     | DB size, mail status
+     --------------------+---------+-----------------------------------
+     TOTAL               |  ~45    | (note: some overlap with cache)
+     Unique after cache  |  16-18  | cache dedup across widgets
+     --------------------+---------+-----------------------------------
+
+     The "unique after cache" count (16-18) reflects that per-widget caching
+     means each widget's queries only run once per TTL window, even if Charts
+     re-computes data that Operations also computed. The cache key is different
+     per widget, so there is no sharing — but each widget hits the cache on
+     subsequent page loads.
+
+     For the first page load (cold cache), ~45 queries run. For subsequent
+     loads (warm cache within TTL), ~0-2 queries run (only expired widgets).
+
+10.2 Memory
+
+     ~5-10KB per widget × 10 widgets = ~50-100KB per user session.
+     With file/database cache: trivial.
+
+10.3 Cache Overhead
+
+     Global version increment: 1 write per model change (existing).
+     Widget cache miss: N queries where N = widgets that expired (max 10).
+     Acceptable for shared-hosting.
+
+10.4 Backward Compatibility
+
+     - Route GET /dashboard unchanged
+     - API endpoint GET /api/dashboard returns existing format (unchanged)
+     - View variable names now prefixed by widget (e.g., $totalServices → $operations)
+     - Existing DashboardTest assertions may need updating for variable names
+     - AssetManagementTest, WebDashboardTest unaffected (they test general page load)
+
+================================================================================
+END OF PHASE 6A SIMPLIFIED IMPLEMENTATION PLAN
+================================================================================

@@ -2,15 +2,19 @@ import { Chart, DoughnutController, BarController, CategoryScale, LinearScale, A
 
 Chart.register(DoughnutController, BarController, CategoryScale, LinearScale, ArcElement, BarElement, Tooltip, Legend);
 
+function safeJson(val) { try { return JSON.parse(val || '[]'); } catch { return []; } }
+
+const colors = ['#6b7280', '#3b82f6', '#eab308', '#22c55e'];
+
 const statusChart = document.getElementById('tasksStatusChart');
 if (statusChart) {
     new Chart(statusChart, {
         type: 'doughnut',
         data: {
-            labels: JSON.parse(statusChart.dataset.labels),
+            labels: safeJson(statusChart.dataset.labels),
             datasets: [{
-                data: JSON.parse(statusChart.dataset.values),
-                backgroundColor: ['#6b7280', '#3b82f6', '#eab308', '#22c55e'],
+                data: safeJson(statusChart.dataset.values),
+                backgroundColor: colors,
                 borderWidth: 0,
             }],
         },
@@ -25,9 +29,9 @@ if (statusChart) {
 
 const servicesChart = document.getElementById('servicesTypeChart');
 if (servicesChart) {
-    const labels = JSON.parse(servicesChart.dataset.labels);
-    const values = JSON.parse(servicesChart.dataset.values);
-    const colors = ['#3b82f6', '#22c55e', '#eab308', '#f97316', '#a855f7', '#ec4899', '#06b6d4', '#6366f1'];
+    const labels = safeJson(servicesChart.dataset.labels);
+    const values = safeJson(servicesChart.dataset.values);
+    const serviceColors = ['#3b82f6', '#22c55e', '#eab308', '#f97316', '#a855f7', '#ec4899', '#06b6d4', '#6366f1'];
 
     new Chart(servicesChart, {
         type: 'bar',
@@ -35,7 +39,7 @@ if (servicesChart) {
             labels,
             datasets: [{
                 data: values,
-                backgroundColor: colors.slice(0, labels.length),
+                backgroundColor: serviceColors.slice(0, labels.length),
                 borderRadius: 4,
             }],
         },
@@ -46,6 +50,50 @@ if (servicesChart) {
             scales: {
                 x: { beginAtZero: true, ticks: { stepSize: 1 } },
                 y: { ticks: { font: { size: 11 } } },
+            },
+        },
+    });
+}
+
+const assetsChart = document.getElementById('assetsStatusChart');
+if (assetsChart) {
+    new Chart(assetsChart, {
+        type: 'doughnut',
+        data: {
+            labels: safeJson(assetsChart.dataset.labels),
+            datasets: [{
+                data: safeJson(assetsChart.dataset.values),
+                backgroundColor: ['#22c55e', '#3b82f6', '#ef4444', '#6b7280'],
+                borderWidth: 0,
+            }],
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { position: 'bottom', labels: { padding: 12, boxWidth: 12 } },
+            },
+        },
+    });
+}
+
+const renewalsChart = document.getElementById('renewalsExpiryChart');
+if (renewalsChart) {
+    new Chart(renewalsChart, {
+        type: 'bar',
+        data: {
+            labels: safeJson(renewalsChart.dataset.labels),
+            datasets: [{
+                data: safeJson(renewalsChart.dataset.values),
+                backgroundColor: '#eab308',
+                borderRadius: 4,
+            }],
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { ticks: { font: { size: 10 } } },
+                y: { beginAtZero: true, ticks: { stepSize: 1, font: { size: 10 } } },
             },
         },
     });

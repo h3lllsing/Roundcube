@@ -7,6 +7,7 @@ use App\Http\Requests\StoreServiceProviderRequest;
 use App\Http\Requests\UpdateServiceProviderRequest;
 use App\Models\ServiceProvider;
 use App\Services\ServiceProviderService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use OpenApi\Attributes as OA;
 
@@ -34,12 +35,18 @@ class ServiceProviderController extends Controller
             ])),
         ]
     )]
-    public function index(Request $request): \Illuminate\Http\JsonResponse
+    public function index(Request $request): JsonResponse
     {
         $user = $request->user();
         $filters = $request->only(['module_id', 'search', 'status', 'per_page', 'sort_by', 'sort_order']);
-        if ($user->hasRole('super-admin') && $request->boolean('with_trashed')) $filters['with_trashed'] = true;
-        if (!$user->hasRole('super-admin')) $filters['user_id'] = $user->id;
+        if ($user->hasRole('super-admin') && $request->boolean('with_trashed')) {
+            $filters['with_trashed'] = true;
+        }
+        if (! $user->hasRole('super-admin')) {
+            $ids = $user->getAccessibleModuleIds('read');
+            $filters['accessible_module_ids'] = $ids ?: [0];
+        }
+
         return response()->json($this->serviceProviderService->list($filters));
     }
 
@@ -59,7 +66,7 @@ class ServiceProviderController extends Controller
                 new OA\Property(property: 'start_date', type: 'string', format: 'date', nullable: true),
                 new OA\Property(property: 'expiry_date', type: 'string', format: 'date', nullable: true),
                 new OA\Property(property: 'status', type: 'string', default: 'active', enum: ['active', 'expired', 'cancelled']),
-                new OA\Property(property: 'notes', type: 'string', nullable: true),
+                new OA\Property(property: 'description', type: 'string', nullable: true),
                 new OA\Property(property: 'module_id', type: 'integer', nullable: true),
             ])
         ),
@@ -71,10 +78,16 @@ class ServiceProviderController extends Controller
             new OA\Response(response: 422, description: 'Validation error'),
         ]
     )]
-    public function store(StoreServiceProviderRequest $request): \Illuminate\Http\JsonResponse
+    public function store(StoreServiceProviderRequest $request): JsonResponse
     {
         $validated = $request->validated();
         $validated['user_id'] = $request->user()->id;
+        $user = $request->user();
+        if (!$user->hasRole('super-admin')) {
+            $moduleId = $validated['module_id'] ?? null;
+            abort_unless($moduleId && $user->canOnModule(\App\Models\Module::find($moduleId), 'create'), 403, 'Forbidden');
+        }
+
         return $this->created($this->serviceProviderService->create($validated), 'Service provider created');
     }
 
@@ -93,13 +106,14 @@ class ServiceProviderController extends Controller
             new OA\Response(response: 404, description: 'Not found'),
         ]
     )]
-    public function show(Request $request, ServiceProvider $serviceProvider): \Illuminate\Http\JsonResponse
+    public function show(Request $request, ServiceProvider $serviceProvider): JsonResponse
     {
         $serviceProvider->load('module.feature', 'user');
         $user = $request->user();
-        if (!$user->hasRole('super-admin') && $serviceProvider->user_id !== $user->id) {
+        if (! $user->hasRole('super-admin') && $serviceProvider->user_id !== $user->id) {
             abort(403, 'Forbidden');
         }
+
         return $this->success($serviceProvider);
     }
 
@@ -122,7 +136,7 @@ class ServiceProviderController extends Controller
                 new OA\Property(property: 'start_date', type: 'string', format: 'date', nullable: true),
                 new OA\Property(property: 'expiry_date', type: 'string', format: 'date', nullable: true),
                 new OA\Property(property: 'status', type: 'string', enum: ['active', 'expired', 'cancelled']),
-                new OA\Property(property: 'notes', type: 'string', nullable: true),
+                new OA\Property(property: 'description', type: 'string', nullable: true),
                 new OA\Property(property: 'module_id', type: 'integer', nullable: true),
             ])
         ),
@@ -134,13 +148,23 @@ class ServiceProviderController extends Controller
             new OA\Response(response: 422, description: 'Validation error'),
         ]
     )]
-    public function update(UpdateServiceProviderRequest $request, ServiceProvider $serviceProvider): \Illuminate\Http\JsonResponse
+    public function update(UpdateServiceProviderRequest $request, ServiceProvider $serviceProvider): JsonResponse
     {
         $user = $request->user();
-        if (!$user->hasRole('super-admin') && $serviceProvider->user_id !== $user->id) {
+        if (! $user->hasRole('super-admin') && $serviceProvider->user_id !== $user->id) {
             abort(403, 'Forbidden');
         }
-        return $this->success($this->serviceProviderService->update($serviceProvider, $request->validated()), 'Service provider updated');
+        if (!$user->hasRole('super-admin') && $serviceProvider->module && !$user->canOnModule($serviceProvider->module, 'update')) {
+            abort(403, 'Forbidden');
+        }
+        $this->checkOptimisticLock($serviceProvider, $request);
+
+        $data = $request->validated();
+        if (empty($data['password'])) {
+            unset($data['password']);
+        }
+
+        return $this->success($this->serviceProviderService->update($serviceProvider, $data), 'Service provider updated');
     }
 
     #[OA\Delete(
@@ -155,13 +179,17 @@ class ServiceProviderController extends Controller
             new OA\Response(response: 200, description: 'Service provider deleted', content: new OA\JsonContent(ref: '#/components/schemas/MessageResponse')),
         ]
     )]
-    public function destroy(Request $request, ServiceProvider $serviceProvider): \Illuminate\Http\JsonResponse
+    public function destroy(Request $request, ServiceProvider $serviceProvider): JsonResponse
     {
         $user = $request->user();
-        if (!$user->hasRole('super-admin') && $serviceProvider->user_id !== $user->id) {
+        if (! $user->hasRole('super-admin') && $serviceProvider->user_id !== $user->id) {
+            abort(403, 'Forbidden');
+        }
+        if (!$user->hasRole('super-admin') && $serviceProvider->module && !$user->canOnModule($serviceProvider->module, 'delete')) {
             abort(403, 'Forbidden');
         }
         $this->serviceProviderService->delete($serviceProvider);
+
         return $this->message('Service provider deleted');
     }
 }

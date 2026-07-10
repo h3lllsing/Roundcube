@@ -4,11 +4,9 @@
 
 @section('content')
 <div class="max-w-3xl mx-auto">
-    <div class="flex items-center justify-between mb-6">
-        <h1 class="text-2xl font-semibold">Create Vault Entry</h1>
-    </div>
+    <x-page-header title="Create Vault Entry" subtitle="Store a new password entry" />
 
-    <form action="{{ route('vault.store') }}" method="POST" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 space-y-4">
+    <form action="{{ route('vault.store') }}" method="POST" class="bg-white dark:bg-black rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 space-y-4">
         @csrf
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -18,7 +16,7 @@
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <x-form.input name="username" label="Username" :value="old('username')" />
-            <x-form.input name="encrypted_password" label="Password" type="password" :value="old('encrypted_password')" />
+            <x-form.input name="encrypted_password" label="Password" type="password" :value="old('encrypted_password')" autocomplete="new-password" />
         </div>
 
         <x-form.select name="module_id" label="Module" :options="$modules" :value="old('module_id')" placeholder="Select module..." />
@@ -27,8 +25,8 @@
         <x-form.textarea name="description" label="Description" :value="old('description')" />
 
         <div class="flex items-center gap-3 pt-2">
-            <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">Save</button>
-            <a href="{{ route('vault.index') }}" class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900">Cancel</a>
+            <x-button type="submit" variant="primary" size="sm">Save</x-button>
+            <x-button href="{{ route('vault.index') }}" variant="outline" size="sm">Cancel</x-button>
         </div>
     </form>
 </div>

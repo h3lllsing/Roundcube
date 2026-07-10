@@ -3,8 +3,9 @@
 namespace Tests\Feature;
 
 use App\Models\Feature;
-use App\Models\Module;
 use App\Models\User;
+use Database\Seeders\FeatureModuleSeeder;
+use HasinHayder\Tyro\Database\Seeders\TyroSeeder;
 use HasinHayder\Tyro\Models\Role;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
@@ -17,8 +18,8 @@ class FeatureTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->seed(\HasinHayder\Tyro\Database\Seeders\TyroSeeder::class);
-        $this->seed(\Database\Seeders\FeatureModuleSeeder::class);
+        $this->seed(TyroSeeder::class);
+        $this->seed(FeatureModuleSeeder::class);
     }
 
     public function test_list_features_as_authenticated_user()
@@ -47,6 +48,9 @@ class FeatureTest extends TestCase
 
         $response->assertStatus(201)
             ->assertJsonStructure(['data' => ['id', 'name', 'slug']]);
+
+        $feature = Feature::where('slug', 'test-feature')->firstOrFail();
+        $this->assertCount(0, $feature->activeModules);
 
         $this->assertDatabaseHas('features', ['slug' => 'test-feature', 'is_active' => true]);
     }
@@ -135,7 +139,7 @@ class FeatureTest extends TestCase
             ->getJson('/api/features?with_trashed=1');
 
         $response->assertStatus(200);
-        $this->assertStringContainsString((string)$feature->id, $response->getContent());
+        $this->assertStringContainsString((string) $feature->id, $response->getContent());
     }
 
     public function test_super_admin_creates_then_sees_feature()
@@ -199,7 +203,7 @@ class FeatureTest extends TestCase
     {
         $user = User::factory()->create();
         $token = $user->createToken('test')->plainTextToken;
-        $feature = \App\Models\Feature::first();
+        $feature = Feature::first();
 
         $response = $this->withHeader('Authorization', "Bearer $token")
             ->putJson("/api/features/{$feature->id}", ['name' => 'Hacked']);
@@ -226,7 +230,7 @@ class FeatureTest extends TestCase
         $role = Role::where('slug', 'super-admin')->firstOrFail();
         $user->assignRole($role);
         $token = $user->createToken('test')->plainTextToken;
-        $existing = \App\Models\Feature::first();
+        $existing = Feature::first();
 
         $response = $this->withHeader('Authorization', "Bearer $token")
             ->postJson('/api/features', [
@@ -290,8 +294,8 @@ class FeatureTest extends TestCase
         $user->assignRole($role);
         $token = $user->createToken('test')->plainTextToken;
 
-        \App\Models\Feature::create(['name' => 'UniqueSearchFeature', 'slug' => 'unique-search-feature']);
-        \App\Models\Feature::create(['name' => 'OtherFeature', 'slug' => 'other-feature']);
+        Feature::create(['name' => 'UniqueSearchFeature', 'slug' => 'unique-search-feature']);
+        Feature::create(['name' => 'OtherFeature', 'slug' => 'other-feature']);
         Cache::flush();
 
         $response = $this->withHeader('Authorization', "Bearer $token")

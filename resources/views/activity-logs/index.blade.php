@@ -4,15 +4,22 @@
 
 @section('content')
 <div class="max-w-7xl mx-auto">
-    <div class="flex items-center justify-between mb-6">
-        <h1 class="text-2xl font-semibold">Activity Logs</h1>
-    </div>
+    <x-page-header title="Activity Logs" subtitle="View system activity history.">
+        <x-slot:actions>
+            @if(auth()->user()->hasRole('super-admin'))
+            <x-button href="{{ route('export', 'activity-logs') }}" variant="success" size="sm">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                Export CSV
+            </x-button>
+            @endif
+        </x-slot:actions>
+    </x-page-header>
 
     <form method="GET" class="flex flex-wrap gap-3 mb-6">
         <input type="text" name="search" value="{{ request('search') }}" placeholder="Search description..."
-            class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+            class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl input-focus outline-none">
         <select name="event"
-            class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none">
+            class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm bg-white dark:bg-black text-gray-900 dark:text-white input-focus outline-none">
             <option value="">All events</option>
             <option value="created" @selected(request('event') === 'created')>Created</option>
             <option value="updated" @selected(request('event') === 'updated')>Updated</option>
@@ -21,21 +28,32 @@
             <option value="login" @selected(request('event') === 'login')>Login</option>
             <option value="logout" @selected(request('event') === 'logout')>Logout</option>
         </select>
-        <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors">Filter</button>
-        @if(request()->anyFilled(['search', 'event']))
-            <a href="{{ route('activity-logs.index') }}" class="px-4 py-2 bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 text-sm rounded-lg transition-colors">Clear</a>
+        <select name="causer_id"
+            class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm bg-white dark:bg-black text-gray-900 dark:text-white input-focus outline-none">
+            <option value="">All users</option>
+            @foreach ($users as $id => $name)
+                <option value="{{ $id }}" @selected(request('causer_id') == $id)>{{ $name }}</option>
+            @endforeach
+        </select>
+        <input type="date" name="date_from" value="{{ request('date_from') }}" placeholder="From"
+            class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl input-focus outline-none">
+        <input type="date" name="date_to" value="{{ request('date_to') }}" placeholder="To"
+            class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl input-focus outline-none">
+        <x-button type="submit" variant="primary" size="sm">Filter</x-button>
+        @if(request()->anyFilled(['search', 'event', 'causer_id', 'date_from', 'date_to']))
+            <x-button href="{{ route('activity-logs.index') }}" variant="outline" size="sm">Clear</x-button>
         @endif
     </form>
 
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+    <div class="bg-white dark:bg-black rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-x-auto w-full">
         <table class="w-full text-sm">
             <thead>
-                <tr class="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
-                    <th class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">User</th>
-                    <th class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Event</th>
-                    <th class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Description</th>
-                    <th class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Subject</th>
-                    <th class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Date</th>
+                <tr class="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-black/50">
+                    <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">User</th>
+                    <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Event</th>
+                    <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Description</th>
+                    <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Subject</th>
+                    <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Date</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
@@ -49,15 +67,15 @@
                                 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' => $activity->event === 'updated',
                                 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' => $activity->event === 'deleted',
                                 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300' => $activity->event === 'revealed',
-                                'bg-gray-100 text-gray-700 dark:bg-gray-600 dark:text-gray-200' => !in_array($activity->event, ['created','updated','deleted','revealed']),
+                                'bg-gray-100 text-gray-700 dark:bg-black dark:text-gray-200' => !in_array($activity->event, ['created','updated','deleted','revealed']),
                             ])>{{ $activity->event }}</span>
                         </td>
-                        <td class="px-6 py-3 max-w-sm truncate">{{ $activity->description }}</td>
+                        <td class="px-6 py-3 max-w-sm truncate"><a href="{{ route('activity-logs.show', $activity->id) }}" class="hover:text-indigo-600 dark:hover:text-indigo-400">{{ $activity->description }}</a></td>
                         <td class="px-6 py-3 text-gray-500">{{ $activity->subject_type ? class_basename($activity->subject_type) . ' #' . $activity->subject_id : '—' }}</td>
                         <td class="px-6 py-3 text-gray-500 text-nowrap">{{ $activity->created_at->format('Y-m-d H:i') }}</td>
                     </tr>
                 @empty
-                    <tr><td colspan="5" class="px-6 py-8 text-center text-gray-400">No activity logs found.</td></tr>
+                    <tr><x-empty-state :colspan="5" icon="activity" title="No activity logs found." message="Activity will appear as users interact with the system." /></tr>
                 @endforelse
             </tbody>
         </table>

@@ -6,6 +6,8 @@ use App\Models\Module;
 use App\Models\ModuleRolePermission;
 use App\Models\User;
 use App\Models\VaultEntry;
+use Database\Seeders\FeatureModuleSeeder;
+use HasinHayder\Tyro\Database\Seeders\TyroSeeder;
 use HasinHayder\Tyro\Models\Role;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -15,14 +17,16 @@ class HasModulePermissionsTraitTest extends TestCase
     use RefreshDatabase;
 
     private User $user;
+
     private Module $module;
+
     private Role $userRole;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->seed(\HasinHayder\Tyro\Database\Seeders\TyroSeeder::class);
-        $this->seed(\Database\Seeders\FeatureModuleSeeder::class);
+        $this->seed(TyroSeeder::class);
+        $this->seed(FeatureModuleSeeder::class);
         $this->userRole = Role::where('slug', 'user')->firstOrFail();
         $this->user = User::factory()->create();
         $this->user->assignRole($this->userRole);
@@ -56,33 +60,6 @@ class HasModulePermissionsTraitTest extends TestCase
         $this->assertFalse($this->user->canOnModule($this->module, 'read'));
     }
 
-    public function test_get_module_permissions_returns_array(): void
-    {
-        ModuleRolePermission::create([
-            'module_id' => $this->module->id,
-            'role_id' => $this->userRole->id,
-            'can_read' => true,
-            'can_create' => true,
-        ]);
-
-        $result = $this->user->getModulePermissions($this->module);
-
-        $this->assertIsArray($result);
-        $this->assertTrue($result['can_read']);
-        $this->assertTrue($result['can_create']);
-        $this->assertFalse($result['can_update']);
-        $this->assertFalse($result['can_delete']);
-        $this->assertFalse($result['can_approve']);
-        $this->assertFalse($result['can_export']);
-    }
-
-    public function test_get_module_permissions_returns_null_when_none(): void
-    {
-        $result = $this->user->getModulePermissions($this->module);
-
-        $this->assertNull($result);
-    }
-
     public function test_get_all_module_permissions_returns_merged_permissions(): void
     {
         $module2 = Module::factory()->create(['feature_id' => $this->module->feature_id]);
@@ -91,6 +68,7 @@ class HasModulePermissionsTraitTest extends TestCase
             'module_id' => $this->module->id,
             'role_id' => $this->userRole->id,
             'can_read' => true,
+            'can_reveal' => true,
         ]);
         ModuleRolePermission::create([
             'module_id' => $module2->id,
@@ -104,6 +82,9 @@ class HasModulePermissionsTraitTest extends TestCase
         $this->assertArrayHasKey($module2->id, $result);
         $this->assertTrue($result[$this->module->id]['can_read']);
         $this->assertTrue($result[$module2->id]['can_create']);
+        $this->assertTrue($result[$this->module->id]['can_reveal']);
+        $this->assertArrayHasKey('can_reveal', $result[$module2->id]);
+        $this->assertFalse($result[$module2->id]['can_reveal']);
     }
 
     public function test_get_accessible_module_ids_returns_matching_modules(): void

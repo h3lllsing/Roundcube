@@ -7,6 +7,7 @@ use App\Http\Requests\StoreVpsRequest;
 use App\Http\Requests\UpdateVpsRequest;
 use App\Models\Vps;
 use App\Services\VpsService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use OpenApi\Attributes as OA;
 
@@ -34,12 +35,18 @@ class VpsController extends Controller
             ])),
         ]
     )]
-    public function index(Request $request): \Illuminate\Http\JsonResponse
+    public function index(Request $request): JsonResponse
     {
         $user = $request->user();
         $filters = $request->only(['module_id', 'search', 'status', 'per_page', 'sort_by', 'sort_order']);
-        if ($user->hasRole('super-admin') && $request->boolean('with_trashed')) $filters['with_trashed'] = true;
-        if (!$user->hasRole('super-admin')) $filters['user_id'] = $user->id;
+        if ($user->hasRole('super-admin') && $request->boolean('with_trashed')) {
+            $filters['with_trashed'] = true;
+        }
+        if (! $user->hasRole('super-admin')) {
+            $ids = $user->getAccessibleModuleIds('read');
+            $filters['accessible_module_ids'] = $ids ?: [0];
+        }
+
         return response()->json($this->vpsService->list($filters));
     }
 
@@ -63,7 +70,7 @@ class VpsController extends Controller
                 new OA\Property(property: 'start_date', type: 'string', format: 'date', nullable: true),
                 new OA\Property(property: 'expiry_date', type: 'string', format: 'date', nullable: true),
                 new OA\Property(property: 'status', type: 'string', default: 'active', enum: ['active', 'expired', 'cancelled']),
-                new OA\Property(property: 'notes', type: 'string', nullable: true),
+                new OA\Property(property: 'description', type: 'string', nullable: true),
                 new OA\Property(property: 'module_id', type: 'integer', nullable: true),
             ])
         ),
@@ -75,10 +82,21 @@ class VpsController extends Controller
             new OA\Response(response: 422, description: 'Validation error'),
         ]
     )]
-    public function store(StoreVpsRequest $request): \Illuminate\Http\JsonResponse
+    public function store(StoreVpsRequest $request): JsonResponse
     {
         $validated = $request->validated();
         $validated['user_id'] = $request->user()->id;
+        $user = $request->user();
+        if (!$user->hasRole('super-admin')) {
+            $moduleId = $validated['module_id'] ?? null;
+            abort_unless($moduleId && $user->canOnModule(\App\Models\Module::find($moduleId), 'create'), 403, 'Forbidden');
+        }
+        foreach (['login_ids', 'additional_ips'] as $field) {
+            if (isset($validated[$field]) && is_string($validated[$field])) {
+                $validated[$field] = json_decode($validated[$field], true);
+            }
+        }
+
         return $this->created($this->vpsService->create($validated), 'VPS created');
     }
 
@@ -97,13 +115,14 @@ class VpsController extends Controller
             new OA\Response(response: 404, description: 'Not found'),
         ]
     )]
-    public function show(Request $request, Vps $vps): \Illuminate\Http\JsonResponse
+    public function show(Request $request, Vps $vps): JsonResponse
     {
         $vps->load('module.feature', 'user');
         $user = $request->user();
-        if (!$user->hasRole('super-admin') && $vps->user_id !== $user->id) {
+        if (! $user->hasRole('super-admin') && $vps->user_id !== $user->id) {
             abort(403, 'Forbidden');
         }
+
         return $this->success($vps);
     }
 
@@ -130,7 +149,7 @@ class VpsController extends Controller
                 new OA\Property(property: 'start_date', type: 'string', format: 'date', nullable: true),
                 new OA\Property(property: 'expiry_date', type: 'string', format: 'date', nullable: true),
                 new OA\Property(property: 'status', type: 'string', enum: ['active', 'expired', 'cancelled']),
-                new OA\Property(property: 'notes', type: 'string', nullable: true),
+                new OA\Property(property: 'description', type: 'string', nullable: true),
                 new OA\Property(property: 'module_id', type: 'integer', nullable: true),
             ])
         ),
@@ -142,13 +161,27 @@ class VpsController extends Controller
             new OA\Response(response: 422, description: 'Validation error'),
         ]
     )]
-    public function update(UpdateVpsRequest $request, Vps $vps): \Illuminate\Http\JsonResponse
+    public function update(UpdateVpsRequest $request, Vps $vps): JsonResponse
     {
         $user = $request->user();
-        if (!$user->hasRole('super-admin') && $vps->user_id !== $user->id) {
+        if (! $user->hasRole('super-admin') && $vps->user_id !== $user->id) {
             abort(403, 'Forbidden');
         }
-        return $this->success($this->vpsService->update($vps, $request->validated()), 'VPS updated');
+        if (!$user->hasRole('super-admin') && $vps->module && !$user->canOnModule($vps->module, 'update')) {
+            abort(403, 'Forbidden');
+        }
+        $this->checkOptimisticLock($vps, $request);
+        $validated = $request->validated();
+        foreach (['login_ids', 'additional_ips'] as $field) {
+            if (isset($validated[$field]) && is_string($validated[$field])) {
+                $validated[$field] = json_decode($validated[$field], true);
+            }
+        }
+        if (empty($validated['password'])) {
+            unset($validated['password']);
+        }
+
+        return $this->success($this->vpsService->update($vps, $validated), 'VPS updated');
     }
 
     #[OA\Delete(
@@ -163,13 +196,17 @@ class VpsController extends Controller
             new OA\Response(response: 200, description: 'VPS deleted', content: new OA\JsonContent(ref: '#/components/schemas/MessageResponse')),
         ]
     )]
-    public function destroy(Request $request, Vps $vps): \Illuminate\Http\JsonResponse
+    public function destroy(Request $request, Vps $vps): JsonResponse
     {
         $user = $request->user();
-        if (!$user->hasRole('super-admin') && $vps->user_id !== $user->id) {
+        if (! $user->hasRole('super-admin') && $vps->user_id !== $user->id) {
+            abort(403, 'Forbidden');
+        }
+        if (!$user->hasRole('super-admin') && $vps->module && !$user->canOnModule($vps->module, 'delete')) {
             abort(403, 'Forbidden');
         }
         $this->vpsService->delete($vps);
+
         return $this->message('VPS deleted');
     }
 }

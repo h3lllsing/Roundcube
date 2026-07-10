@@ -2,14 +2,17 @@
 
 namespace App\Models;
 
+use App\Models\Role;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 
 class ModuleRolePermission extends Model
 {
-    use LogsActivity;
+    use HasFactory, LogsActivity, SoftDeletes;
 
     protected $fillable = [
         'module_id',
@@ -18,8 +21,10 @@ class ModuleRolePermission extends Model
         'can_read',
         'can_update',
         'can_delete',
-        'can_approve',
         'can_export',
+        'can_reveal',
+        'can_import',
+        'can_approve',
     ];
 
     protected function casts(): array
@@ -29,8 +34,10 @@ class ModuleRolePermission extends Model
             'can_read' => 'boolean',
             'can_update' => 'boolean',
             'can_delete' => 'boolean',
-            'can_approve' => 'boolean',
             'can_export' => 'boolean',
+            'can_reveal' => 'boolean',
+            'can_import' => 'boolean',
+            'can_approve' => 'boolean',
         ];
     }
 
@@ -40,18 +47,18 @@ class ModuleRolePermission extends Model
             ->logFillable()
             ->logOnlyDirty()
             ->dontSubmitEmptyLogs()
-            ->setDescriptionForEvent(fn(string $eventName) => "ModuleRolePermission for module {$this->module_id}, role {$this->role_id} {$eventName}");
+            ->setDescriptionForEvent(fn (string $eventName) => "ModuleRolePermission for module {$this->module_id}, role {$this->role_id} {$eventName}");
     }
 
-    /** @return BelongsTo<\App\Models\Module, $this> */
+    /** @return BelongsTo<Module, $this> */
     public function module(): BelongsTo
     {
         return $this->belongsTo(Module::class);
     }
 
-    /** @return BelongsTo<\HasinHayder\Tyro\Models\Role, $this> */
+    /** @return BelongsTo<Role, $this> */
     public function role(): BelongsTo
     {
-        return $this->belongsTo(\HasinHayder\Tyro\Models\Role::class);
+        return $this->belongsTo(Role::class);
     }
 }

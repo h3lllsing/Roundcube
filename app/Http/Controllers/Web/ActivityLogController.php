@@ -3,25 +3,34 @@
 namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
-use Spatie\Activitylog\Models\Activity;
+use App\Services\ActivityLogService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 
 class ActivityLogController extends Controller
 {
+    public function __construct(
+        private readonly ActivityLogService $activityLogService
+    ) {}
+
     public function index(Request $request): View
     {
-        $query = Activity::with('causer');
+        abort_unless(Auth::user()->hasRole('super-admin'), 403);
 
-        if ($request->filled('event')) {
-            $query->where('event', $request->event);
-        }
-        if ($request->filled('search')) {
-            $query->where('description', 'like', '%' . $request->search . '%');
-        }
+        $filters = $request->only(['event', 'search', 'causer_id', 'date_from', 'date_to']);
+        $activities = $this->activityLogService->paginate($filters);
+        $users = $this->activityLogService->getUsers();
 
-        $activities = $query->latest()->paginate(30);
+        return view('activity-logs.index', compact('activities', 'users'));
+    }
 
-        return view('activity-logs.index', compact('activities'));
+    public function show(int $id): View
+    {
+        abort_unless(Auth::user()->hasRole('super-admin'), 403);
+
+        $activity = $this->activityLogService->find($id);
+
+        return view('activity-logs.show', compact('activity'));
     }
 }

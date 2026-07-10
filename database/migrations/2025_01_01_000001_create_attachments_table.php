@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('attachments', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
             $table->string('notable_type')->nullable();
             $table->unsignedBigInteger('notable_id')->nullable();
             $table->string('filename');

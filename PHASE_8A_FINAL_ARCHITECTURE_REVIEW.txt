@@ -1,0 +1,504 @@
+PHASE 8A — REPORTING ARCHITECTURE — FINAL REVIEW
+==================================================
+
+Date: 2026-06-26
+Base: PHASE_8A_ENTERPRISE_REPORTING_MASTER_PLAN.txt
+Status: REFINEMENT — Applies adjustments to master plan. No implementation.
+
+================================================================================
+ADJUSTMENT 1 — MODULE-SPECIFIC REPORT CLASSES
+================================================================================
+
+Instead of a single monolithic ReportService with all definitions in one file,
+split definitions into per-module service classes. ReportService aggregates them.
+
+Before (master plan):
+    App\Services\ReportService  ← one class, all definitions inline
+
+After:
+
+    App\Reports\
+    ├── DomainReports.php
+    ├── HostingReports.php
+    ├── VpsReports.php
+    ├── AssetReports.php
+    ├── RenewalReports.php
+    ├── TaskReports.php
+    ├── UserReports.php
+    ├── VaultReports.php          ← reserved for Phase 8B
+    └── ActivityReports.php       ← reserved for Phase 8B
+
+    App\Services\ReportService    ← aggregates all *Reports classes
+
+Each class is a "report provider" with a consistent contract:
+
+    interface ReportProvider
+    {
+        /** @return array[] keyed by report key, each a report definition */
+        public function definitions(): array;
+    }
+
+Or simpler — a trait-free base pattern:
+
+    class DomainReports
+    {
+        public static function definitions(): array
+        {
+            return [
+                'domains.active' => [ ... ],
+                'domains.expiring' => [ ... ],
+                'domains.expired' => [ ... ],
+            ];
+        }
+    }
+
+ReportService scans all providers in a configured list:
+
+    class ReportService
+    {
+        private array $providers = [
+            DomainReports::class,
+            HostingReports::class,
+            VpsReports::class,
+            AssetReports::class,
+            RenewalReports::class,
+            TaskReports::class,
+            UserReports::class,
+            // VaultReports::class,      — Phase 8B
+            // ActivityReports::class,   — Phase 8B
+        ];
+
+        public function getDefinitions(): array
+        {
+            $all = [];
+            foreach ($this->providers as $provider) {
+                $all = array_merge($all, $provider::definitions());
+            }
+            return $all;
+        }
+    }
+
+Benefits:
+- Each file is focused (~30-60 lines).
+- New reports added by creating a new class and registering it.
+- No merge conflicts on a single giant array.
+- Easy to move reports between phases (just remove the provider registration).
+
+Each definition array retains the same structure from the master plan, with
+one addition: a 'provider' key that references the defining class for
+possible reverse lookup.
+
+================================================================================
+ADJUSTMENT 2 — DASHBOARD WIDGETS REUSE ReportService (NO GENERIC WIDGET)
+================================================================================
+
+Instead of a generic ReportsWidget, each dashboard widget calls
+ReportService directly to fetch its data.
+
+Pattern for a widget:
+
+    class ActiveDomainsWidget
+    {
+        public function render(): string
+        {
+            $report = app(ReportService::class)->run('domains.active', ['per_page' => 5]);
+            // $report['rows'] is a paginated collection of active domains
+            return view('dashboard.widgets.active_domains', [
+                'domains' => $report['rows'],
+            ])->render();
+        }
+    }
+
+Each widget:
+- Is a standalone class in App\Dashboard\Reports\.
+- Accepts a report key and optional limit via constructor or method.
+- Calls ReportService::run() with the appropriate filters.
+- Renders a small partial view (different from the full report view).
+- May include an inline link to the full report (e.g., "View all →").
+
+Widgets for MVP:
+
+    App\Dashboard\Reports\
+    ├── ActiveDomainsWidget.php         → report: domains.active, limit: 5
+    ├── ExpiringDomainsWidget.php       → report: domains.expiring, limit: 5
+    ├── ExpiredDomainsCountWidget.php   → report: domains.expired (count only)
+    ├── ActiveHostingWidget.php         → report: hosting.active, limit: 5
+    ├── ExpiringHostingWidget.php       → report: hosting.expiring, limit: 5
+    ├── ActiveVpsWidget.php             → report: vps.active, limit: 5
+    ├── RenewalsDueTodayWidget.php      → report: renewals.due_today, limit: 5
+    ├── RenewalsNext30Widget.php        → report: renewals.next_30, limit: 5
+    ├── RenewalsOverdueWidget.php       → report: renewals.overdue, limit: 5
+    ├── AssignedAssetsWidget.php        → report: assets.assigned, limit: 5
+    ├── AvailableAssetsWidget.php       → report: assets.available, limit: 5
+    ├── AssetsByDepartmentWidget.php    → report: assets.by_department (chart)
+    ├── PendingTasksWidget.php          → report: tasks.pending, limit: 5
+    ├── OverdueTasksWidget.php          → report: tasks.overdue, limit: 5
+    └── ActiveUsersWidget.php           → report: users.active (count only)
+
+Each widget deep-links to the full report page:
+    <a href="{{ route('reports.show', ['category' => 'domains', 'report' => 'active']) }}">
+      View Full Report →
+    </a>
+
+This satisfies Adjustment 7 (deep-link) without duplicating report logic.
+The widget uses the exact same query as the report, guaranteeing consistency.
+
+================================================================================
+ADJUSTMENT 3 — REDUCED MVP REPORT SCOPE
+================================================================================
+
+Master plan had 40+ reports across 13 categories. MVP reduces to 15 reports
+across 7 categories. Remaining reports defer to Phase 8B.
+
+MVP Reports:
+
+    DOMAINS (3 reports):
+      domains/active        → Domain::where('status', 'active')
+      domains/expiring      → Domain::where('status', 'active')
+                               ->where('expiry_date', '>=', now())
+                               ->where('expiry_date', '<=', now()->addDays(90))
+                               ->orderBy('expiry_date')
+      domains/expired       → Domain::where('status', 'expired')
+                               ->orWhere('expiry_date', '<', now())
+                               ->orderByDesc('expiry_date')
+
+    HOSTING (2 reports):
+      hosting/active        → Hosting::where('status', 'active')
+      hosting/expiring      → Hosting::where('status', 'active')
+                               ->where('expiry_date', '>=', now())
+                               ->where('expiry_date', '<=', now()->addDays(90))
+                               ->orderBy('expiry_date')
+
+    VPS (1 report):
+      vps/active            → Vps::where('status', 'active')
+
+    RENEWALS (3 reports):
+      renewals/today        → ExpiryTracker::whereDate('expiry_date', today())
+      renewals/next-30      → ExpiryTracker::whereBetween('expiry_date',
+                               [today(), today()->addDays(30)])
+                               ->orderBy('expiry_date')
+      renewals/overdue      → ExpiryTracker::where('expiry_date', '<', today())
+                               ->where('status', '!=', 'cancelled')
+                               ->orderByDesc('expiry_date')
+
+    ASSETS (3 reports):
+      assets/assigned       → Asset::where('status', 'assigned')
+      assets/available      → Asset::where('status', 'available')
+      assets/by-department  → Asset::selectRaw('department, count(*) as total')
+                               ->whereNotNull('department')
+                               ->groupBy('department')
+                               ->orderByDesc('total')
+
+    TASKS (2 reports):
+      tasks/pending         → Task::whereIn('status', ['pending', 'in_progress'])
+      tasks/overdue         → Task::whereIn('status', ['pending', 'in_progress'])
+                               ->where('due_date', '<', now())
+                               ->whereNotNull('due_date')
+                               ->orderBy('due_date')
+
+    USERS (1 report):
+      users/active          → User::whereNull('suspended_at')
+                               ->whereNull('deleted_at')
+
+Total: 15 reports. Total providers: 7 classes (one per category).
+
+Deferred to Phase 8B:
+    Domain Emails (all), VoIP (all), Other Services (all),
+    Login Audits (all), Activity Logs (all), Vault (all),
+    Domains (auto_renew, by_provider), Hosting (by_provider, by_ip),
+    VPS (by_vendor, by_department, by_location), Assets (lost, decommissioned,
+    by_user, by_category, by_location), Tasks (completed, by_user),
+    Users (suspended, by_role), Renewals (completed, failed_notifications).
+
+================================================================================
+ADJUSTMENT 4 — READABLE URL STRUCTURE
+================================================================================
+
+Before (master plan):
+    /reports/domains.active
+    /reports/domains.active/export/csv
+    route('reports.show', 'domains.active')
+
+After:
+    /reports/domains/active
+    /reports/domains/active/export/csv
+    route('reports.show', ['category' => 'domains', 'report' => 'active'])
+
+Route definition:
+
+    Route::prefix('reports')->name('reports.')->group(function () {
+        Route::get('/', [ReportController::class, 'index'])->name('index');
+        Route::get('{category}/{report}', [ReportController::class, 'show'])
+            ->name('show');
+        Route::get('{category}/{report}/export/{format}', [ReportController::class, 'export'])
+            ->whereIn('format', ['csv', 'xlsx'])
+            ->name('export');
+    });
+
+Report key construction:
+    Category slug + "/" + report slug.
+    The category maps to the module name (domains, hosting, vps, etc.).
+    The report slug is a kebab-case identifier (active, expiring, by-department, next-30, etc.).
+
+Inside ReportController:
+    The report key for ReportService is reconstructed as "{category}.{report}"
+    (dot notation) because dots are easier to work with in code and config
+    files. The URL uses slashes for readability.
+
+    public function show(string $category, string $report)
+    {
+        $key = str_replace('-', '_', $category . '.' . $report);
+        // e.g. "domains.active", "renewals.next_30", "assets.by_department"
+        // This keeps URL kebab-case while config uses snake_case.
+        ...
+    }
+
+Alternative: Keep the config key and URL segment identical since PHP
+doesn't mind hyphens in string keys:
+    config key: 'domains.active'
+    URL:        /reports/domains.active
+    (Decision: Use hyphens → config key: 'domains.active', URL: /reports/domains/active)
+
+URL examples:
+    /reports                          → index page
+    /reports/domains/active           → active domains table
+    /reports/domains/expiring         → expiring domains table
+    /reports/domains/expired          → expired domains table
+    /reports/hosting/active           → active hosting table
+    /reports/hosting/expiring         → expiring hosting table
+    /reports/vps/active               → active vps table
+    /reports/renewals/today           → renewals due today
+    /reports/renewals/next-30         → renewals next 30 days
+    /reports/renewals/overdue         → overdue renewals
+    /reports/assets/assigned          → assigned assets
+    /reports/assets/available         → available assets
+    /reports/assets/by-department     → assets by department
+    /reports/tasks/pending            → pending tasks
+    /reports/tasks/overdue            → overdue tasks
+    /reports/users/active             → active users
+
+================================================================================
+ADJUSTMENT 5 — SHARED ReportFilterBar COMPONENT
+================================================================================
+
+Create a reusable Blade component for report filters.
+
+    resources/views/components/report-filter-bar.blade.php
+
+Props:
+    action: string        (form action URL)
+    filters: array        (filter definitions from report config)
+    applied: array        (currently applied filter values)
+    sort_field: string    (current sort field)
+    sort_order: string    (current sort direction)
+
+Each filter definition:
+
+    [
+        'key' => 'status',
+        'type' => 'select',        // select | text | date_range | date_from | date_to
+        'label' => 'Status',
+        'options' => [             // for select type
+            'active' => 'Active',
+            'expired' => 'Expired',
+        ],
+        'placeholder' => 'All Statuses',
+    ]
+
+Component renders:
+    <form method="GET" action="{{ $action }}" class="flex flex-wrap gap-3 items-end">
+        @foreach ($filters as $filter)
+            @if ($filter['type'] === 'select')
+                <select name="{{ $filter['key'] }}">
+                    <option value="">{{ $filter['placeholder'] ?? 'All' }}</option>
+                    @foreach ($filter['options'] as $val => $label)
+                        <option value="{{ $val }}" @selected(($applied[$filter['key']] ?? '') === $val)>
+                            {{ $label }}
+                        </option>
+                    @endforeach
+                </select>
+            @elseif ($filter['type'] === 'text')
+                <input type="text" name="{{ $filter['key'] }}" placeholder="{{ $filter['placeholder'] ?? '' }}"
+                       value="{{ $applied[$filter['key']] ?? '' }}">
+            @elseif ($filter['type'] === 'date_range')
+                <input type="date" name="{{ $filter['key'] }}_from" value="{{ $applied[$filter['key'].'_from'] ?? '' }}">
+                <input type="date" name="{{ $filter['key'] }}_to" value="{{ $applied[$filter['key'].'_to'] ?? '' }}">
+            @endif
+        @endforeach
+        <button type="submit">Apply Filters</button>
+        <a href="{{ $action }}">Clear</a>
+    </form>
+
+Each report show view includes:
+    <x-report-filter-bar
+        :action="route('reports.show', ['category' => $category, 'report' => $report])"
+        :filters="$reportDef['filters']"
+        :applied="$applied"
+    />
+
+This avoids duplicating filter markup across 15+ report views.
+
+================================================================================
+ADJUSTMENT 6 — EXPORT PRIORITIES
+================================================================================
+
+Primary exports (both required):
+    CSV   — always available, no packages needed
+    XLSX  — via PhpSpreadsheet if already installed, or openspout/openspout
+
+Secondary (optional):
+    PDF   — only if DomPDF is already in the project
+
+Implementation:
+
+    $format = $request->route('format'); // 'csv' or 'xlsx'
+    $rows = $reportService->exportQuery(...); // all rows, no pagination
+    $filename = Str::slug($reportDef['label']) . '_' . now()->format('Y-m-d');
+
+    match ($format) {
+        'csv' => $this->exportCsv($rows, $reportDef['columns'], $filename),
+        'xlsx' => $this->exportXlsx($rows, $reportDef['columns'], $filename),
+    };
+
+CSV export method:
+    return response()->streamDownload(function () use ($rows, $columns) {
+        $handle = fopen('php://output', 'w');
+        fprintf($handle, chr(0xEF) . chr(0xBB) . chr(0xBF)); // UTF-8 BOM
+        fputcsv($handle, array_column($columns, 'label'));
+        foreach ($rows as $row) {
+            fputcsv($handle, array_map(fn($c) => $row[$c['key']] ?? '', $columns));
+        }
+        fclose($handle);
+    }, $filename . '.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
+
+XLSX export method (if maatwebsite/laravel-excel is available):
+    return Excel::download(new ReportExport($rows, $columns), $filename . '.xlsx');
+
+XLSX export method (if only openspout):
+    use OpenSpout\Writer\XLSX\Writer;
+    $writer = new Writer();
+    $writer->openToBrowser($filename . '.xlsx');
+    $writer->addRow(array_column($columns, 'label'));
+    foreach ($rows as $row) {
+        $writer->addRow(array_map(fn($c) => $row[$c['key']] ?? '', $columns));
+    }
+    $writer->close();
+
+If neither package is available, CSV is the only MVP export. XLSX and PDF
+become future enhancements.
+
+================================================================================
+ADJUSTMENT 7 — DASHBOARD WIDGETS DEEP-LINK TO REPORTS
+================================================================================
+
+Every dashboard widget that displays report data includes a prominent
+link to the full report page. This avoids duplicating report logic.
+
+Widget footer:
+    <div class="mt-2 text-right">
+        <a href="{{ route('reports.show', ['category' => 'domains', 'report' => 'active']) }}"
+           class="text-xs text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 font-medium">
+            View Full Report →
+        </a>
+    </div>
+
+Route for link:
+    route('reports.show', ['category' => $reportCategory, 'report' => $reportSlug])
+
+The widget passes the exact same parameters as the report URL, ensuring
+the user lands on the correct page with matching data.
+
+Widgets that show a subset of data (e.g., "Top 5 Active Domains"):
+    - Query: same as the full report, but with ->limit(5).
+    - The ReportService::run() method accepts an optional 'per_page' or 'limit'
+      parameter in the filters array.
+    - No separate query logic in the widget — it calls the same report.
+
+This guarantees consistency between dashboard snippets and full reports.
+
+================================================================================
+UPDATED FILE STRUCTURE
+================================================================================
+
+After applying all 7 adjustments:
+
+    app/
+    ├── Reports/
+    │   ├── DomainReports.php
+    │   ├── HostingReports.php
+    │   ├── VpsReports.php
+    │   ├── AssetReports.php
+    │   ├── RenewalReports.php
+    │   ├── TaskReports.php
+    │   └── UserReports.php
+    ├── Services/
+    │   └── ReportService.php
+    ├── Http/Controllers/Web/
+    │   └── ReportController.php
+    └── Dashboard/Reports/
+        ├── ActiveDomainsWidget.php
+        ├── ExpiringDomainsWidget.php
+        ├── ExpiredDomainsCountWidget.php
+        ├── ActiveHostingWidget.php
+        ├── ExpiringHostingWidget.php
+        ├── ActiveVpsWidget.php
+        ├── RenewalsDueTodayWidget.php
+        ├── RenewalsNext30Widget.php
+        ├── RenewalsOverdueWidget.php
+        ├── AssignedAssetsWidget.php
+        ├── AvailableAssetsWidget.php
+        ├── AssetsByDepartmentWidget.php
+        ├── PendingTasksWidget.php
+        ├── OverdueTasksWidget.php
+        └── ActiveUsersWidget.php
+
+    resources/views/
+    ├── reports/
+    │   ├── index.blade.php
+    │   └── show.blade.php
+    └── components/
+        └── report-filter-bar.blade.php
+
+    tests/Feature/
+    └── ReportsTest.php
+
+No new tables. No migrations. No package additions for MVP.
+CSV export requires no packages. XLSX export may require a package check.
+
+================================================================================
+IMPLEMENTATION ORDER (UPDATED)
+================================================================================
+
+Step 1: Create App\Reports\* provider classes (7 files, ~30-60 lines each).
+Step 2: Create App\Services\ReportService (aggregates providers, run/export methods).
+Step 3: Create resources/views/components/report-filter-bar.blade.php.
+Step 4: Create App\Http\Controllers\Web\ReportController (index, show, export).
+Step 5: Create routes (reports.index, reports.show, reports.export).
+Step 6: Create views (reports/index.blade.php, reports/show.blade.php).
+Step 7: Add "Reports" navigation menu item.
+Step 8: Create App\Dashboard\Reports\* widgets (15 files).
+Step 9: Register widgets in Dashboard configuration.
+Step 10: Update GlobalSearchService to search report names (model => null handler).
+Step 11: Create tests/Feature/ReportsTest.php (~20 tests).
+Step 12: Run full suite, create implementation report.
+
+================================================================================
+SUMMARY OF CHANGES FROM MASTER PLAN
+================================================================================
+
+| Aspect                  | Master Plan              | Final Review                   |
+|-------------------------|--------------------------|--------------------------------|
+| Report definitions      | Single ReportService     | 7 provider classes + Service   |
+| Dashboard widgets       | Generic ReportsWidget    | Per-report widgets calling     |
+|                         |                          | ReportService directly         |
+| MVP report count        | 40+                      | 15                             |
+| URL structure           | /reports/{key} (dot)     | /reports/{category}/{report}   |
+| Filter bar              | Inline in each view      | Shared component               |
+| Export formats          | CSV/XLSX/PDF             | CSV required, XLSX primary,    |
+|                         |                          | PDF optional                   |
+| Widget logic            | Embedded in widget       | Delegates to ReportService,    |
+|                         |                          | deep-links to full report      |
+
+================================================================================
+END OF PHASE 8A — REPORTING ARCHITECTURE FINAL REVIEW
+================================================================================

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Database\Factories\VaultEntryFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -9,11 +10,12 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Crypt;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
+use RuntimeException;
 
 class VaultEntry extends Model
 {
-    /** @use HasFactory<\Database\Factories\VaultEntryFactory> */
-    use HasFactory, SoftDeletes, LogsActivity;
+    /** @use HasFactory<VaultEntryFactory> */
+    use HasFactory, LogsActivity, SoftDeletes;
 
     protected $table = 'password_vault';
 
@@ -23,11 +25,27 @@ class VaultEntry extends Model
         'service_name',
         'service_url',
         'username',
-        'encrypted_password',
         'description',
     ];
 
     protected $hidden = ['encrypted_password'];
+
+    protected function casts(): array
+    {
+        return [
+            'created_at' => 'datetime',
+            'updated_at' => 'datetime',
+        ];
+    }
+
+    protected static function booted(): void
+    {
+        static::creating(function (self $vaultEntry) {
+            if (empty($vaultEntry->getAttribute('encrypted_password'))) {
+                throw new RuntimeException('VaultEntry requires an encrypted password on creation. Call encryptPassword() first.');
+            }
+        });
+    }
 
     /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo
@@ -45,6 +63,7 @@ class VaultEntry extends Model
     {
         try {
             $decrypted = $this->decryptPassword();
+
             return str_repeat('•', max(6, strlen($decrypted)));
         } catch (\Exception $e) {
             return '••••••';
@@ -62,12 +81,8 @@ class VaultEntry extends Model
         if (empty($value)) {
             throw new \RuntimeException('Encrypted password is empty');
         }
-        return Crypt::decryptString($value);
-    }
 
-    public function setEncryptedPasswordAttribute(mixed $value): void
-    {
-        $this->attributes['encrypted_password'] = $value;
+        return Crypt::decryptString($value);
     }
 
     public function getActivitylogOptions(): LogOptions
@@ -75,6 +90,7 @@ class VaultEntry extends Model
         return LogOptions::defaults()
             ->logFillable()
             ->logOnlyDirty()
-            ->dontSubmitEmptyLogs();
+            ->dontSubmitEmptyLogs()
+            ->dontLogIfAttributesChangedOnly(['encrypted_password']);
     }
 }

@@ -1,0 +1,155 @@
+PHASE 7B — ENTERPRISE GLOBAL SEARCH — IMPLEMENTATION REPORT
+===========================================================
+
+Date: 2026-06-26
+Status: COMPLETE
+
+1. SEARCH ENGINE
+----------------
+
+File: app/Services/GlobalSearchService.php (new)
+- 15 searchable modules configured (Domains, Hosting, VPS, VoIP, Domain Emails,
+  Other Services, Service Providers, Renewals, Assets, Tasks, Vault, Notes,
+  Features, Modules, Users, SMTP Profiles)
+- Multi-column LIKE '%term%' per module (no raw MySQL)
+- Ownership scoping:
+  - sa_only (Features, Modules, Users, SMTP Profiles) — hidden from non-admin
+  - user (Notes) — only own records
+  - user_or_module (Domains, Hosting, VPS, etc.) — own records or module-accessible
+  - task (Tasks) — in accessible modules or assigned to user
+- Relevance ordering: Exact Match (3) → Starts With (2) → Contains (1)
+- Max 5 results per module, max 50 total
+- 6 filters: All, Services, Assets, Tasks, Vault, Users
+- searchForApi() returns indexed array groups for JSON API
+- SQLite-safe, no Redis, no Scout, no migrations
+
+2. SEARCH HELPER
+----------------
+
+File: app/Helpers/SearchHelper.php (new)
+- static highlight(): wraps matching portions in <mark class="bg-amber-200...">
+- Case-insensitive matching, preserves original case
+- Returns raw HTML string for use with {!! !!} in Blade
+
+3. API SEARCH CONTROLLER
+------------------------
+
+File: app/Http/Controllers/Api/SearchController.php (refactored)
+- Delegates to GlobalSearchService
+- 60s per-user cache (keyed by user_id + query hash + filter + limit)
+- Throttled (search limiter + api limiter)
+- Accepts: q (required, min 2 chars), filter (default: all), limit (default: 5, max: 20)
+- Returns: { data: [{ key, label, url, items }] }
+- Swagger/OpenAPI annotations preserved
+
+4. WEB SEARCH CONTROLLER
+------------------------
+
+File: app/Http/Controllers/Web/SearchController.php (refactored)
+- Delegates to GlobalSearchService
+- Accepts: q, filter
+- Returns search/index view with grouped results
+
+5. SEARCH VIEW
+--------------
+
+File: resources/views/search/index.blade.php (rewritten)
+- Filter buttons row (All / Services / Assets / Tasks / Vault / Users)
+- Active filter highlighted (bg-indigo-100)
+- Per-module color-coded badges with status mapping:
+  - active → green, pending → yellow, expired → red, in_progress → blue
+  - cancelled → gray, decommissioned → gray, suspended → orange
+- Highlighted titles via {!! $item['title_highlighted'] !!}
+- "View all →" link with pre-filtered module index (e.g., /domains?search=term)
+- Empty state with search icon + message
+- Min 2-character enforcement with user-friendly message
+
+6. CTRL+K COMMAND PALETTE
+-------------------------
+
+File: resources/views/layouts/admin.blade.php (enhanced)
+- Placeholder changed to "Search pages and records..."
+- AJAX integration: fetches /api/search?q=...&limit=3 with 300ms debounce
+- AbortController on rapid input (no stale requests)
+- Two sections: "Records" (top) and "Pages" (bottom), separated by divider
+- Per-module color-coded badges (same palette as search view)
+- Keyboard navigation: ↑↓, Enter, Esc, Tab
+- Mouse hover highlighting synchronized with keyboard index
+- Empty state differentiates "Type to search" vs "No pages or records found"
+
+7. TESTS
+--------
+
+File: tests/Feature/GlobalSearchTest.php (new, 33 tests)
+- test_requires_authentication
+- test_requires_minimum_two_characters
+- test_super_admin_sees_all_records_across_modules
+- test_non_admin_only_sees_own_records
+- test_non_admin_cannot_see_sa_only_modules
+- test_super_admin_sees_sa_only_modules
+- test_non_admin_notes_scoped_to_own
+- test_non_admin_sees_own_vault_entries
+- test_non_admin_sees_vault_in_accessible_module
+- test_non_admin_sees_tasks_in_accessible_module
+- test_filter_services_returns_only_service_modules
+- test_filter_assets_returns_only_assets
+- test_filter_tasks_returns_only_tasks
+- test_filter_vault_returns_only_vault
+- test_filter_users_returns_only_users
+- test_relevance_ordering_exact_match_first
+- test_relevance_ordering_starts_with_before_contains
+- test_max_five_per_module
+- test_limit_parameter_respected
+- test_highlighting_in_title
+- test_highlighting_helper
+- test_highlighting_case_insensitive
+- test_no_results_returns_empty_data
+- test_web_search_page_loads
+- test_web_search_with_filter
+- test_web_search_short_query
+- test_web_search_non_admin
+- test_web_search_shows_results
+- test_service_returns_empty_for_short_query
+- test_service_returns_results_for_valid_query
+- test_service_search_for_api_returns_groups
+- test_badge_value_present_in_results
+- test_search_matches_subtitle_column
+
+File: tests/Feature/SearchTest.php (12 existing tests, refactored for new API format)
+- All tests updated to work with indexed array groups (collect + firstWhere)
+
+File: tests/Feature/WebNewResourcesTest.php (1 test fixed)
+- test_search_returns_results: assertSee updated to match unbroken substring
+
+8. FINAL TEST RESULTS
+---------------------
+
+Full suite: 1810 tests, 4568 assertions — 0 failures, 0 errors, 0 risky
+  (includes 33 new GlobalSearchTest + 12 refactored SearchTest)
+
+9. BUG FIXES DURING IMPLEMENTATION
+-----------------------------------
+
+- Fixed isNotEmpty() on array error in GlobalSearchService::applyOwnership
+  (getAccessibleModuleIds returns array, not Collection)
+- Fixed search() to pass $limit parameter through to searchModule()
+  (limit query param was accepted but ignored)
+- Fixed Domain factory FK constraint in tests (non-existent module_id 9999)
+- Fixed search view assertSee assertions broken by <mark> highlighting tags
+
+10. FILES CHANGED/CREATED
+-------------------------
+
+NEW:
+  app/Services/GlobalSearchService.php
+  app/Helpers/SearchHelper.php
+  tests/Feature/GlobalSearchTest.php
+  PHASE_7B_GLOBAL_SEARCH_IMPLEMENTATION_REPORT.txt
+
+MODIFIED:
+  app/Http/Controllers/Api/SearchController.php
+  app/Http/Controllers/Web/SearchController.php
+  resources/views/search/index.blade.php
+  resources/views/layouts/admin.blade.php
+  tests/Feature/SearchTest.php
+  tests/Feature/WebNewResourcesTest.php

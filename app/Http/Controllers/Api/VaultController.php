@@ -5,8 +5,10 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreVaultRequest;
 use App\Http\Requests\UpdateVaultRequest;
+use App\Models\Module;
 use App\Models\VaultEntry;
 use App\Services\VaultService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use OpenApi\Attributes as OA;
 
@@ -15,6 +17,33 @@ class VaultController extends Controller
     public function __construct(
         private readonly VaultService $vaultService
     ) {}
+
+    #[OA\Get(
+        path: '/my-vault',
+        summary: 'List current user\'s vault entries (password always masked)',
+        security: [['sanctum' => []]],
+        tags: ['Password Vault'],
+        parameters: [
+            new OA\Parameter(name: 'search', in: 'query', schema: new OA\Schema(type: 'string')),
+            new OA\Parameter(name: 'sort_by', in: 'query', required: false, schema: new OA\Schema(type: 'string', enum: ['service_name', 'created_at', 'updated_at', 'username'])),
+            new OA\Parameter(name: 'sort_order', in: 'query', required: false, schema: new OA\Schema(type: 'string', enum: ['asc', 'desc'])),
+            new OA\Parameter(name: 'per_page', in: 'query', schema: new OA\Schema(type: 'integer', default: 20)),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Paginated vault entries (password masked)', content: new OA\JsonContent(properties: [
+                new OA\Property(property: 'data', type: 'array', items: new OA\Items(ref: '#/components/schemas/VaultData')),
+            ])),
+        ]
+    )]
+    public function myVault(Request $request): JsonResponse
+    {
+        $filters = $request->only(['search', 'per_page', 'sort_by', 'sort_order']);
+        $filters['user_id'] = $request->user()->id;
+
+        $entries = $this->vaultService->list($filters);
+
+        return response()->json($entries);
+    }
 
     #[OA\Get(
         path: '/vault',
@@ -35,7 +64,7 @@ class VaultController extends Controller
             ])),
         ]
     )]
-    public function index(Request $request): \Illuminate\Http\JsonResponse
+    public function index(Request $request): JsonResponse
     {
         $user = $request->user();
         $filters = $request->only(['module_id', 'search', 'per_page', 'sort_by', 'sort_order']);
@@ -44,8 +73,8 @@ class VaultController extends Controller
             $filters['with_trashed'] = true;
         }
 
-        if (!$user->hasRole('super-admin')) {
-            $accessibleModuleIds = \App\Models\Module::whereHas('rolePermissions', function ($q) use ($user) {
+        if (! $user->hasRole('super-admin')) {
+            $accessibleModuleIds = Module::whereHas('rolePermissions', function ($q) use ($user) {
                 $q->whereIn('role_id', $user->roles()->pluck('roles.id'))->where('can_read', true);
             })->pluck('id');
             $filters['accessible_module_ids'] = $accessibleModuleIds;
@@ -53,6 +82,7 @@ class VaultController extends Controller
         }
 
         $entries = $this->vaultService->list($filters);
+
         return response()->json($entries);
     }
 
@@ -80,11 +110,16 @@ class VaultController extends Controller
             new OA\Response(response: 422, description: 'Validation error'),
         ]
     )]
-    public function store(StoreVaultRequest $request): \Illuminate\Http\JsonResponse
+    public function store(StoreVaultRequest $request): JsonResponse
     {
         $validated = $request->validated();
 
         $validated['user_id'] = $request->user()->id;
+        $user = $request->user();
+        if (!$user->hasRole('super-admin')) {
+            $moduleId = $validated['module_id'] ?? null;
+            abort_unless($moduleId && $user->canOnModule(Module::find($moduleId), 'create'), 403, 'Forbidden');
+        }
 
         $entry = $this->vaultService->create($validated);
 
@@ -106,12 +141,13 @@ class VaultController extends Controller
             new OA\Response(response: 404, description: 'Not found'),
         ]
     )]
-    public function show(Request $request, VaultEntry $vault): \Illuminate\Http\JsonResponse
+    public function show(Request $request, VaultEntry $vault): JsonResponse
     {
-        if (!$request->user()->canAccessVault($vault)) {
+        if (! $request->user()->canAccessVault($vault)) {
             return $this->message('Forbidden', 403);
         }
         $vault->load('module.feature', 'user');
+
         return $this->success($vault->append('password_masked'));
     }
 
@@ -130,12 +166,12 @@ class VaultController extends Controller
             new OA\Response(response: 404, description: 'Not found'),
         ]
     )]
-    public function reveal(Request $request, VaultEntry $vault): \Illuminate\Http\JsonResponse
+    public function reveal(Request $request, VaultEntry $vault): JsonResponse
     {
-        if (!$request->user()->canAccessVault($vault)) {
-            abort(403, 'Forbidden');
-        }
-        $password = $this->vaultService->reveal($vault, $request->user());
+        $user = $request->user();
+        abort_unless($user->hasRole('super-admin') || ($vault->module && $user->canOnModule($vault->module, 'reveal')), 403);
+        $password = $this->vaultService->reveal($vault, $user);
+
         return $this->success([
             'id' => $vault->id,
             'service_name' => $vault->service_name,
@@ -171,14 +207,19 @@ class VaultController extends Controller
             new OA\Response(response: 422, description: 'Validation error'),
         ]
     )]
-    public function update(UpdateVaultRequest $request, VaultEntry $vault): \Illuminate\Http\JsonResponse
+    public function update(UpdateVaultRequest $request, VaultEntry $vault): JsonResponse
     {
-        if (!$request->user()->isVaultOwner($vault)) {
+        if (! $request->user()->isVaultOwner($vault)) {
             return $this->message('Forbidden', 403);
         }
-        $validated = $request->validated();
+        $user = $request->user();
+        if (!$user->hasRole('super-admin') && $vault->module && !$user->canOnModule($vault->module, 'update')) {
+            abort(403, 'Forbidden');
+        }
+    $this->checkOptimisticLock($vault, $request);
+    $validated = $request->validated();
 
-        $entry = $this->vaultService->update($vault, $validated);
+    $entry = $this->vaultService->update($vault, $validated);
 
         return $this->success($entry->append('password_masked'), 'Vault entry updated');
     }
@@ -195,12 +236,17 @@ class VaultController extends Controller
             new OA\Response(response: 200, description: 'Vault entry deleted', content: new OA\JsonContent(ref: '#/components/schemas/MessageResponse')),
         ]
     )]
-    public function destroy(Request $request, VaultEntry $vault): \Illuminate\Http\JsonResponse
+    public function destroy(Request $request, VaultEntry $vault): JsonResponse
     {
-        if (!$request->user()->isVaultOwner($vault)) {
+        if (! $request->user()->isVaultOwner($vault)) {
             return $this->message('Forbidden', 403);
         }
+        $user = $request->user();
+        if (!$user->hasRole('super-admin') && $vault->module && !$user->canOnModule($vault->module, 'delete')) {
+            abort(403, 'Forbidden');
+        }
         $this->vaultService->delete($vault);
+
         return $this->message('Vault entry deleted');
     }
 }

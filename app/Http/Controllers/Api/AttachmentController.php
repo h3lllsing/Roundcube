@@ -6,9 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreAttachmentRequest;
 use App\Models\Attachment;
 use App\Services\AttachmentService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use OpenApi\Attributes as OA;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class AttachmentController extends Controller
 {
@@ -47,28 +49,29 @@ class AttachmentController extends Controller
             ])),
         ]
     )]
-    public function store(StoreAttachmentRequest $request): \Illuminate\Http\JsonResponse
+    public function store(StoreAttachmentRequest $request): JsonResponse
     {
         $validated = $request->validated();
         $user = $request->user();
 
         $notable = null;
-        if (!empty($validated['notable_type']) && !empty($validated['notable_id'])) {
-            if (!in_array($validated['notable_type'], $this->allowedNotableTypes)) {
+        if (! empty($validated['notable_type']) && ! empty($validated['notable_id'])) {
+            if (! in_array($validated['notable_type'], $this->allowedNotableTypes)) {
                 return $this->message('Invalid notable_type', 422);
             }
             $modelClass = $validated['notable_type'];
             $notable = $modelClass::find($validated['notable_id']);
-            if (!$notable) {
+            if (! $notable) {
                 return $this->message('Notable entity not found', 404);
             }
-            if (!$user->hasRole('super-admin') && isset($notable->user_id) && $notable->user_id !== $user->id) {
+            if (! $user->hasRole('super-admin') && isset($notable->user_id) && $notable->user_id !== $user->id) {
                 return $this->message('Forbidden', 403);
             }
         }
 
         $validated['user_id'] = $user->id;
         $attachment = $this->attachmentService->create($validated, $notable);
+
         return $this->created($attachment, 'Attachment uploaded');
     }
 
@@ -91,29 +94,35 @@ class AttachmentController extends Controller
             ])),
         ]
     )]
-    public function index(Request $request): \Illuminate\Http\JsonResponse
+    public function index(Request $request): JsonResponse
     {
         $user = $request->user();
         $notable = null;
         $filters = $request->only(['search', 'per_page', 'sort_by', 'sort_order']);
 
+        $request->validate([
+            'notable_type' => 'nullable|string|in:' . implode(',', $this->allowedNotableTypes),
+            'notable_id' => 'nullable|integer|min:1',
+        ]);
+
         if ($request->filled('notable_type') && $request->filled('notable_id')) {
-            if (!in_array($request->input('notable_type'), $this->allowedNotableTypes)) {
+            if (! in_array($request->input('notable_type'), $this->allowedNotableTypes)) {
                 return $this->message('Invalid notable_type', 422);
             }
             $modelClass = $request->input('notable_type');
             $notable = $modelClass::find($request->input('notable_id'));
-            if (!$notable) {
+            if (! $notable) {
                 return $this->message('Notable entity not found', 404);
             }
-            if (!$user->hasRole('super-admin') && isset($notable->user_id) && $notable->user_id !== $user->id) {
+            if (! $user->hasRole('super-admin') && isset($notable->user_id) && $notable->user_id !== $user->id) {
                 return $this->message('Forbidden', 403);
             }
-        } elseif (!$user->hasRole('super-admin')) {
+        } elseif (! $user->hasRole('super-admin')) {
             $filters['user_id'] = $user->id;
         }
 
         $attachments = $this->attachmentService->listFor($notable, $filters);
+
         return response()->json($attachments);
     }
 
@@ -131,13 +140,14 @@ class AttachmentController extends Controller
             ])),
         ]
     )]
-    public function show(Request $request, Attachment $attachment): \Illuminate\Http\JsonResponse
+    public function show(Request $request, Attachment $attachment): JsonResponse
     {
         $user = $request->user();
-        if (!$user->hasRole('super-admin') && $attachment->user_id !== $user->id) {
+        if (! $user->hasRole('super-admin') && $attachment->user_id !== $user->id) {
             return $this->message('Forbidden', 403);
         }
         $attachment->load('user');
+
         return $this->success($attachment);
     }
 
@@ -153,13 +163,14 @@ class AttachmentController extends Controller
             new OA\Response(response: 200, description: 'File download'),
         ]
     )]
-    public function download(Request $request, Attachment $attachment): \Symfony\Component\HttpFoundation\StreamedResponse|\Illuminate\Http\JsonResponse
+    public function download(Request $request, Attachment $attachment): StreamedResponse|JsonResponse
     {
         $user = $request->user();
-        if (!$user->hasRole('super-admin') && $attachment->user_id !== $user->id) {
+        if (! $user->hasRole('super-admin') && $attachment->user_id !== $user->id) {
             return $this->message('Forbidden', 403);
         }
-        return Storage::disk('public')->download('attachments/' . $attachment->filename, $attachment->original_name);
+
+        return Storage::disk('public')->download('attachments/'.$attachment->filename, $attachment->original_name);
     }
 
     #[OA\Delete(
@@ -174,14 +185,15 @@ class AttachmentController extends Controller
             new OA\Response(response: 200, description: 'Attachment deleted', content: new OA\JsonContent(ref: '#/components/schemas/MessageResponse')),
         ]
     )]
-    public function destroy(Request $request, Attachment $attachment): \Illuminate\Http\JsonResponse
+    public function destroy(Request $request, Attachment $attachment): JsonResponse
     {
         $user = $request->user();
-        if (!$user->hasRole('super-admin') && $attachment->user_id !== $user->id) {
+        if (! $user->hasRole('super-admin') && $attachment->user_id !== $user->id) {
             return $this->message('Forbidden', 403);
         }
 
         $this->attachmentService->delete($attachment);
+
         return $this->message('Attachment deleted');
     }
 }

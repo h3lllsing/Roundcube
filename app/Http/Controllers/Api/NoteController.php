@@ -8,6 +8,7 @@ use App\Models\Feature;
 use App\Models\Module;
 use App\Models\Note;
 use App\Services\NoteService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use OpenApi\Attributes as OA;
 
@@ -35,12 +36,13 @@ class NoteController extends Controller
             ])),
         ]
     )]
-    public function storeGlobal(StoreNoteRequest $request): \Illuminate\Http\JsonResponse
+    public function storeGlobal(StoreNoteRequest $request): JsonResponse
     {
         $validated = $request->validated();
         $validated['user_id'] = $request->user()->id;
 
         $note = $this->noteService->create($validated);
+
         return $this->created($note, 'Note created');
     }
 
@@ -65,16 +67,17 @@ class NoteController extends Controller
             ])),
         ]
     )]
-    public function storeForFeature(StoreNoteRequest $request, Feature $feature): \Illuminate\Http\JsonResponse
+    public function storeForFeature(StoreNoteRequest $request, Feature $feature): JsonResponse
     {
         $user = $request->user();
-        if (!$user->hasRole('super-admin') && !$feature->modules()->whereHas('rolePermissions', fn($q) => $q->whereIn('role_id', $user->roles()->pluck('roles.id'))->where('can_read', true))->exists()) {
+        if (! $user->hasRole('super-admin') && ! $feature->modules()->whereHas('rolePermissions', fn ($q) => $q->whereIn('role_id', $user->roles()->pluck('roles.id'))->where('can_read', true))->exists()) {
             return $this->message('Forbidden', 403);
         }
         $validated = $request->validated();
         $validated['user_id'] = $user->id;
 
         $note = $this->noteService->create($validated, $feature);
+
         return $this->created($note, 'Note created');
     }
 
@@ -99,16 +102,17 @@ class NoteController extends Controller
             ])),
         ]
     )]
-    public function storeForModule(StoreNoteRequest $request, Module $module): \Illuminate\Http\JsonResponse
+    public function storeForModule(StoreNoteRequest $request, Module $module): JsonResponse
     {
         $user = $request->user();
-        if (!$user->hasRole('super-admin') && !$user->canOnModule($module, 'read')) {
+        if (! $user->hasRole('super-admin') && ! $user->canOnModule($module, 'read')) {
             return $this->message('Forbidden', 403);
         }
         $validated = $request->validated();
         $validated['user_id'] = $user->id;
 
         $note = $this->noteService->create($validated, $module);
+
         return $this->created($note, 'Note created');
     }
 
@@ -129,13 +133,14 @@ class NoteController extends Controller
             ])),
         ]
     )]
-    public function globalNotes(Request $request): \Illuminate\Http\JsonResponse
+    public function globalNotes(Request $request): JsonResponse
     {
         $filters = $request->only(['search', 'per_page', 'sort_by', 'sort_order']);
-        if (!$request->user()->hasRole('super-admin')) {
+        if (! $request->user()->hasRole('super-admin')) {
             $filters['user_id'] = $request->user()->id;
         }
         $notes = $this->noteService->listFor(null, $filters);
+
         return response()->json($notes);
     }
 
@@ -157,13 +162,14 @@ class NoteController extends Controller
             ])),
         ]
     )]
-    public function featureNotes(Request $request, Feature $feature): \Illuminate\Http\JsonResponse
+    public function featureNotes(Request $request, Feature $feature): JsonResponse
     {
         $user = $request->user();
-        if (!$user->hasRole('super-admin') && !$feature->modules()->whereHas('rolePermissions', fn($q) => $q->whereIn('role_id', $user->roles()->pluck('roles.id'))->where('can_read', true))->exists()) {
+        if (! $user->hasRole('super-admin') && ! $feature->modules()->whereHas('rolePermissions', fn ($q) => $q->whereIn('role_id', $user->roles()->pluck('roles.id'))->where('can_read', true))->exists()) {
             return $this->message('Forbidden', 403);
         }
         $notes = $this->noteService->listFor($feature, $request->only(['search', 'per_page', 'sort_by', 'sort_order']));
+
         return response()->json($notes);
     }
 
@@ -185,14 +191,85 @@ class NoteController extends Controller
             ])),
         ]
     )]
-    public function moduleNotes(Request $request, Module $module): \Illuminate\Http\JsonResponse
+    public function moduleNotes(Request $request, Module $module): JsonResponse
     {
         $user = $request->user();
-        if (!$user->hasRole('super-admin') && !$user->canOnModule($module, 'read')) {
+        if (! $user->hasRole('super-admin') && ! $user->canOnModule($module, 'read')) {
             return $this->message('Forbidden', 403);
         }
         $notes = $this->noteService->listFor($module, $request->only(['search', 'per_page', 'sort_by', 'sort_order']));
+
         return response()->json($notes);
+    }
+
+    #[OA\Get(
+        path: '/notes/{id}',
+        summary: 'Get a single note by ID',
+        security: [['sanctum' => []]],
+        tags: ['Notes'],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Note details', content: new OA\JsonContent(ref: '#/components/schemas/NoteData')),
+            new OA\Response(response: 404, description: 'Not found'),
+        ]
+    )]
+    public function show(Request $request, Note $note): JsonResponse
+    {
+        $user = $request->user();
+        if (! $user->hasRole('super-admin') && $note->user_id !== $user->id) {
+            if ($note->notable_type === 'App\Models\Module') {
+                $module = Module::find($note->notable_id);
+                if (! $module || ! $user->canOnModule($module, 'read')) {
+                    return $this->message('Forbidden', 403);
+                }
+            } else {
+                return $this->message('Forbidden', 403);
+            }
+        }
+        $note->loadMissing('user');
+
+        return $this->success($note);
+    }
+
+    #[OA\Put(
+        path: '/notes/{id}',
+        summary: 'Update a note',
+        security: [['sanctum' => []]],
+        tags: ['Notes'],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(properties: [
+                new OA\Property(property: 'content', type: 'string'),
+            ])
+        ),
+        responses: [
+            new OA\Response(response: 200, description: 'Note updated', content: new OA\JsonContent(properties: [
+                new OA\Property(property: 'message', type: 'string'),
+                new OA\Property(property: 'data', ref: '#/components/schemas/NoteData'),
+            ])),
+        ]
+    )]
+    public function update(Request $request, Note $note): JsonResponse
+    {
+        $user = $request->user();
+        if (! $user->hasRole('super-admin') && $note->user_id !== $user->id) {
+            if ($note->notable_type === 'App\Models\Module') {
+                $module = Module::find($note->notable_id);
+                if (! $module || ! $user->canOnModule($module, 'update')) {
+                    return $this->message('Forbidden', 403);
+                }
+            } else {
+                return $this->message('Forbidden', 403);
+            }
+        }
+
+        $this->checkOptimisticLock($note, $request);
+    $validated = $request->validate(['updated_at' => 'required|date', 'content' => 'required|string']);
+        $note = $this->noteService->update($note, $validated);
+
+        return $this->success($note, 'Note updated');
     }
 
     #[OA\Delete(
@@ -207,13 +284,13 @@ class NoteController extends Controller
             new OA\Response(response: 200, description: 'Note deleted', content: new OA\JsonContent(ref: '#/components/schemas/MessageResponse')),
         ]
     )]
-    public function destroy(Request $request, Note $note): \Illuminate\Http\JsonResponse
+    public function destroy(Request $request, Note $note): JsonResponse
     {
         $user = $request->user();
-        if (!$user->hasRole('super-admin') && $note->user_id !== $user->id) {
+        if (! $user->hasRole('super-admin') && $note->user_id !== $user->id) {
             if ($note->notable_type === 'App\Models\Module') {
-                $module = \App\Models\Module::find($note->notable_id);
-                if (!$module || !$user->canOnModule($module, 'delete')) {
+                $module = Module::find($note->notable_id);
+                if (! $module || ! $user->canOnModule($module, 'delete')) {
                     return $this->message('Forbidden', 403);
                 }
             } else {
@@ -221,6 +298,7 @@ class NoteController extends Controller
             }
         }
         $this->noteService->delete($note);
+
         return $this->message('Note deleted');
     }
 }

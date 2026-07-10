@@ -1,0 +1,206 @@
+================================================================================
+PHASE 4.5A — PRODUCTION SECURITY IMPLEMENTATION REPORT
+================================================================================
+Date:       2026-06-26
+Status:     COMPLETE
+Ref:        PHASE_4_5_PRODUCTION_HARDENING_MASTER_PLAN.txt
+Audit Ref:  ENTERPRISE_ARCHITECTURE_AUDIT_v1.1.txt
+
+Scope:      6 P0 security hardening code changes
+Constraints: No .env changes, no APP_ENV/APP_DEBUG, no HTTPS, no deployment
+             scripts, no scheduler, no renewals, no RBAC redesign
+================================================================================
+
+IMPLEMENTED CHANGES
+================================================================================
+
+
+1. Suspended User Enforcement Middleware (P0)
+──────────────────────────────────────────────────────────────────────────────────
+
+  Problem:
+  User model has isSuspended() and suspended_at but no enforcement on
+  authenticated routes. Suspended users with active tokens retain access.
+
+  Files created:
+    app/Http/Middleware/CheckSuspended.php                (NEW)
+
+  Files modified:
+    bootstrap/app.php                                     (register 'suspended' alias)
+    routes/web.php                                        (add 'suspended' to auth
+                                                           and super-admin groups)
+    routes/api.php                                        (add 'suspended' to
+                                                           auth:sanctum groups)
+
+  Implementation:
+  Middleware checks Auth::check() && Auth::user()->isSuspended(). For JSON
+  requests (API), returns 403 with {"message": "Account suspended."}. For
+  web requests, abort(403) which renders the custom 403 error page.
+
+  Registered as alias 'suspended' and applied to all 4 authenticated
+  route groups (web auth, web super-admin, API sanctum, API super-admin).
+
+  Risk mitigated:
+  CRITICAL — Account suspension is now enforced on every authenticated
+  request. Suspended users cannot access any resource until unsuspended.
+
+
+2. current_password Validation on Web Profile (P0)
+──────────────────────────────────────────────────────────────────────────────────
+
+  Problem:
+  Web profile password change (AuthController::updateProfile) did not
+  require current_password. API version (UpdateProfileRequest) already
+  had this check via 'current_password' rule.
+
+  Files modified:
+    app/Http/Controllers/Web/AuthController.php (line 169)
+
+  Implementation:
+  Added to the validation rules array:
+    'current_password' => 'required_with:password|string|current_password',
+  Uses Laravel's built-in 'current_password' rule (no custom rule needed).
+
+  Risk mitigated:
+  HIGH — A logged-in user can no longer change password without providing
+  the current password. XSS/unattended workstation attacks are mitigated.
+
+  Test updated:
+  tests/Feature/AuthTest.php (line 534) — added 'current_password' => 'oldpass'
+
+
+3. Login Audit Query Fix (P0)
+──────────────────────────────────────────────────────────────────────────────────
+
+  Problem:
+  UserController::show() queried event = 'login' but all events are stored
+  as login_success, login_failed, etc. The query returned no results,
+  showing blank last-login data for all users.
+
+  Files modified:
+    app/Http/Controllers/Web/UserController.php (line 287)
+
+  Implementation:
+  Changed 'login' to 'login_success' in the where clause.
+
+  Risk mitigated:
+  LOW — Display-only bug. Last login now correctly shows on user show page.
+
+
+4. SMTP Duplicate Password Replication Fix (P0)
+──────────────────────────────────────────────────────────────────────────────────
+
+  Problem:
+  SmtpProfileController::duplicate() called replicate() which copied the
+  already-encrypted smtp_password. When save() triggered
+  setSmtpPasswordAttribute(), encrypt() was called on the already-encrypted
+  blob, causing double-encryption. The duplicated profile had a corrupted
+  password that would fail on any SMTP connection attempt.
+
+  Files modified:
+    app/Http/Controllers/Web/SmtpProfileController.php (lines 97-102)
+
+  Implementation:
+  Before replicate(), read the decrypted password via the accessor:
+    $password = $smtpProfile->smtp_password;  // triggers decrypt
+  Exclude 'smtp_password' from replicate():
+    $copy = $smtpProfile->replicate([..., 'smtp_password']);
+  Set the decrypted password on the copy (re-encrypts correctly on save):
+    $copy->smtp_password = $password;
+
+  Risk mitigated:
+  HIGH — Duplicated SMTP profiles now have correct passwords and can
+  successfully send email. The duplicate feature is no longer broken.
+
+
+5. Production Error Pages (P0)
+──────────────────────────────────────────────────────────────────────────────────
+
+  Problem:
+  No custom error views existed. With APP_DEBUG=false, Laravel renders
+  bare unstyled error pages. With APP_DEBUG=true, stack traces are exposed.
+
+  Files created:
+    resources/views/errors/403.blade.php         (Forbidden)
+    resources/views/errors/404.blade.php         (Not Found)
+    resources/views/errors/419.blade.php         (Session Expired)
+    resources/views/errors/500.blade.php         (Server Error)
+
+  Implementation:
+  Each page is a standalone Tailwind-styled view matching the app theme
+  (bg-gray-50 dark:bg-gray-900, indigo-600 accent). The 403 page shows
+  the exception message if available (e.g., "Account suspended"). All
+  pages provide a "Back to Dashboard" or "Sign In" action link.
+
+  Views are automatically resolved by Laravel's error handler when
+  corresponding HTTP status codes are encountered.
+
+  Risk mitigated:
+  MEDIUM — Users now see styled branded error pages instead of bare
+  default pages. No stack traces are exposed on any error page.
+
+
+6. Move laravel/tinker to require-dev (P0)
+──────────────────────────────────────────────────────────────────────────────────
+
+  Problem:
+  laravel/tinker (interactive PHP REPL) was in "require" (production).
+  If composer install is run without --no-dev, tinker is available
+  as php artisan tinker for arbitrary code execution.
+
+  Files modified:
+    composer.json (remove from require, add to require-dev)
+
+  Implementation:
+  Moved "laravel/tinker": "^2.10.1" from require to require-dev.
+
+  Risk mitigated:
+  CRITICAL — tinker is no longer installed in production when
+  composer install --no-dev is used. Arbitrary code execution
+  via tinker is prevented.
+
+
+================================================================================
+TEST RESULTS
+================================================================================
+
+  Before:   1700 tests passed
+  After:    1700 tests passed (0 failures, 0 errors)
+
+  All 1700 tests pass with zero regressions.
+
+================================================================================
+FILES SUMMARY
+================================================================================
+
+  CREATED:
+    app/Http/Middleware/CheckSuspended.php
+    resources/views/errors/403.blade.php
+    resources/views/errors/404.blade.php
+    resources/views/errors/419.blade.php
+    resources/views/errors/500.blade.php
+
+  MODIFIED:
+    bootstrap/app.php                          (register middleware alias)
+    routes/web.php                             (add suspended middleware)
+    routes/api.php                             (add suspended middleware)
+    app/Http/Controllers/Web/AuthController.php (add current_password rule)
+    app/Http/Controllers/Web/UserController.php (fix login audit query)
+    app/Http/Controllers/Web/SmtpProfileController.php (fix password replication)
+    composer.json                              (move tinker to require-dev)
+    tests/Feature/AuthTest.php                 (add current_password to test)
+
+================================================================================
+COMPLETION CHECKLIST
+================================================================================
+
+  ✅ Suspended User Enforcement Middleware  — created, registered, applied
+  ✅ current_password on Web Profile       — validation rule added
+  ✅ Login Audit Query Fix                 — 'login' → 'login_success'
+  ✅ SMTP Password Replication Fix         — decrypt then re-encrypt
+  ✅ Production Error Pages                — 403/404/419/500 created
+  ✅ laravel/tinker → require-dev          — moved in composer.json
+  ✅ Full test suite passes                — 1700 passed, 0 failed
+  ✅ No .env/APP_ENV/APP_DEBUG modified    — deferred to deployment
+  ✅ No HTTPS/deployment/scheduler touched — out of scope
+  ✅ No RBAC/renewals redesign             — constraint respected

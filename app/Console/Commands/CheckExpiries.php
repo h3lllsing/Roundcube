@@ -8,6 +8,7 @@ use Illuminate\Console\Command;
 class CheckExpiries extends Command
 {
     protected $signature = 'expiry:check';
+
     protected $description = 'Check all service modules for items expiring soon and send notifications';
 
     public function handle(ExpiryNotificationService $service): int

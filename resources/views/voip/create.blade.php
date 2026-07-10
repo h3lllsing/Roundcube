@@ -4,46 +4,49 @@
 
 @section('content')
 <div class="max-w-3xl mx-auto">
-    <div class="flex items-center justify-between mb-6">
-        <h1 class="text-2xl font-semibold">Create VoIP</h1>
-    </div>
+    <x-page-header title="Create VoIP" subtitle="Add a new VoIP service" />
 
-    <form action="{{ route('voip.store') }}" method="POST" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 space-y-4">
-        @csrf
+    <form action="{{ route('voip.store') }}" method="POST">
+        <x-card class="space-y-4">
+            @csrf
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <x-form.input name="name" label="Name" :value="old('name')" required />
-            <x-form.input name="provider" label="Provider" :value="old('provider')" />
-        </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <x-form.input name="extension" label="Extension" :value="old('extension')" placeholder="e.g. 101" />
+                <x-form.input name="name" label="Name" :value="old('name')" required />
+            </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <x-form.input name="phone_number" label="Phone Number" :value="old('phone_number')" />
-            <x-form.input name="type" label="Type" :value="old('type')" />
-        </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <x-form.select name="service_provider_id" label="Vendor" :options="$serviceProviders" :value="old('service_provider_id')" placeholder="Select vendor..." />
+                <x-form.input name="phone_number" label="Phone" :value="old('phone_number')" />
+            </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <x-form.input name="username" label="Username" :value="old('username')" />
-            <x-form.input type="number" step="0.01" name="cost" label="Cost" :value="old('cost')" />
-        </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <x-form.input name="server_ip" label="Server IP" :value="old('server_ip')" placeholder="e.g. 192.168.1.100" />
+                <x-form.select name="direction" label="Inbound/Out" :options="['inbound' => 'Inbound', 'outbound' => 'Outbound', 'both' => 'Both']" :value="old('direction')" placeholder="Select direction..." />
+            </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <x-form.input type="date" name="start_date" label="Start Date" :value="old('start_date')" />
-            <x-form.input type="date" name="expiry_date" label="Expiry Date" :value="old('expiry_date')" />
-        </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <x-form.input name="number_status" label="Number Status" :value="old('number_status')" placeholder="e.g. active, blocked, forwarding" />
+                <x-form.input name="outbound_code" label="Code for Outbound" :value="old('outbound_code')" />
+            </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <x-form.select name="status" label="Status" :options="['active' => 'Active', 'inactive' => 'Inactive', 'expired' => 'Expired', 'suspended' => 'Suspended']" :value="old('status')" required />
-        </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <x-form.input type="number" step="0.01" name="cost" label="Monthly Cost" :value="old('cost')" />
+                <x-form.select name="billing_period_months" label="Billing Period" :options="[1 => 'Monthly', 3 => 'Quarterly (3 months)', 6 => 'Semi-Annual (6 months)', 12 => 'Annual (12 months)', 24 => 'Biennial (24 months)']" :value="old('billing_period_months', 12)" />
+            </div>
 
-        <x-form.select name="module_id" label="Module" :options="$modules" :value="old('module_id')" placeholder="Select module..." />
-        <x-form.select name="user_id" label="User" :options="$users" :value="old('user_id')" placeholder="Select user..." />
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <x-form.input type="date" name="expiry_date" label="Expiry Date" :value="old('expiry_date')" />
+                <x-form.input type="password" name="extension_password" label="Extension Password" :value="old('extension_password')" autocomplete="new-password" />
+            </div>
 
-        <x-form.textarea name="notes" label="Notes" :value="old('notes')" />
+            <x-form.textarea name="team_details" label="Team Details" :value="old('team_details')" />
 
-        <div class="flex items-center gap-3 pt-2">
-            <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">Save</button>
-            <a href="{{ route('voip.index') }}" class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900">Cancel</a>
-        </div>
+            <div class="flex items-center gap-3 pt-2">
+                <x-button type="submit" variant="primary" size="sm">Save</x-button>
+                <x-button href="{{ route('voip.index') }}" variant="outline" size="sm">Cancel</x-button>
+            </div>
+        </x-card>
     </form>
 </div>
 @endsection

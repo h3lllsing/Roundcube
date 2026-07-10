@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use HasinHayder\Tyro\Database\Seeders\TyroSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -11,12 +12,13 @@ class TokenTest extends TestCase
     use RefreshDatabase;
 
     private User $user;
+
     private string $token;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->seed(\HasinHayder\Tyro\Database\Seeders\TyroSeeder::class);
+        $this->seed(TyroSeeder::class);
         $this->user = User::factory()->create();
         $this->token = $this->user->createToken('test-init')->plainTextToken;
     }
@@ -92,5 +94,19 @@ class TokenTest extends TestCase
         $this->getJson('/api/tokens')->assertUnauthorized();
         $this->postJson('/api/tokens', ['name' => 'x'])->assertUnauthorized();
         $this->deleteJson('/api/tokens/1')->assertUnauthorized();
+    }
+
+    public function test_index_search_filter(): void
+    {
+        $this->user->createToken('SearchableToken');
+        $this->user->createToken('OtherToken');
+
+        $response = $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->getJson('/api/tokens?search=Searchable');
+
+        $response->assertOk();
+        $names = collect($response->json('data'))->pluck('name');
+        $this->assertContains('SearchableToken', $names);
+        $this->assertNotContains('OtherToken', $names);
     }
 }

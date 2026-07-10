@@ -16,6 +16,8 @@ class StoreNoteRequest extends FormRequest
     {
         return [
             'content' => 'required|string',
+            'notable_type' => 'nullable|string|in:App\Models\Feature,App\Models\Module',
+            'notable_id' => 'nullable|integer|required_with:notable_type',
         ];
     }
 }

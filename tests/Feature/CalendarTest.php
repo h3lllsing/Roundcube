@@ -4,8 +4,11 @@ namespace Tests\Feature;
 
 use App\Models\Domain;
 use App\Models\ExpiryTracker;
+use App\Models\Module;
+use App\Models\Task;
 use App\Models\User;
 use Carbon\Carbon;
+use HasinHayder\Tyro\Database\Seeders\TyroSeeder;
 use HasinHayder\Tyro\Models\Role;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -15,12 +18,13 @@ class CalendarTest extends TestCase
     use RefreshDatabase;
 
     private User $admin;
+
     private User $user;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->seed(\HasinHayder\Tyro\Database\Seeders\TyroSeeder::class);
+        $this->seed(TyroSeeder::class);
         $adminRole = Role::where('slug', 'super-admin')->firstOrFail();
         $this->admin = User::factory()->create();
         $this->admin->assignRole($adminRole);
@@ -33,6 +37,7 @@ class CalendarTest extends TestCase
         if ($date->month !== Carbon::now()->month) {
             $date = Carbon::now()->endOfMonth();
         }
+
         return $date->toDateString();
     }
 
@@ -61,11 +66,13 @@ class CalendarTest extends TestCase
             'name' => 'my-domain.com',
             'expiry_date' => $date,
             'user_id' => $this->user->id,
+            'service_provider_id' => null,
         ]);
         Domain::factory()->create([
             'name' => 'admin-domain.com',
             'expiry_date' => $date,
             'user_id' => $this->admin->id,
+            'service_provider_id' => null,
         ]);
 
         $token = $this->user->createToken('test')->plainTextToken;
@@ -84,11 +91,13 @@ class CalendarTest extends TestCase
             'name' => 'user-domain.com',
             'expiry_date' => $date,
             'user_id' => $this->user->id,
+            'service_provider_id' => null,
         ]);
         Domain::factory()->create([
             'name' => 'admin-domain.com',
             'expiry_date' => $date,
             'user_id' => $this->admin->id,
+            'service_provider_id' => null,
         ]);
 
         $response = $this->actingAs($this->admin)
@@ -101,7 +110,7 @@ class CalendarTest extends TestCase
     public function test_filters_by_month_and_year()
     {
         $response = $this->actingAs($this->admin)
-            ->getJson("/api/calendar");
+            ->getJson('/api/calendar');
         $month = $response->json('data.month');
         $year = $response->json('data.year');
 
@@ -109,6 +118,7 @@ class CalendarTest extends TestCase
             'name' => 'filtered-domain.com',
             'expiry_date' => $this->withinCurrentMonth(),
             'user_id' => $this->admin->id,
+            'service_provider_id' => null,
         ]);
 
         $response = $this->actingAs($this->admin)
@@ -129,11 +139,13 @@ class CalendarTest extends TestCase
             'name' => 'later-domain.com',
             'expiry_date' => $lateDate,
             'user_id' => $this->admin->id,
+            'service_provider_id' => null,
         ]);
         Domain::factory()->create([
             'name' => 'earlier-domain.com',
             'expiry_date' => $earlyDate,
             'user_id' => $this->admin->id,
+            'service_provider_id' => null,
         ]);
 
         $response = $this->actingAs($this->admin)
@@ -158,6 +170,7 @@ class CalendarTest extends TestCase
             'name' => 'domain-event',
             'expiry_date' => $date,
             'user_id' => $this->admin->id,
+            'service_provider_id' => null,
         ]);
         ExpiryTracker::factory()->create([
             'name' => 'tracker-event',
@@ -172,5 +185,73 @@ class CalendarTest extends TestCase
         $types = collect($response->json('data.events'))->pluck('type')->unique();
         $this->assertContains('domains', $types);
         $this->assertContains('expiry-trackers', $types);
+    }
+
+    public function test_includes_tasks_with_due_dates()
+    {
+        $module = Module::factory()->create();
+        $task = Task::create([
+            'title' => 'Calendar Task',
+            'due_date' => $this->withinCurrentMonth(),
+            'priority' => 'high',
+            'status' => 'active',
+            'module_id' => $module->id,
+            'created_by' => $this->admin->id,
+            'updated_by' => $this->admin->id,
+        ]);
+
+        $response = $this->actingAs($this->admin)
+            ->getJson('/api/calendar');
+
+        $response->assertOk();
+        $tasks = collect($response->json('data.events'))->where('type', 'tasks');
+        $this->assertCount(1, $tasks);
+        $this->assertEquals('Calendar Task', $tasks->first()['name']);
+    }
+
+    public function test_non_admin_sees_own_tasks_in_calendar()
+    {
+        $module = Module::factory()->create();
+        $task = Task::create([
+            'title' => 'My Task',
+            'due_date' => $this->withinCurrentMonth(),
+            'priority' => 'medium',
+            'status' => 'active',
+            'module_id' => $module->id,
+            'created_by' => $this->user->id,
+            'updated_by' => $this->user->id,
+        ]);
+        $task->assignees()->attach($this->user->id);
+
+        $token = $this->user->createToken('test')->plainTextToken;
+        $response = $this->withHeader('Authorization', "Bearer $token")
+            ->getJson('/api/calendar');
+
+        $response->assertOk();
+        $tasks = collect($response->json('data.events'))->where('type', 'tasks');
+        $this->assertCount(1, $tasks);
+    }
+
+    public function test_non_admin_does_not_see_others_tasks()
+    {
+        $module = Module::factory()->create();
+        $task = Task::create([
+            'title' => 'Admin Task',
+            'due_date' => $this->withinCurrentMonth(),
+            'priority' => 'low',
+            'status' => 'active',
+            'module_id' => $module->id,
+            'created_by' => $this->admin->id,
+            'updated_by' => $this->admin->id,
+        ]);
+        $task->assignees()->attach($this->admin->id);
+
+        $token = $this->user->createToken('test')->plainTextToken;
+        $response = $this->withHeader('Authorization', "Bearer $token")
+            ->getJson('/api/calendar');
+
+        $response->assertOk();
+        $tasks = collect($response->json('data.events'))->where('type', 'tasks');
+        $this->assertCount(0, $tasks);
     }
 }

@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Route;
 use Tests\TestCase;
 
 class RateLimiterTest extends TestCase
@@ -31,7 +32,7 @@ class RateLimiterTest extends TestCase
         $user = User::factory()->create();
         $limiter = RateLimiter::limiter('api');
         $request = Request::create('/api/me', 'GET');
-        $request->setUserResolver(fn() => $user);
+        $request->setUserResolver(fn () => $user);
 
         $limit = $limiter($request);
 
@@ -58,7 +59,7 @@ class RateLimiterTest extends TestCase
         $limiter = RateLimiter::limiter('search');
         $user = User::factory()->create();
         $request = Request::create('/api/search', 'GET');
-        $request->setUserResolver(fn() => $user);
+        $request->setUserResolver(fn () => $user);
 
         $limit = $limiter($request);
 
@@ -75,7 +76,7 @@ class RateLimiterTest extends TestCase
         $limiter = RateLimiter::limiter('export');
         $user = User::factory()->create();
         $request = Request::create('/api/export/domains', 'GET');
-        $request->setUserResolver(fn() => $user);
+        $request->setUserResolver(fn () => $user);
 
         $limit = $limiter($request);
 
@@ -92,7 +93,7 @@ class RateLimiterTest extends TestCase
         $limiter = RateLimiter::limiter('bulk');
         $user = User::factory()->create();
         $request = Request::create('/api/bulk/domains', 'POST');
-        $request->setUserResolver(fn() => $user);
+        $request->setUserResolver(fn () => $user);
 
         $limit = $limiter($request);
 
@@ -109,7 +110,7 @@ class RateLimiterTest extends TestCase
         $limiter = RateLimiter::limiter('import');
         $user = User::factory()->create();
         $request = Request::create('/api/import/domains', 'POST');
-        $request->setUserResolver(fn() => $user);
+        $request->setUserResolver(fn () => $user);
 
         $limit = $limiter($request);
 
@@ -134,24 +135,24 @@ class RateLimiterTest extends TestCase
             $this->postJson('/api/reset-password', [
                 'email' => 'test@example.com',
                 'token' => 'token',
-                'password' => 'newpassword',
-                'password_confirmation' => 'newpassword',
+                'password' => 'NewPass123',
+                'password_confirmation' => 'NewPass123',
             ]);
         }
 
         $response = $this->postJson('/api/reset-password', [
             'email' => 'test@example.com',
             'token' => 'token',
-            'password' => 'newpassword',
-            'password_confirmation' => 'newpassword',
+            'password' => 'NewPass123',
+            'password_confirmation' => 'NewPass123',
         ]);
         $response->assertStatus(429);
     }
 
     public function test_login_throttle_middleware_applied()
     {
-        $routes = collect(\Illuminate\Support\Facades\Route::getRoutes()->getRoutes());
-        $loginRoute = $routes->first(fn($r) => $r->uri === 'api/login');
+        $routes = collect(Route::getRoutes()->getRoutes());
+        $loginRoute = $routes->first(fn ($r) => $r->uri === 'api/login');
 
         $this->assertNotNull($loginRoute);
         $middleware = $loginRoute->middleware();
@@ -160,8 +161,8 @@ class RateLimiterTest extends TestCase
 
     public function test_api_throttle_middleware_applied_to_authenticated_routes()
     {
-        $routes = collect(\Illuminate\Support\Facades\Route::getRoutes()->getRoutes());
-        $meRoute = $routes->first(fn($r) => $r->uri === 'api/me');
+        $routes = collect(Route::getRoutes()->getRoutes());
+        $meRoute = $routes->first(fn ($r) => $r->uri === 'api/me');
 
         $this->assertNotNull($meRoute);
         $middleware = $meRoute->middleware();

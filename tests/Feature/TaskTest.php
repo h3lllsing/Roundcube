@@ -3,10 +3,14 @@
 namespace Tests\Feature;
 
 use App\Models\Module;
+use App\Models\ModuleRolePermission;
 use App\Models\Task;
 use App\Models\User;
+use Database\Seeders\FeatureModuleSeeder;
+use HasinHayder\Tyro\Database\Seeders\TyroSeeder;
 use HasinHayder\Tyro\Models\Role;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Spatie\Activitylog\Models\Activity;
 use Tests\TestCase;
 
 class TaskTest extends TestCase
@@ -16,8 +20,8 @@ class TaskTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->seed(\HasinHayder\Tyro\Database\Seeders\TyroSeeder::class);
-        $this->seed(\Database\Seeders\FeatureModuleSeeder::class);
+        $this->seed(TyroSeeder::class);
+        $this->seed(FeatureModuleSeeder::class);
     }
 
     public function test_super_admin_can_create_task()
@@ -222,7 +226,7 @@ class TaskTest extends TestCase
         $task->save();
 
         $response = $this->withHeader('Authorization', "Bearer $token")
-            ->getJson('/api/tasks?date_from=' . now()->subDays(5)->format('Y-m-d'));
+            ->getJson('/api/tasks?date_from='.now()->subDays(5)->format('Y-m-d'));
 
         $response->assertStatus(200);
         $this->assertStringNotContainsString('Past Task', $response->getContent());
@@ -305,7 +309,7 @@ class TaskTest extends TestCase
         $task->assignees()->attach($user->id);
 
         $response = $this->withHeader('Authorization', "Bearer $token")
-            ->getJson('/api/tasks?assigned_to=' . $user->id);
+            ->getJson('/api/tasks?assigned_to='.$user->id);
 
         $response->assertStatus(200);
         $this->assertStringContainsString('Assigned Task', $response->getContent());
@@ -538,7 +542,7 @@ class TaskTest extends TestCase
         $token = $user->createToken('test')->plainTextToken;
         $module = Module::first();
 
-        \App\Models\ModuleRolePermission::create([
+        ModuleRolePermission::create([
             'module_id' => $module->id,
             'role_id' => $userRole->id,
             'can_create' => true,
@@ -652,7 +656,7 @@ class TaskTest extends TestCase
         $token = $user->createToken('test')->plainTextToken;
         $module = Module::first();
 
-        \App\Models\ModuleRolePermission::create([
+        ModuleRolePermission::create([
             'module_id' => $module->id,
             'role_id' => $userRole->id,
             'can_delete' => true,
@@ -675,7 +679,7 @@ class TaskTest extends TestCase
         $module = Module::first();
         $module2 = Module::factory()->create(['feature_id' => $module->feature_id]);
 
-        \App\Models\ModuleRolePermission::create([
+        ModuleRolePermission::create([
             'module_id' => $module->id,
             'role_id' => $userRole->id,
             'can_read' => true,
@@ -737,7 +741,7 @@ class TaskTest extends TestCase
         $this->withHeader('Authorization', "Bearer $token")
             ->putJson("/api/tasks/{$task->id}", ['status' => 'completed']);
 
-        $logs = \Spatie\Activitylog\Models\Activity::where('subject_type', 'App\Models\Task')
+        $logs = Activity::where('subject_type', 'App\Models\Task')
             ->where('subject_id', $task->id)->get();
         $this->assertGreaterThanOrEqual(1, $logs->count());
     }
@@ -764,5 +768,218 @@ class TaskTest extends TestCase
         $afterCompleted = $after->json('data.tasks_by_status.completed') ?? 0;
 
         $this->assertEquals($beforeCompleted + 1, $afterCompleted);
+    }
+
+    public function test_non_super_admin_index_filters_by_accessible_modules(): void
+    {
+        $user = User::factory()->create();
+        $userRole = Role::where('slug', 'user')->firstOrFail();
+        $user->assignRole($userRole);
+        $token = $user->createToken('test')->plainTextToken;
+        $module = Module::first();
+
+        ModuleRolePermission::create([
+            'module_id' => $module->id,
+            'role_id' => $userRole->id,
+            'can_read' => true,
+        ]);
+
+        Task::create(['title' => 'Visible Task', 'module_id' => $module->id, 'status' => 'pending', 'priority' => 'medium', 'created_by' => 1, 'updated_by' => 1]);
+
+        $response = $this->withHeader('Authorization', "Bearer $token")
+            ->getJson('/api/tasks');
+
+        $response->assertOk();
+        $this->assertStringContainsString('Visible Task', $response->getContent());
+    }
+
+    public function test_non_super_admin_update_task_without_module_returns_403(): void
+    {
+        $user = User::factory()->create();
+        $userRole = Role::where('slug', 'user')->firstOrFail();
+        $user->assignRole($userRole);
+        $token = $user->createToken('test')->plainTextToken;
+
+        $task = Task::create(['title' => 'No Module Task', 'module_id' => null, 'status' => 'pending', 'priority' => 'medium', 'created_by' => 1, 'updated_by' => 1]);
+
+        $response = $this->withHeader('Authorization', "Bearer $token")
+            ->putJson("/api/tasks/{$task->id}", ['title' => 'Trying to update']);
+
+        $response->assertStatus(403);
+    }
+
+    public function test_web_task_index_filters(): void
+    {
+        $user = User::factory()->create();
+        $role = Role::where('slug', 'super-admin')->firstOrFail();
+        $user->assignRole($role);
+        $module = Module::first();
+        $task = Task::factory()->create(['module_id' => $module->id]);
+        $assignee = User::factory()->create();
+        $task->assignees()->attach($assignee->id);
+
+        $this->actingAs($user);
+        $this->get(route('tasks.index', ['module_id' => $module->id]))->assertStatus(200);
+        $this->get(route('tasks.index', ['assigned_to' => $assignee->id]))->assertStatus(200);
+        $this->get(route('tasks.index', ['date_from' => now()->subDay()->format('Y-m-d')]))->assertStatus(200);
+        $this->get(route('tasks.index', ['date_to' => now()->addDay()->format('Y-m-d')]))->assertStatus(200);
+    }
+
+    public function test_web_my_tasks_filters(): void
+    {
+        $user = User::factory()->create();
+        $role = Role::where('slug', 'super-admin')->firstOrFail();
+        $user->assignRole($role);
+        $module = Module::first();
+        $task = Task::factory()->create(['module_id' => $module->id]);
+        $task->assignees()->attach($user->id);
+
+        $this->actingAs($user);
+        $this->get(route('tasks.my', ['priority' => 'high']))->assertStatus(200);
+        $this->get(route('tasks.my', ['search' => 'Test']))->assertStatus(200);
+        $this->get(route('tasks.my', ['module_id' => $module->id]))->assertStatus(200);
+        $this->get(route('tasks.my', ['date_from' => now()->subDay()->format('Y-m-d')]))->assertStatus(200);
+        $this->get(route('tasks.my', ['date_to' => now()->addDay()->format('Y-m-d')]))->assertStatus(200);
+    }
+
+    public function test_web_create_task_with_assignees_saves_assignees(): void
+    {
+        $user = User::factory()->create();
+        $role = Role::where('slug', 'super-admin')->firstOrFail();
+        $user->assignRole($role);
+        $assignee1 = User::factory()->create(['name' => 'Assignee One']);
+        $assignee2 = User::factory()->create(['name' => 'Assignee Two']);
+        $module = Module::first();
+
+        $this->actingAs($user);
+
+        $response = $this->post(route('tasks.store'), [
+            'title' => 'Task With Assignees',
+            'module_id' => $module->id,
+            'assignee_ids' => [$assignee1->id, $assignee2->id],
+        ]);
+
+        $response->assertSessionHas('success');
+        $response->assertRedirect(route('tasks.index'));
+
+        $task = Task::where('title', 'Task With Assignees')->first();
+        $this->assertNotNull($task);
+        $this->assertCount(2, $task->assignees);
+        $this->assertTrue($task->assignees->contains($assignee1->id));
+        $this->assertTrue($task->assignees->contains($assignee2->id));
+    }
+
+    public function test_web_update_task_with_assignees_updates_assignees(): void
+    {
+        $user = User::factory()->create();
+        $role = Role::where('slug', 'super-admin')->firstOrFail();
+        $user->assignRole($role);
+        $oldAssignee = User::factory()->create(['name' => 'Old Assignee']);
+        $newAssignee = User::factory()->create(['name' => 'New Assignee']);
+        $module = Module::first();
+
+        $task = Task::factory()->create(['module_id' => $module->id, 'created_by' => $user->id]);
+        $task->assignees()->attach($oldAssignee->id);
+
+        $this->actingAs($user);
+
+        $response = $this->put(route('tasks.update', $task->id), [
+            'title' => 'Updated Title',
+            'assignee_ids' => [$newAssignee->id],
+        ]);
+
+        $response->assertSessionHas('success');
+        $response->assertRedirect(route('tasks.index'));
+
+        $task->refresh();
+        $this->assertCount(1, $task->assignees);
+        $this->assertTrue($task->assignees->contains($newAssignee->id));
+        $this->assertFalse($task->assignees->contains($oldAssignee->id));
+    }
+
+    public function test_web_update_without_assignee_ids_preserves_existing_assignees(): void
+    {
+        $user = User::factory()->create();
+        $role = Role::where('slug', 'super-admin')->firstOrFail();
+        $user->assignRole($role);
+        $assignee = User::factory()->create(['name' => 'Original Assignee']);
+        $module = Module::first();
+
+        $task = Task::factory()->create(['module_id' => $module->id, 'created_by' => $user->id]);
+        $task->assignees()->attach($assignee->id);
+
+        $this->actingAs($user);
+
+        $response = $this->put(route('tasks.update', $task->id), [
+            'title' => 'Updated Without Assignees',
+        ]);
+
+        $response->assertSessionHas('success');
+
+        $task->refresh();
+        $this->assertCount(1, $task->assignees);
+        $this->assertTrue($task->assignees->contains($assignee->id));
+    }
+
+    public function test_web_update_with_empty_assignee_ids_clears_assignees(): void
+    {
+        $user = User::factory()->create();
+        $role = Role::where('slug', 'super-admin')->firstOrFail();
+        $user->assignRole($role);
+        $assignee = User::factory()->create(['name' => 'To Be Removed']);
+        $module = Module::first();
+
+        $task = Task::factory()->create(['module_id' => $module->id, 'created_by' => $user->id]);
+        $task->assignees()->attach($assignee->id);
+
+        $this->actingAs($user);
+
+        $response = $this->put(route('tasks.update', $task->id), [
+            'title' => 'Cleared Assignees',
+            'assignee_ids' => [],
+        ]);
+
+        $response->assertSessionHas('success');
+
+        $task->refresh();
+        $this->assertCount(0, $task->assignees);
+    }
+
+    public function test_web_create_page_shows_assignee_selector(): void
+    {
+        $user = User::factory()->create();
+        $role = Role::where('slug', 'super-admin')->firstOrFail();
+        $user->assignRole($role);
+        User::factory()->create(['name' => 'Alice']);
+        User::factory()->create(['name' => 'Bob']);
+
+        $this->actingAs($user);
+
+        $response = $this->get(route('tasks.create'));
+
+        $response->assertStatus(200);
+        $response->assertSee('assignee_ids');
+        $response->assertSee('Alice');
+        $response->assertSee('Bob');
+    }
+
+    public function test_web_edit_page_shows_assignee_selector_with_selected(): void
+    {
+        $user = User::factory()->create();
+        $role = Role::where('slug', 'super-admin')->firstOrFail();
+        $user->assignRole($role);
+        $assignee = User::factory()->create(['name' => 'Assigned User']);
+        $module = Module::first();
+
+        $task = Task::factory()->create(['module_id' => $module->id, 'created_by' => $user->id]);
+        $task->assignees()->attach($assignee->id);
+
+        $this->actingAs($user);
+
+        $response = $this->get(route('tasks.edit', $task->id));
+
+        $response->assertStatus(200);
+        $response->assertSee('assignee_ids');
+        $response->assertSee('Assigned User');
     }
 }

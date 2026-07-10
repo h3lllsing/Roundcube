@@ -1,0 +1,90 @@
+PHASE 4A — PORTAL NAVIGATION CLEANUP: FINAL CLEANUP REPORT
+========================================================
+Date: 2026-06-25
+
+RUNNING TALLY
+-------------
+Phase 4A Implementation (initial): 3 files modified, 1628 assertions pass
+Phase 4A Final Cleanup:            3 additional files modified, 4096 assertions pass (100%)
+Total Phase 4A:                    6 files modified, 1631 tests / 4096 assertions — zero failures
+
+FILES MODIFIED IN FINAL CLEANUP
+--------------------------------
+1. resources/views/expiry-trackers/_notification-form.blade.php
+   - Added $smtpProfileOptions variable with Collection-to-array cast before + operator
+   - Changed :options to use $smtpProfileOptions instead of raw $smtpProfiles
+   - Fixes: "Unsupported operand types: array + Illuminate\Database\Eloquent\Collection"
+   - Root cause: mapWithKeys() returns Collection, but view used array + operator
+
+2. tests/Feature/NavigationTest.php
+   - test_notes_hidden_from_sidebar → test_notes_hidden_from_sidebar_but_accessible_via_command_palette
+   - Added assertSee("label:'Notes'", false) to verify Notes is in Command Palette (Ctrl+K)
+   - Second param false prevents HTML escaping of single quotes
+
+3. tests/Feature/RbacPhase2C4Test.php
+   - test_my_permissions_link_always_visible: assertSee('My Permissions') → assertSee('My Access')
+   - "My Permissions" was renamed to "My Access" in Phase 4A
+
+FAILURE INVESTIGATION
+---------------------
+Pre-existing failures found (3 total):
+  Unsupported operand types: array + Illuminate\Database\Eloquent\Collection
+  View: resources/views/expiry-trackers/_notification-form.blade.php
+  Tests: test_expiry_tracker_create_page_loads
+         test_expiry_tracker_edit_page_loads
+         (and related expiry tracker tests)
+
+Root cause: ExpiryTrackerController passes $smtpProfiles as an Eloquent Collection
+(from mapWithKeys()), but the view uses PHP array + operator (['' => 'Default'] + $smtpProfiles).
+This is a pre-existing Phase 4B bug, not a Phase 4A regression.
+
+Fix: Added @php block at view top to cast Collection to array before operator use.
+
+Tests introduced by Phase 4A (11 new tests):
+  All pass — covering: super-admin sees Administration, admin/user/customer don't,
+  new labels appear, old labels absent, Notes hidden from sidebar + present in
+  Command Palette, Credentials/Documentation/Reports groups appear,
+  Reports hidden for admin.
+
+PRE-EXISTING TEST ADJUSTMENTS (Phase 2C4)
+------------------------------------------
+- test_my_permissions_link_always_visible: Updated to check for "My Access" instead
+  of "My Permissions" due to Phase 4A sidebar rename. This is the only Phase 2C4 test
+  affected; all other 12 Phase 2C4 tests pass unchanged.
+
+NOTES FINAL BEHAVIOR
+--------------------
+- Sidebar: NOT present (hidden from sidebar nav)
+- Command Palette (Ctrl+K): PRESENT as {label:'Notes', url: route('notes.index')}
+- Dashboard stat cards: PRESENT (rendered by controller, not sidebar)
+- Routes/Module/Controller: Untouched — Notes still fully functional
+- Verification: assertDontSee('>Notes<') passes, assertSee("label:'Notes'", false) passes
+
+DOCUMENTATION NAMING
+--------------------
+- Canonical name: "Knowledge Base"
+- Sidebar group label: "Documentation"
+- Command Palette label: "Knowledge Base"
+- Route: guide (unchanged)
+- No "Guide" or "Knowledge Base / Guide" variants remain
+
+COMMAND PALETTE VERIFICATION
+-----------------------------
+All 22 entries verified in admin.blade.php cmdPages:
+  Dashboard, Notifications, Calendar, My Tasks, Task Management,
+  Service Providers, Hosting, Domains, Domain Emails, VPS Accounts,
+  VoIP, Other Services, Renewals, My Credentials, Shared Credentials,
+  My Profile, My Access, Knowledge Base, Notes,
+  + 13 super-admin-only items (Users, Roles, Role Templates, Privileges,
+    Modules, Permissions, Features, SMTP Profiles, Activity Logs,
+    Login Audits, Import, Attachments, Webhooks, API Access, Reports)
+
+Zero occurrences of old labels in cmdPages: no Providers, Hostings, Emails,
+Expiry Trackers, Tasks, My Permissions, API Tokens, Import CSV, Guide, Activity
+
+TEST RESULTS SUMMARY
+---------------------
+Total: 1631 passed (4096 assertions) — zero failures
+All WebNewResourcesTest expiry tracker tests pass (9/9)
+All NavigationTest tests pass (11/11)
+All RbacPhase2C4Test tests pass (13/13)

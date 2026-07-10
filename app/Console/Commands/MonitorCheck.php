@@ -17,6 +17,7 @@ use Illuminate\Console\Command;
 class MonitorCheck extends Command
 {
     protected $signature = 'monitor:check';
+
     protected $description = 'Ping all services that have a monitoring URL configured';
 
     /** @var class-string[] */
@@ -48,6 +49,9 @@ class MonitorCheck extends Command
                 }
 
                 $item->last_ping_at = now();
+                if ($result['ssl']['success']) {
+                    $item->ssl_expires_at = $result['ssl']['valid_to'] ?? null;
+                }
                 $item->save();
             }
         }

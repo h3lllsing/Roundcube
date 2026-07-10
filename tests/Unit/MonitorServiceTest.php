@@ -30,7 +30,7 @@ class MonitorServiceTest extends TestCase
 
     public function test_ping_returns_failure_on_exception(): void
     {
-        Http::fake(['*' => fn() => throw new \Exception('Connection timeout')]);
+        Http::fake(['*' => fn () => throw new \Exception('Connection timeout')]);
 
         $result = $this->service->ping('https://invalid.example.com');
 

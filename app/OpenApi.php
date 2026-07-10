@@ -6,13 +6,13 @@ use OpenApi\Attributes as OA;
 
 #[OA\Info(
     version: '1.0.0',
-    title: 'Tyro RBAC API',
+    title: 'OpsPilot API',
     description: 'Enterprise permission-based RBAC API with features, modules, tasks, notes, activity logs, and notifications.',
     contact: new OA\Contact(email: 'admin@tyro.project'),
 )]
 #[OA\Server(
-    url: 'http://localhost:8000/api',
-    description: 'Local Development Server',
+    url: L5_SWAGGER_CONST_HOST . '/api',
+    description: 'API Server',
 )]
 #[OA\SecurityScheme(
     securityScheme: 'sanctum',
@@ -21,6 +21,4 @@ use OpenApi\Attributes as OA;
     bearerFormat: 'Sanctum',
     description: 'Enter Sanctum token. Get it by logging in.'
 )]
-class OpenApi
-{
-}
+class OpenApi {}

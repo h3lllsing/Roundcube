@@ -1,0 +1,263 @@
+================================================================================
+PLAN_B UI TABLE LAYOUT POLISH REPORT
+================================================================================
+
+DATE: 2026-06-25
+
+================================================================================
+1. FILES CHANGED
+================================================================================
+
+Controllers (6 files):
+  - app/Http/Controllers/Web/VpsController.php
+    - Added 'user' to ->with()
+    - Added 'ip_address', 'password', 'user_id' to ->select()
+
+  - app/Http/Controllers/Web/HostingController.php
+    - Added 'password' to ->select()
+
+  - app/Http/Controllers/Web/DomainEmailController.php
+    - Added 'password' to ->select()
+
+  - app/Http/Controllers/Web/ServiceProviderController.php
+    - Changed ->select() from ['cost', 'expiry_date'] to ['notes', 'website']
+    - Kept 'name' (needed for record identity in show/edit forms + other logic)
+
+  - app/Http/Controllers/Web/VoipController.php
+    - Added 'serviceProvider' to ->with()
+    - Added 'extension_password' to ->select()
+
+Views (6 files):
+  - resources/views/vps/index.blade.php
+  - resources/views/hostings/index.blade.php
+  - resources/views/domain-emails/index.blade.php
+  - resources/views/service-providers/index.blade.php
+  - resources/views/voip/index.blade.php
+  - resources/views/domains/index.blade.php
+
+================================================================================
+2. COLUMNS PER MODULE — BEFORE vs AFTER
+================================================================================
+
+2a. VPS list table
+  BEFORE:
+    Checkbox | Name | Password | Module | Service Provider | Plan | Cost | Expiry | Status | Actions
+
+  AFTER:
+    Checkbox | VPS | Vendor | VPS IP | VPS Pass | Associate | Actions
+
+  MAPPING:
+    VPS       = name
+    Vendor    = serviceProvider->name
+    VPS IP    = ip_address
+    VPS Pass  = password (masked + AJAX reveal)
+    Associate = user->name
+    Actions   = icon-only (View, Edit, Delete)
+
+  REMOVED: Name, Module, Service Provider, Plan, Cost, Expiry, Status
+  HIDDEN BUT KEPT IN SYSTEM: Module, Plan, Cost, Expiry, Status, service_provider_id
+
+2b. Hosting list table
+  BEFORE:
+    Checkbox | Name | Username | Password | cPanel URL | Provider | Expiry | Status | Actions
+
+  AFTER:
+    Checkbox | Serial | Domain | Cpanel Link | Cpanel ID | Cpanel PW | Actions
+
+  MAPPING:
+    Serial      = id
+    Domain      = name
+    Cpanel Link = cpanel_url
+    Cpanel ID   = username
+    Cpanel PW   = password (masked + AJAX reveal)
+    Actions     = icon-only (View, Edit, Delete)
+
+  REMOVED: Name, Username (→Cpanel ID), Password (→Cpanel PW), Provider, Expiry, Status
+  SKIPPED (no DB column): Domain IP, Mail Domain IP, Cpanel IP
+  HIDDEN BUT KEPT IN SYSTEM: service_provider_id, status, expiry_date
+
+2c. Domain Emails list table
+  BEFORE:
+    Email | Password | Service Provider | Domain | Actions
+
+  AFTER:
+    Serial | Emails | Passwords | Actions
+
+  MAPPING:
+    Serial    = id
+    Emails    = email
+    Passwords = password (masked + AJAX reveal)
+    Actions   = icon-only (View, Edit, Delete)
+
+  REMOVED: Service Provider, Domain
+  HIDDEN BUT KEPT IN SYSTEM: service_provider_id, domain_id, module_id
+
+2d. Service Providers list table
+  BEFORE:
+    Checkbox | Name | Password | Module | Type | Provider | Cost | Expiry | Status | Actions
+
+  AFTER:
+    Checkbox | Serial | Password | Type | Provider | Status | Details | Actions
+
+  MAPPING:
+    Serial   = id
+    Password = password (masked + AJAX reveal)
+    Type     = type
+    Provider = provider
+    Status   = status
+    Details  = notes (falls back to website)
+    Actions  = icon-only (View, Edit, Delete)
+
+  REMOVED: Name, Module, Cost, Expiry
+  SKIPPED (no DB column): Email (service_providers.email does not exist)
+  HIDDEN BUT KEPT IN SYSTEM: module_id, name, cost, expiry_date
+
+2e. VoIP list table
+  BEFORE:
+    Checkbox | Extension | Users-Name | Vendor | Phone | Server IP | Direction | # Status | Outbound Code | Cost | Password | Team Details | Actions
+
+  AFTER:
+    Checkbox | Serial | EXTENSIONS | PASSWORDS | Users Name | SERVER IP | Number for Inbound | Vendor NAME | Number Status | Code for OutBound | Brand Details | Actions
+
+  MAPPING:
+    Serial               = id
+    EXTENSIONS           = extensions (JSON array, displays first entry)
+    PASSWORDS            = extension_password (masked + AJAX reveal)
+    Users Name           = name
+    SERVER IP            = server_ip
+    Number for Inbound   = phone_number
+    Vendor NAME          = serviceProvider->name
+    Number Status        = number_status
+    Code for OutBound    = outbound_code
+    Brand Details        = team_details
+    Actions              = icon-only (View, Edit, Delete)
+
+  REMOVED: Phone (→Number for Inbound), Direction, Cost
+  HIDDEN BUT KEPT IN SYSTEM: direction, cost, module_id
+
+2f. Domains list table
+  BEFORE:
+    Checkbox | Name | Module | Hosting | Provider | Expiry | Cost | Status | Actions
+
+  AFTER:
+    Checkbox | Name | Hosting | Provider | Expiry | Cost | Status | Actions
+
+  MAPPING:
+    Name     = name
+    Hosting  = hosting->name
+    Provider = serviceProvider->name
+    Expiry   = expiry_date
+    Cost     = cost
+    Status   = status
+    Actions  = icon-only (View, Edit, Delete)
+
+  REMOVED: Module
+  SKIPPED (no DB column): Cloudflare Status (cloudflare_status does not exist)
+  HIDDEN BUT KEPT IN SYSTEM: module_id
+
+================================================================================
+3. NO DB / MIGRATION / MODEL / RELATIONSHIP CHANGES
+================================================================================
+
+Confirmed: Zero changes to:
+  - Database migrations
+  - Database schema
+  - Model classes (casts, fillable, hidden, relationships)
+  - Eloquent relationships
+  - FormRequest validation rules
+  - Routes
+  - API endpoints
+  - Import/Export logic
+  - Permissions/RBAC
+
+Only changed:
+  - Controller ->select() arrays (added columns needed by updated views)
+  - Controller ->with() calls (added relationships needed by updated views)
+  - Blade index view files (table headers, row cells, colspan, action buttons)
+
+================================================================================
+4. MODULE COLUMN NOT REMOVED FROM SYSTEM
+================================================================================
+
+Confirmed:
+  - module_id remains in all DB tables
+  - module_id remains in all $fillable arrays
+  - module_id remains in all controller store/update logic
+  - module_id remains in all forms (create/edit)
+  - module table relationship remains on all models
+  - Module search scoping remains intact
+  - Module RBAC (canOnModule) remains intact
+  - Module export/import filtering remains intact
+  - Module dashboard filtering remains intact
+
+Only hidden from display in list tables:
+  - Domains index (Module column removed from header/rows)
+  - VPS index (Module column removed from header/rows)
+  - Service Providers index (Module column removed from header/rows)
+
+Module column was NOT visible in VoIP, Hosting, or Domain Emails tables
+before this change. Module is still accessible via show/edit pages.
+
+================================================================================
+5. ONLY LIST VIEW UI CHANGED
+================================================================================
+
+Confirmed:
+  - Only index.blade.php files modified
+  - No show.blade.php, create.blade.php, edit.blade.php files touched
+  - No form fields, validation, or submission logic changed
+  - No search/filter queries altered (only display columns)
+  - Controller index() method logic untouched (only select/with for view data)
+  - All other controller methods (create, store, show, edit, update, destroy)
+    completely untouched
+
+================================================================================
+6. TEST RESULTS
+================================================================================
+
+  Tests:  1366 passed (2993 assertions)
+  Failures: 0
+
+  Key test groups verified:
+    - VpsTest       : 11/11 passed
+    - HostingTest   : 11/11 passed
+    - DomainEmailTest: through feature tests (WebNewResourcesTest + Api)
+    - ServiceProviderTest : 11/11 passed
+    - VoipTest      : 11/11 passed
+    - DomainTest    : through feature tests (WebCrudTest + Api)
+    - WebCrudTest   : 83/83 passed (index loads, store, show, edit, update, destroy)
+    - WebResourcePagesTest : 20/20 passed (resource page loads)
+    - SecurityFixesTest : 20/20 passed
+    - All unit tests : UserTest, ServiceProviderTest, BulkActionServiceTest, etc.
+    - All API tests  : all passed
+
+================================================================================
+7. REQUESTED COLUMNS SKIPPED BECAUSE DB COLUMN DOES NOT EXIST
+================================================================================
+
+Module        | Column Requested          | DB Column Needed      | Reason
+--------------|---------------------------|-----------------------|-----------------------------------
+VPS           | Department                | vps.department        | No such column
+VPS           | Location                  | vps.location          | No such column
+VPS           | VPS IDs (multi-login)     | vps.login_ids (JSON)  | No such column; single ip_address
+Hosting       | Domain IP                 | hostings.domain_ip    | No such column
+Hosting       | Mail Domain IP            | hostings.mail_ip      | No such column
+Hosting       | Cpanel IP                 | hostings.cpanel_ip    | No such column
+Service Prov. | Email                     | service_providers.email | No such column
+Domains       | Cloudflare Status         | domains.cloudflare_status | No such column
+
+================================================================================
+8. SUMMARY OF UI POLISH APPLIED
+================================================================================
+
+- All 6 resource list tables updated to match approved mockup column layout
+- All action buttons changed to icon-only with accessible title attributes
+- Password columns show masked dots + copy/reveal button (AJAX-fetched)
+- All action buttons preserved (View, Edit, Delete) with same RBAC guards
+- All bulk-action checkboxes preserved
+- All search/filter forms preserved
+- All pagination preserved
+- Zero new dependencies or packages
+- All 1366 existing tests pass with zero regressions
+
+================================================================================

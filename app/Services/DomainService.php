@@ -3,34 +3,49 @@
 namespace App\Services;
 
 use App\Models\Domain;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 class DomainService
 {
     /**
-     * @param array<string, mixed> $filters
-     * @return \Illuminate\Pagination\LengthAwarePaginator<int, Domain>
+     * @param  array<string, mixed>  $filters
+     * @return LengthAwarePaginator<int, Domain>
      */
-    public function list(array $filters = []): \Illuminate\Pagination\LengthAwarePaginator
+    public function list(array $filters = []): LengthAwarePaginator
     {
         $query = Domain::with('module.feature', 'user');
 
-        if (!empty($filters['with_trashed'])) $query->withTrashed();
-        if (isset($filters['module_id'])) $query->where('module_id', $filters['module_id']);
-        if (isset($filters['status'])) $query->where('status', $filters['status']);
-        if (isset($filters['user_id'])) $query->where('user_id', $filters['user_id']);
+        if (! empty($filters['with_trashed'])) {
+            $query->withTrashed();
+        }
+        if (isset($filters['module_id'])) {
+            $query->where('module_id', $filters['module_id']);
+        }
+        if (isset($filters['status'])) {
+            $query->where('status', $filters['status']);
+        }
+        if (isset($filters['user_id'])) {
+            $query->where('user_id', $filters['user_id']);
+        }
         if (isset($filters['search'])) {
             $query->where(function ($q) use ($filters) {
-                $q->where('name', 'like', '%' . $filters['search'] . '%')
-                  ->orWhere('registrar', 'like', '%' . $filters['search'] . '%');
+                $q->where('name', 'like', '%'.$filters['search'].'%')
+                    ->orWhere('cloudflare_status', 'like', '%'.$filters['search'].'%');
             });
         }
-        if (!empty($filters['accessible_module_ids'])) $query->whereIn('module_id', $filters['accessible_module_ids']);
+        if (! empty($filters['accessible_module_ids'])) {
+            $query->whereIn('module_id', $filters['accessible_module_ids']);
+        }
 
         $sortBy = $filters['sort_by'] ?? 'expiry_date';
         $sortOrder = $filters['sort_order'] ?? 'asc';
-        $allowedSort = ['name', 'registrar', 'expiry_date', 'cost', 'status', 'created_at'];
-        if (!in_array($sortBy, $allowedSort)) $sortBy = 'expiry_date';
-        if (!in_array($sortOrder, ['asc', 'desc'])) $sortOrder = 'asc';
+        $allowedSort = ['name', 'expiry_date', 'cost', 'status', 'created_at'];
+        if (! in_array($sortBy, $allowedSort)) {
+            $sortBy = 'expiry_date';
+        }
+        if (! in_array($sortOrder, ['asc', 'desc'])) {
+            $sortOrder = 'asc';
+        }
 
         return $query->orderBy($sortBy, $sortOrder)->paginate(min($filters['per_page'] ?? 20, 100));
     }
@@ -46,8 +61,12 @@ class DomainService
     {
         $entry->update($data);
         $entry->refresh()->load('module.feature', 'user');
+
         return $entry;
     }
 
-    public function delete(Domain $entry): void { $entry->delete(); }
+    public function delete(Domain $entry): void
+    {
+        $entry->delete();
+    }
 }

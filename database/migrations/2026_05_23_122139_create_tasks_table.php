@@ -15,9 +15,9 @@ return new class extends Migration
             $table->foreignId('module_id')->nullable()->constrained()->nullOnDelete();
             $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
             $table->foreignId('updated_by')->nullable()->constrained('users')->nullOnDelete();
-            $table->string('status')->default('pending');
-            $table->string('priority')->default('medium');
-            $table->dateTime('due_date')->nullable();
+            $table->string('status')->default('pending')->index();
+            $table->string('priority')->default('medium')->index();
+            $table->dateTime('due_date')->nullable()->index();
             $table->timestamps();
             $table->softDeletes();
         });

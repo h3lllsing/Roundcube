@@ -1,0 +1,878 @@
+<?xml version="1.0"?>
+<phpunit xmlns="https://schema.phpunit.de/coverage/1.0">
+  <file name="HostingService.php" path="\Services">
+    <totals>
+      <lines total="64" comments="6" code="58" executable="24" executed="24" percent="100.00"/>
+      <methods count="4" tested="4" percent="100.00"/>
+      <functions count="0" tested="0" percent="0"/>
+      <classes count="1" tested="1" percent="100.00"/>
+      <traits count="0" tested="0" percent="0"/>
+    </totals>
+    <class name="App\Services\HostingService" start="8" executable="24" executed="24" crap="12">
+      <namespace name="App\Services"/>
+      <method name="list" signature="list(array $filters): Illuminate\Pagination\LengthAwarePaginator" start="14" end="42" crap="9" executable="19" executed="19" coverage="100"/>
+      <method name="create" signature="create(array $data): App\Models\Hosting" start="45" end="48" crap="1" executable="1" executed="1" coverage="100"/>
+      <method name="update" signature="update(App\Models\Hosting $entry, array $data): App\Models\Hosting" start="51" end="57" crap="1" executable="3" executed="3" coverage="100"/>
+      <method name="delete" signature="delete(App\Models\Hosting $entry): void" start="59" end="62" crap="1" executable="1" executed="1" coverage="100"/>
+    </class>
+    <coverage>
+      <line nr="16">
+        <covered by="Tests\Unit\HostingServiceTest::test_list_with_trashed"/>
+        <covered by="Tests\Unit\HostingServiceTest::test_list_filters_by_module_id"/>
+        <covered by="Tests\Unit\HostingServiceTest::test_list_filters_by_status"/>
+        <covered by="Tests\Unit\HostingServiceTest::test_list_search"/>
+        <covered by="Tests\Unit\HostingServiceTest::test_list_filters_by_user_id"/>
+        <covered by="Tests\Unit\HostingServiceTest::test_list_invalid_sort_falls_back"/>
+        <covered by="Tests\Unit\HostingServiceTest::test_list_clamps_per_page"/>
+        <covered by="Tests\Unit\HostingServiceTest::test_list_accessible_module_ids"/>
+        <covered by="Tests\Feature\HostingTest::test_list"/>
+        <covered by="Tests\Feature\HostingTest::test_filter_by_status"/>
+        <covered by="Tests\Feature\HostingTest::test_list_shows_own_hostings_for_regular_user"/>
+        <covered by="Tests\Feature\HostingTest::test_list_with_trashed"/>
+      </line>
+      <line nr="17">
+        <covered by="Tests\Unit\HostingServiceTest::test_list_with_trashed"/>
+        <covered by="Tests\Unit\HostingServiceTest::test_list_filters_by_module_id"/>
+        <covered by="Tests\Unit\HostingServiceTest::test_list_filters_by_status"/>
+        <covered by="Tests\Unit\HostingServiceTest::test_list_search"/>
+        <covered by="Tests\Unit\HostingServiceTest::test_list_filters_by_user_id"/>
+        <covered by="Tests\Unit\HostingServiceTest::test_list_invalid_sort_falls_back"/>
+        <covered by="Tests\Unit\HostingServiceTest::test_list_clamps_per_page"/>
+        <covered by="Tests\Unit\HostingServiceTest::test_list_accessible_module_ids"/>
+        <covered by="Tests\Feature\HostingTest::test_list"/>
+        <covered by="Tests\Feature\HostingTest::test_filter_by_status"/>
+        <covered by="Tests\Feature\HostingTest::test_list_shows_own_hostings_for_regular_user"/>
+        <covered by="Tests\Feature\HostingTest::test_list_with_trashed"/>
+      </line>
+      <line nr="18">
+        <covered by="Tests\Unit\HostingServiceTest::test_list_with_trashed"/>
+        <covered by="Tests\Feature\HostingTest::test_list_with_trashed"/>
+      </line>
+      <line nr="20">
+        <covered by="Tests\Unit\HostingServiceTest::test_list_with_trashed"/>
+        <covered by="Tests\Unit\HostingServiceTest::test_list_filters_by_module_id"/>
+        <covered by="Tests\Unit\HostingServiceTest::test_list_filters_by_status"/>
+        <covered by="Tests\Unit\HostingServiceTest::test_list_search"/>
+        <covered by="Tests\Unit\HostingServiceTest::test_list_filters_by_user_id"/>
+        <covered by="Tests\Unit\HostingServiceTest::test_list_invalid_sort_falls_back"/>
+        <covered by="Tests\Unit\HostingServiceTest::test_list_clamps_per_page"/>
+        <covered by="Tests\Unit\HostingServiceTest::test_list_accessible_module_ids"/>
+        <covered by="Tests\Feature\HostingTest::test_list"/>
+        <covered by="Tests\Feature\HostingTest::test_filter_by_status"/>
+        <covered by="Tests\Feature\HostingTest::test_list_shows_own_hostings_for_regular_user"/>
+        <covered by="Tests\Feature\HostingTest::test_list_with_trashed"/>
+      </line>
+      <line nr="21">
+        <covered by="Tests\Unit\HostingServiceTest::test_list_filters_by_module_id"/>
+      </line>
+      <line nr="23">
+        <covered by="Tests\Unit\HostingServiceTest::test_list_with_trashed"/>
+        <covered by="Tests\Unit\HostingServiceTest::test_list_filters_by_module_id"/>
+        <covered by="Tests\Unit\HostingServiceTest::test_list_filters_by_status"/>
+        <covered by="Tests\Unit\HostingServiceTest::test_list_search"/>
+        <covered by="Tests\Unit\HostingServiceTest::test_list_filters_by_user_id"/>
+        <covered by="Tests\Unit\HostingServiceTest::test_list_invalid_sort_falls_back"/>
+        <covered by="Tests\Unit\HostingServiceTest::test_list_clamps_per_page"/>
+        <covered by="Tests\Unit\HostingServiceTest::test_list_accessible_module_ids"/>
+        <covered by="Tests\Feature\HostingTest::test_list"/>
+        <covered by="Tests\Feature\HostingTest::test_filter_by_status"/>
+        <covered by="Tests\Feature\HostingTest::test_list_shows_own_hostings_for_regular_user"/>
+        <covered by="Tests\Feature\HostingTest::test_list_with_trashed"/>
+      </line>
+      <line nr="24">
+        <covered by="Tests\Unit\HostingServiceTest::test_list_filters_by_status"/>
+        <covered by="Tests\Feature\HostingTest::test_filter_by_status"/>
+      </line>
+      <line nr="26">
+        <covered by="Tests\Unit\HostingServiceTest::test_list_with_trashed"/>
+        <covered by="Tests\Unit\HostingServiceTest::test_list_filters_by_module_id"/>
+        <covered by="Tests\Unit\HostingServiceTest::test_list_filters_by_status"/>
+        <covered by="Tests\Unit\HostingServiceTest::test_list_search"/>
+        <covered by="Tests\Unit\HostingServiceTest::test_list_filters_by_user_id"/>
+        <covered by="Tests\Unit\HostingServiceTest::test_list_invalid_sort_falls_back"/>
+        <covered by="Tests\Unit\HostingServiceTest::test_list_clamps_per_page"/>
+        <covered by="Tests\Unit\HostingServiceTest::test_list_accessible_module_ids"/>
+        <covered by="Tests\Feature\HostingTest::test_list"/>
+        <covered by="Tests\Feature\HostingTest::test_filter_by_status"/>
+        <covered by="Tests\Feature\HostingTest::test_list_shows_own_hostings_for_regular_user"/>
+        <covered by="Tests\Feature\HostingTest::test_list_with_trashed"/>
+      </line>
+      <line nr="27">
+        <covered by="Tests\Unit\HostingServiceTest::test_list_filters_by_user_id"/>
+        <covered by="Tests\Feature\HostingTest::test_list_shows_own_hostings_for_regular_user"/>
+      </line>
+      <line nr="29">
+        <covered by="Tests\Unit\HostingServiceTest::test_list_with_trashed"/>
+        <covered by="Tests\Unit\HostingServiceTest::test_list_filters_by_module_id"/>
+        <covered by="Tests\Unit\HostingServiceTest::test_list_filters_by_status"/>
+        <covered by="Tests\Unit\HostingServiceTest::test_list_search"/>
+        <covered by="Tests\Unit\HostingServiceTest::test_list_filters_by_user_id"/>
+        <covered by="Tests\Unit\HostingServiceTest::test_list_invalid_sort_falls_back"/>
+        <covered by="Tests\Unit\HostingServiceTest::test_list_clamps_per_page"/>
+        <covered by="Tests\Unit\HostingServiceTest::test_list_accessible_module_ids"/>
+        <covered by="Tests\Feature\HostingTest::test_list"/>
+        <covered by="Tests\Feature\HostingTest::test_filter_by_status"/>
+        <covered by="Tests\Feature\HostingTest::test_list_shows_own_hostings_for_regular_user"/>
+        <covered by="Tests\Feature\HostingTest::test_list_with_trashed"/>
+      </line>
+      <line nr="30">
+        <covered by="Tests\Unit\HostingServiceTest::test_list_search"/>
+      </line>
+      <line nr="33">
+        <covered by="Tests\Unit\HostingServiceTest::test_list_search"/>
+      </line>
+      <line nr="35">
+        <covered by="Tests\Unit\HostingServiceTest::test_list_with_trashed"/>
+        <covered by="Tests\Unit\HostingServiceTest::test_list_filters_by_module_id"/>
+        <covered by="Tests\Unit\HostingServiceTest::test_list_filters_by_status"/>
+        <covered by="Tests\Unit\HostingServiceTest::test_list_search"/>
+        <covered by="Tests\Unit\HostingServiceTest::test_list_filters_by_user_id"/>
+        <covered by="Tests\Unit\HostingServiceTest::test_list_invalid_sort_falls_back"/>
+        <covered by="Tests\Unit\HostingServiceTest::test_list_clamps_per_page"/>
+        <covered by="Tests\Unit\HostingServiceTest::test_list_accessible_module_ids"/>
+        <covered by="Tests\Feature\HostingTest::test_list"/>
+        <covered by="Tests\Feature\HostingTest::test_filter_by_status"/>
+        <covered by="Tests\Feature\HostingTest::test_list_shows_own_hostings_for_regular_user"/>
+        <covered by="Tests\Feature\HostingTest::test_list_with_trashed"/>
+      </line>
+      <line nr="36">
+        <covered by="Tests\Unit\HostingServiceTest::test_list_accessible_module_ids"/>
+      </line>
+      <line nr="38">
+        <covered by="Tests\Unit\HostingServiceTest::test_list_with_trashed"/>
+        <covered by="Tests\Unit\HostingServiceTest::test_list_filters_by_module_id"/>
+        <covered by="Tests\Unit\HostingServiceTest::test_list_filters_by_status"/>
+        <covered by="Tests\Unit\HostingServiceTest::test_list_search"/>
+        <covered by="Tests\Unit\HostingServiceTest::test_list_filters_by_user_id"/>
+        <covered by="Tests\Unit\HostingServiceTest::test_list_invalid_sort_falls_back"/>
+        <covered by="Tests\Unit\HostingServiceTest::test_list_clamps_per_page"/>
+        <covered by="Tests\Unit\HostingServiceTest::test_list_accessible_module_ids"/>
+        <covered by="Tests\Feature\HostingTest::test_list"/>
+        <covered by="Tests\Feature\HostingTest::test_filter_by_status"/>
+        <covered by="Tests\Feature\HostingTest::test_list_shows_own_hostings_for_regular_user"/>
+        <covered by="Tests\Feature\HostingTest::test_list_with_trashed"/>
+      </line>
+      <line nr="39">
+        <covered by="Tests\Unit\HostingServiceTest::test_list_with_trashed"/>
+        <covered by="Tests\Unit\HostingServiceTest::test_list_filters_by_module_id"/>
+        <covered by="Tests\Unit\HostingServiceTest::test_list_filters_by_status"/>
+        <covered by="Tests\Unit\HostingServiceTest::test_list_search"/>
+        <covered by="Tests\Unit\HostingServiceTest::test_list_filters_by_user_id"/>
+        <covered by="Tests\Unit\HostingServiceTest::test_list_invalid_sort_falls_back"/>
+        <covered by="Tests\Unit\HostingServiceTest::test_list_clamps_per_page"/>
+        <covered by="Tests\Unit\HostingServiceTest::test_list_accessible_module_ids"/>
+        <covered by="Tests\Feature\HostingTest::test_list"/>
+        <covered by="Tests\Feature\HostingTest::test_filter_by_status"/>
+        <covered by="Tests\Feature\HostingTest::test_list_shows_own_hostings_for_regular_user"/>
+        <covered by="Tests\Feature\HostingTest::test_list_with_trashed"/>
+      </line>
+      <line nr="41">
+        <covered by="Tests\Unit\HostingServiceTest::test_list_with_trashed"/>
+        <covered by="Tests\Unit\HostingServiceTest::test_list_filters_by_module_id"/>
+        <covered by="Tests\Unit\HostingServiceTest::test_list_filters_by_status"/>
+        <covered by="Tests\Unit\HostingServiceTest::test_list_search"/>
+        <covered by="Tests\Unit\HostingServiceTest::test_list_filters_by_user_id"/>
+        <covered by="Tests\Unit\HostingServiceTest::test_list_invalid_sort_falls_back"/>
+        <covered by="Tests\Unit\HostingServiceTest::test_list_clamps_per_page"/>
+        <covered by="Tests\Unit\HostingServiceTest::test_list_accessible_module_ids"/>
+        <covered by="Tests\Feature\HostingTest::test_list"/>
+        <covered by="Tests\Feature\HostingTest::test_filter_by_status"/>
+        <covered by="Tests\Feature\HostingTest::test_list_shows_own_hostings_for_regular_user"/>
+        <covered by="Tests\Feature\HostingTest::test_list_with_trashed"/>
+      </line>
+      <line nr="31">
+        <covered by="Tests\Unit\HostingServiceTest::test_list_search"/>
+      </line>
+      <line nr="32">
+        <covered by="Tests\Unit\HostingServiceTest::test_list_search"/>
+      </line>
+      <line nr="47">
+        <covered by="Tests\Unit\HostingServiceTest::test_create"/>
+        <covered by="Tests\Unit\HostingServiceTest::test_update"/>
+        <covered by="Tests\Unit\HostingServiceTest::test_delete"/>
+        <covered by="Tests\Unit\HostingServiceTest::test_list_with_trashed"/>
+        <covered by="Tests\Unit\HostingServiceTest::test_list_filters_by_module_id"/>
+        <covered by="Tests\Unit\HostingServiceTest::test_list_filters_by_status"/>
+        <covered by="Tests\Unit\HostingServiceTest::test_list_search"/>
+        <covered by="Tests\Unit\HostingServiceTest::test_list_filters_by_user_id"/>
+        <covered by="Tests\Unit\HostingServiceTest::test_list_invalid_sort_falls_back"/>
+        <covered by="Tests\Unit\HostingServiceTest::test_list_clamps_per_page"/>
+        <covered by="Tests\Unit\HostingServiceTest::test_list_accessible_module_ids"/>
+        <covered by="Tests\Feature\HostingTest::test_create"/>
+      </line>
+      <line nr="53">
+        <covered by="Tests\Unit\HostingServiceTest::test_update"/>
+        <covered by="Tests\Feature\HostingTest::test_update"/>
+      </line>
+      <line nr="54">
+        <covered by="Tests\Unit\HostingServiceTest::test_update"/>
+        <covered by="Tests\Feature\HostingTest::test_update"/>
+      </line>
+      <line nr="56">
+        <covered by="Tests\Unit\HostingServiceTest::test_update"/>
+        <covered by="Tests\Feature\HostingTest::test_update"/>
+      </line>
+      <line nr="61">
+        <covered by="Tests\Unit\HostingServiceTest::test_delete"/>
+        <covered by="Tests\Feature\HostingTest::test_delete"/>
+      </line>
+    </coverage>
+    <source>
+      <line no="1">
+        <token name="T_OPEN_TAG">&lt;?php</token>
+      </line>
+      <line no="2"/>
+      <line no="3">
+        <token name="T_NAMESPACE">namespace</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_NAME_QUALIFIED">App\Services</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="4"/>
+      <line no="5">
+        <token name="T_USE">use</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_NAME_QUALIFIED">App\Models\Hosting</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="6">
+        <token name="T_USE">use</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_NAME_QUALIFIED">Illuminate\Pagination\LengthAwarePaginator</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="7"/>
+      <line no="8">
+        <token name="T_CLASS">class</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">HostingService</token>
+      </line>
+      <line no="9">
+        <token name="T_OPEN_CURLY">{</token>
+      </line>
+      <line no="10">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_DOC_COMMENT">/**</token>
+      </line>
+      <line no="11">
+        <token name="T_DOC_COMMENT">     * @param  array&lt;string, mixed&gt;  $filters</token>
+      </line>
+      <line no="12">
+        <token name="T_DOC_COMMENT">     * @return LengthAwarePaginator&lt;int, Hosting&gt;</token>
+      </line>
+      <line no="13">
+        <token name="T_DOC_COMMENT">     */</token>
+      </line>
+      <line no="14">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_PUBLIC">public</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_FUNCTION">function</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_LIST">list</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_ARRAY">array</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$filters</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_EQUAL">=</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_SQUARE">[</token>
+        <token name="T_CLOSE_SQUARE">]</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_COLON">:</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">LengthAwarePaginator</token>
+      </line>
+      <line no="15">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_OPEN_CURLY">{</token>
+      </line>
+      <line no="16">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_VARIABLE">$query</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_EQUAL">=</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">Hosting</token>
+        <token name="T_DOUBLE_COLON">::</token>
+        <token name="T_STRING">with</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'module.feature'</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'user'</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="17">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_IF">if</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_EXCLAMATION_MARK">!</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_EMPTY">empty</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_VARIABLE">$filters</token>
+        <token name="T_OPEN_SQUARE">[</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'with_trashed'</token>
+        <token name="T_CLOSE_SQUARE">]</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_CURLY">{</token>
+      </line>
+      <line no="18">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_VARIABLE">$query</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">withTrashed</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="19">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_CLOSE_CURLY">}</token>
+      </line>
+      <line no="20">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_IF">if</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_ISSET">isset</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_VARIABLE">$filters</token>
+        <token name="T_OPEN_SQUARE">[</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'module_id'</token>
+        <token name="T_CLOSE_SQUARE">]</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_CURLY">{</token>
+      </line>
+      <line no="21">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_VARIABLE">$query</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">where</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'module_id'</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$filters</token>
+        <token name="T_OPEN_SQUARE">[</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'module_id'</token>
+        <token name="T_CLOSE_SQUARE">]</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="22">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_CLOSE_CURLY">}</token>
+      </line>
+      <line no="23">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_IF">if</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_ISSET">isset</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_VARIABLE">$filters</token>
+        <token name="T_OPEN_SQUARE">[</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'status'</token>
+        <token name="T_CLOSE_SQUARE">]</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_CURLY">{</token>
+      </line>
+      <line no="24">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_VARIABLE">$query</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">where</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'status'</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$filters</token>
+        <token name="T_OPEN_SQUARE">[</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'status'</token>
+        <token name="T_CLOSE_SQUARE">]</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="25">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_CLOSE_CURLY">}</token>
+      </line>
+      <line no="26">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_IF">if</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_ISSET">isset</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_VARIABLE">$filters</token>
+        <token name="T_OPEN_SQUARE">[</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'user_id'</token>
+        <token name="T_CLOSE_SQUARE">]</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_CURLY">{</token>
+      </line>
+      <line no="27">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_VARIABLE">$query</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">where</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'user_id'</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$filters</token>
+        <token name="T_OPEN_SQUARE">[</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'user_id'</token>
+        <token name="T_CLOSE_SQUARE">]</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="28">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_CLOSE_CURLY">}</token>
+      </line>
+      <line no="29">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_IF">if</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_ISSET">isset</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_VARIABLE">$filters</token>
+        <token name="T_OPEN_SQUARE">[</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'search'</token>
+        <token name="T_CLOSE_SQUARE">]</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_CURLY">{</token>
+      </line>
+      <line no="30">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_VARIABLE">$query</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">where</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_FUNCTION">function</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_VARIABLE">$q</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_USE">use</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_VARIABLE">$filters</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_CURLY">{</token>
+      </line>
+      <line no="31">
+        <token name="T_WHITESPACE">                </token>
+        <token name="T_VARIABLE">$q</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">where</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'name'</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'like'</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'%'</token>
+        <token name="T_DOT">.</token>
+        <token name="T_VARIABLE">$filters</token>
+        <token name="T_OPEN_SQUARE">[</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'search'</token>
+        <token name="T_CLOSE_SQUARE">]</token>
+        <token name="T_DOT">.</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'%'</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+      </line>
+      <line no="32">
+        <token name="T_WHITESPACE">                    </token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">orWhere</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'domain'</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'like'</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'%'</token>
+        <token name="T_DOT">.</token>
+        <token name="T_VARIABLE">$filters</token>
+        <token name="T_OPEN_SQUARE">[</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'search'</token>
+        <token name="T_CLOSE_SQUARE">]</token>
+        <token name="T_DOT">.</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'%'</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="33">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_CLOSE_CURLY">}</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="34">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_CLOSE_CURLY">}</token>
+      </line>
+      <line no="35">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_IF">if</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_EXCLAMATION_MARK">!</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_EMPTY">empty</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_VARIABLE">$filters</token>
+        <token name="T_OPEN_SQUARE">[</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'accessible_module_ids'</token>
+        <token name="T_CLOSE_SQUARE">]</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_CURLY">{</token>
+      </line>
+      <line no="36">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_VARIABLE">$query</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">whereIn</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'module_id'</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$filters</token>
+        <token name="T_OPEN_SQUARE">[</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'accessible_module_ids'</token>
+        <token name="T_CLOSE_SQUARE">]</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="37">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_CLOSE_CURLY">}</token>
+      </line>
+      <line no="38">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_VARIABLE">$sortBy</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_EQUAL">=</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">in_array</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_VARIABLE">$filters</token>
+        <token name="T_OPEN_SQUARE">[</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'sort_by'</token>
+        <token name="T_CLOSE_SQUARE">]</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_COALESCE">??</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'expiry_date'</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_SQUARE">[</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'name'</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'plan'</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'domain'</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'expiry_date'</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'cost'</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'status'</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'created_at'</token>
+        <token name="T_CLOSE_SQUARE">]</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_QUESTION_MARK">?</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_VARIABLE">$filters</token>
+        <token name="T_OPEN_SQUARE">[</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'sort_by'</token>
+        <token name="T_CLOSE_SQUARE">]</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_COALESCE">??</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'expiry_date'</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_COLON">:</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'expiry_date'</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="39">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_VARIABLE">$sortOrder</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_EQUAL">=</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">in_array</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_VARIABLE">$filters</token>
+        <token name="T_OPEN_SQUARE">[</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'sort_order'</token>
+        <token name="T_CLOSE_SQUARE">]</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_COALESCE">??</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'asc'</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_SQUARE">[</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'asc'</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'desc'</token>
+        <token name="T_CLOSE_SQUARE">]</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_QUESTION_MARK">?</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_VARIABLE">$filters</token>
+        <token name="T_OPEN_SQUARE">[</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'sort_order'</token>
+        <token name="T_CLOSE_SQUARE">]</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_COALESCE">??</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'asc'</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_COLON">:</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'asc'</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="40"/>
+      <line no="41">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_RETURN">return</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$query</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">orderBy</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_VARIABLE">$sortBy</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$sortOrder</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">paginate</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_STRING">min</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_VARIABLE">$filters</token>
+        <token name="T_OPEN_SQUARE">[</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'per_page'</token>
+        <token name="T_CLOSE_SQUARE">]</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_COALESCE">??</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_LNUMBER">20</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_LNUMBER">100</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="42">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_CLOSE_CURLY">}</token>
+      </line>
+      <line no="43"/>
+      <line no="44">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_DOC_COMMENT">/** @param array&lt;string, mixed&gt; $data */</token>
+      </line>
+      <line no="45">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_PUBLIC">public</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_FUNCTION">function</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">create</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_ARRAY">array</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$data</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_COLON">:</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">Hosting</token>
+      </line>
+      <line no="46">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_OPEN_CURLY">{</token>
+      </line>
+      <line no="47">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_RETURN">return</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">Hosting</token>
+        <token name="T_DOUBLE_COLON">::</token>
+        <token name="T_STRING">create</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_VARIABLE">$data</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">fresh</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">load</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'module.feature'</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'user'</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="48">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_CLOSE_CURLY">}</token>
+      </line>
+      <line no="49"/>
+      <line no="50">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_DOC_COMMENT">/** @param array&lt;string, mixed&gt; $data */</token>
+      </line>
+      <line no="51">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_PUBLIC">public</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_FUNCTION">function</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">update</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_STRING">Hosting</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$entry</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_ARRAY">array</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$data</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_COLON">:</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">Hosting</token>
+      </line>
+      <line no="52">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_OPEN_CURLY">{</token>
+      </line>
+      <line no="53">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_VARIABLE">$entry</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">update</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_VARIABLE">$data</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="54">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_VARIABLE">$entry</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">refresh</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">load</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'module.feature'</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'user'</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="55"/>
+      <line no="56">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_RETURN">return</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$entry</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="57">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_CLOSE_CURLY">}</token>
+      </line>
+      <line no="58"/>
+      <line no="59">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_PUBLIC">public</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_FUNCTION">function</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">delete</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_STRING">Hosting</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$entry</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_COLON">:</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">void</token>
+      </line>
+      <line no="60">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_OPEN_CURLY">{</token>
+      </line>
+      <line no="61">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_VARIABLE">$entry</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">delete</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="62">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_CLOSE_CURLY">}</token>
+      </line>
+      <line no="63">
+        <token name="T_CLOSE_CURLY">}</token>
+      </line>
+      <line no="64"/>
+    </source>
+  </file>
+</phpunit>

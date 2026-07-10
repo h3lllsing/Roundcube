@@ -1,0 +1,779 @@
+PHASE 7A — ENTERPRISE GLOBAL SEARCH MASTER PLAN
+================================================
+Date: 2026-06-26
+
+TABLE OF CONTENTS
+  1. Current State Analysis
+  2. Architecture Overview
+  3. Searchable Modules — Per-Module Spec
+  4. Permission & Ownership Model
+  5. UI Design
+  6. API & Controller Design
+  7. Cache & Performance Strategy
+  8. Security Checklist
+  9. Testing Plan
+ 10. Implementation Order
+ 11. Future Considerations (documented only)
+
+=======================================================================
+1. CURRENT STATE ANALYSIS
+=======================================================================
+
+  Existing SearchController (app/Http/Controllers/Web/SearchController.php):
+    - 16 module types in a hardcoded $searches array
+    - Single-column LIKE search on each model's primary display column
+    - Non-SA scoping: user_id filter for "user owned types", module_id IN for tasks
+    - No multi-column search (except Assets which also searches serial_number)
+    - No search result highlighting
+    - No recent searches
+    - No per-module result limits
+    - No keyboard-friendly result navigation on search page
+    - No pagination on the search results page
+    - View (search/index.blade.php) groups results by type in cards
+
+  Command Palette (admin.blade.js, inline JS):
+    - Hardcoded client-side cmdPages array (page labels + URLs only)
+    - Filtered by label match only — no record-level search
+    - Super-admin entries gated by @hasrole blade directive
+    - NOT connected to SearchController
+    - No API endpoint for live search results
+
+  Sidebar Search:
+    - Form submits GET to /search?q=...
+    - Same SearchController as above
+    - Placeholder says "Search... (Ctrl+K)" but Ctrl+K opens cmd palette (different)
+
+  Gaps:
+    - Only searches primary column per model (e.g. name only, not email or IP)
+    - No search across secondary identifiers (cPanel ID, asset serial, hostname, IP)
+    - No results inside Ctrl+K modal
+    - No recent searches stored
+    - No text highlighting
+    - No per-module result caps
+    - Admin role not properly scoped (no use of getAccessibleModuleIds for most types)
+
+=======================================================================
+2. ARCHITECTURE OVERVIEW
+=======================================================================
+
+  Global Search Service
+    App\Services\GlobalSearchService
+    - Single class with search() method
+    - Accepts: string $query, User $user, ?int $perModuleLimit = 5
+    - Returns: Collection of SearchResultGroup objects
+
+  SearchResultGroup DTO
+    App\DTOs\SearchResultGroup
+    - string $moduleKey (slug)
+    - string $label (display name)
+    - string $route (index route for "View all")
+    - Collection $items (SearchResultItem objects)
+
+  SearchResultItem DTO
+    App\DTOs\SearchResultItem
+    - mixed $id
+    - string $title (highlighted)
+    - ?string $subtitle (highlighted)
+    - string $url (show route)
+    - ?string $badge (status/label)
+    - ?string $category (category label)
+
+  Highlight helper
+    App\Helpers\SearchHelper::highlight(string $text, string $query): string
+    - Wraps matching portions in <mark> tags
+    - Case-insensitive matching
+
+  API Endpoint (for Ctrl+K modal)
+    GET /api/search?q=...
+    Returns JSON: { groups: [{ key, label, route, items: [{ id, title, subtitle, url, badge }] }] }
+
+  Web Endpoint (full search page)
+    GET /search?q=...
+    Existing route, refactored to use GlobalSearchService
+    Pagination via ?page=N (for "View all" per-module drill-down)
+
+  Recent Searches
+    - Stored in database: user_search_history table
+    - Columns: id, user_id, query, created_at
+    - Migration: create_user_search_history_table
+    - Max 10 recent searches per user
+    - Trimmed on insert
+    - No migration = store in localstorage as fallback
+
+=======================================================================
+3. SEARCHABLE MODULES — PER-MODULE SPEC
+=======================================================================
+
+  3.1 Clients
+  -----------
+  Note: No Client model exists. Clients are Users in this system.
+  Plan: Search the users table as "Clients" for non-SA roles that
+        need to find user records without full user management.
+
+  Model:    User
+  Table:    users
+  Columns:  name, email
+  Title:    name
+  Subtitle: email
+  Badge:    User's primary role slug (via Tyro roles)
+  URL:      route('users.show', $user->id)
+  Permission: super-admin only (users.show is under role:super-admin middleware)
+  Ownership:  super-admin sees all; admin/user sees nothing
+  Limit:     5
+  Notes:     Search both name and email via OR WHERE LIKE
+
+  3.2 Domains
+  -----------
+  Model:    App\Models\Domain
+  Table:    domains
+  Columns:  name, dns_servers (JSON array — cast to string in search), notes
+  Title:    name
+  Subtitle: serviceProvider?->name (provider name)
+  Badge:    status
+  URL:      route('domains.show', $domain->id)
+  Permission: 'domains' module — can_read check via getAccessibleModuleIds('read')
+             + user_id ownership fallback for regular users
+  Ownership:
+    - Super-admin: all domains
+    - Admin: domains where module_id IN accessibleModuleIds('read')
+    - Regular user: domains where user_id = $user->id
+  Limit:     5
+  Notes:     Index name column. dns_servers is JSON, difficult to LIKE search
+             in SQLite. Skip dns_servers in initial implementation.
+             Search name with LIKE, optionally search notes.
+
+  3.3 Hosting
+  -----------
+  Model:    App\Models\Hosting
+  Table:    hostings
+  Columns:  name, username, domain, cpanel_ip (added 2026_06_25_000002),
+            domain_ip (added 2026_06_25_000002), notes
+  Title:    name
+  Subtitle: plan ?? domain
+  Badge:    status
+  URL:      route('hostings.show', $hosting->id)
+  Permission: same as Domains (module slug: 'hostings')
+  Ownership:
+    - Super-admin: all
+    - Admin: module_id IN accessibleModuleIds('read')
+    - Regular user: user_id = $user->id
+  Limit:     5
+  Notes:     Search: name LIKE, username LIKE, domain LIKE, cpanel_ip LIKE.
+             Do NOT expose password column.
+
+  3.4 VPS
+  -------
+  Model:    App\Models\Vps
+  Table:    vps
+  Columns:  name, ip_address, additional_ips (JSON array), os,
+            login_ids (JSON array), department, location, notes
+  Title:    name
+  Subtitle: ip_address ?? os
+  Badge:    status
+  URL:      route('vps.show', $vps->id)
+  Permission: same pattern as Domains (module slug: 'vps')
+  Limit:     5
+  Notes:     Search: name LIKE, ip_address LIKE.
+             additional_ips is JSON, hard to search — skip initially.
+             Search os, department, location as supplementary columns.
+
+  3.5 Domain Emails
+  -----------------
+  Model:    App\Models\DomainEmail
+  Table:    domain_emails
+  Columns:  email, notes
+  Title:    email
+  Subtitle: domain?->name (related domain)
+  Badge:    status
+  URL:      route('domain-emails.show', $email->id)
+  Permission: same pattern as Domains (module slug: 'domain-emails')
+  Limit:     5
+  Notes:     Search: email LIKE. Eager load domain relation for subtitle.
+             Do NOT expose password column.
+
+  3.6 VoIP
+  --------
+  Model:    App\Models\Voip
+  Table:    voip
+  Columns:  name, phone_number, username, server_ip, extensions (JSON array),
+            outbound_code, team_details, notes
+  Title:    name
+  Subtitle: phone_number ?? server_ip
+  Badge:    status (or number_status)
+  URL:      route('voip.show', $voip->id)
+  Permission: same pattern as Domains (module slug: 'voip')
+  Limit:     5
+  Notes:     Search: name LIKE, phone_number LIKE, username LIKE, server_ip LIKE.
+             Do NOT expose password or extension_password.
+
+  3.7 Other Services
+  ------------------
+  Model:    App\Models\OtherService
+  Table:    other_services
+  Columns:  name, service_type, username, website, notes
+  Title:    name
+  Subtitle: service_type ?? username
+  Badge:    status
+  URL:      route('other-services.show', $otherService->id)
+  Permission: same pattern as Domains (module slug: 'other-services')
+  Limit:     5
+  Notes:     Search: name LIKE, service_type LIKE, username LIKE.
+             Do NOT expose password column.
+
+  3.8 Renewals / Expiry Trackers
+  --------------------------------
+  Model:    App\Models\ExpiryTracker
+  Table:    expiry_trackers
+  Columns:  name, username, login_url, notes
+  Title:    name
+  Subtitle: "Expires " . expiry_date->format('M d, Y') . " (" . days_left . "d)"
+  Badge:    status
+  URL:      route('expiry-trackers.show', $tracker->id)
+  Permission: same pattern as Domains (module slug: 'expiry-trackers')
+  Limit:     5
+  Notes:     Search: name LIKE, username LIKE, login_url LIKE.
+             Do NOT expose password (field exists in fillable but was
+             removed from DB in migration 2026_06_23_182722 — safe).
+             Calculate days_left for subtitle display.
+
+  3.9 Assets
+  ----------
+  Model:    App\Models\Asset
+  Table:    assets
+  Columns:  asset_tag, serial_number, notes, department, condition
+  Title:    asset_tag
+  Subtitle: serial_number ?? "Category: " . category?->name
+  Badge:    status
+  URL:      route('assets.show', $asset->id)
+  Permission: same pattern as Domains (module slug: 'assets')
+  Limit:     5
+  Notes:     Search: asset_tag LIKE, serial_number LIKE, department LIKE,
+             notes LIKE. Eager load category and type for subtitle.
+             Do NOT expose vault_entry_id content (linked vault entry
+             is protected by VaultEntry's own RBAC).
+
+  3.10 Tasks
+  ----------
+  Model:    App\Models\Task
+  Table:    tasks
+  Columns:  title, description
+  Title:    title
+  Subtitle: Str::limit(description, 80)
+  Badge:    status (with priority color)
+  URL:      route('tasks.show', $task->id)
+  Permission: Tasks are NOT module-scoped like services.
+    - Super-admin: all tasks
+    - Admin: tasks where module_id IN accessibleModuleIds('read')
+             OR user is assignee (via task_user pivot)
+    - Regular user: tasks where user is assignee
+  Limit:     5
+  Notes:     Search: title LIKE, description LIKE.
+             Eager load assignees for subtitle (optional).
+
+  3.11 Vault / Credentials
+  ------------------------
+  Model:    App\Models\VaultEntry
+  Table:    password_vault
+  Columns:  service_name, service_url, username, description
+  Title:    service_name
+  Subtitle: username ?? service_url
+  Badge:    (no status column — category is not available)
+  URL:      route('vault.show', $vault->id)
+  Permission:
+    - Super-admin: all vault entries
+    - Regular user: vault entries where user_id = $user->id
+    - Note: Vault entries are NOT currently scoped by module permissions
+            for admins. The existing VaultController only separates
+            "my vault" vs "shared vault" index views.
+    - Use existing canAccessVault() / isVaultOwner() from HasModulePermissions trait.
+  Limit:     5
+  SECURITY: Do NOT expose encrypted_password or decrypted password.
+            The subtitle must never show password values.
+            Only surface service_name, username, service_url in results.
+
+  3.12 Notes
+  ----------
+  Model:    App\Models\Note
+  Table:    notes
+  Columns:  content
+  Title:    Str::limit(content, 100)
+  Subtitle: notable_type . " #" . notable_id (polymorphic reference)
+  Badge:    (no status column)
+  URL:      route('notes.show', $note->id)
+  Permission: Notes are user-owned (user_id column).
+    - Super-admin: all notes
+    - Admin/User: notes where user_id = $user->id
+  Limit:     5
+  Notes:     Search: content LIKE.
+             Eager load notable morph relation for subtitle (optional,
+             can cause N+1 — load only if needed).
+             Highlighting is important for content matches.
+
+  3.13 Users
+  ----------
+  Model:    App\Models\User (same as 3.1 Clients — consolidated)
+  Table:    users
+  Columns:  name, email
+  Title:    name
+  Subtitle: email
+  Badge:    Comma-separated role names
+  URL:      route('users.show', $user->id)
+  Permission: super-admin only (route is under role:super-admin middleware)
+  Limit:     5
+  Notes:     Only visible to SA. Admin/IT Support cannot search users.
+
+  3.14 SMTP Profiles
+  -------------------
+  Model:    App\Models\SmtpProfile
+  Table:    smtp_profiles
+  Columns:  name, sender_name, sender_email, smtp_host, smtp_username
+  Title:    name
+  Subtitle: sender_email ?? smtp_host
+  Badge:    is_active ? "Active" : "Inactive"
+  URL:      route('smtp-profiles.show', $profile->id)
+  Permission: super-admin only (route is under role:super-admin middleware)
+  Limit:     5
+  Notes:     Search: name LIKE, sender_email LIKE, smtp_host LIKE,
+             smtp_username LIKE.
+             Do NOT expose smtp_password.
+
+  3.15 Activity Logs
+  -------------------
+  Model:    Spatie\Activitylog\Models\Activity
+  Table:    activity_log
+  Columns:  description, event, log_name, subject_type, causer_type
+  Title:    description
+  Subtitle: event ?? subject_type . " by " . causer?->name
+  Badge:    event
+  URL:      route('activity-logs.show', $activity->id)
+  Permission: super-admin only (route is under role:super-admin middleware)
+  Limit:     5
+  Notes:     Search: description LIKE.
+             Activity table can grow large — consider adding a limit
+             to total results across all modules for this table.
+             Eager load causer (morph) for subtitle.
+
+=======================================================================
+4. PERMISSION & OWNERSHIP MODEL
+=======================================================================
+
+  Permission Matrix:
+
+  Module              SA      Admin           IT Support       User/Read Only
+  ─────────────────────────────────────────────────────────────────────────────
+  Clients/Users       ALL     —               —                —
+  Domains             ALL     module_id IN     module_id IN     user_id = me
+                              accessibleIds    accessibleIds
+  Hosting             ALL     module_id IN     module_id IN     user_id = me
+                              accessibleIds    accessibleIds
+  VPS                 ALL     module_id IN     module_id IN     user_id = me
+                              accessibleIds    accessibleIds
+  Domain Emails       ALL     module_id IN     module_id IN     user_id = me
+                              accessibleIds    accessibleIds
+  VoIP                ALL     module_id IN     module_id IN     user_id = me
+                              accessibleIds    accessibleIds
+  Other Services      ALL     module_id IN     module_id IN     user_id = me
+                              accessibleIds    accessibleIds
+  Expiry Trackers     ALL     module_id IN     module_id IN     user_id = me
+                              accessibleIds    accessibleIds
+  Assets              ALL     module_id IN     module_id IN     user_id = me
+                              accessibleIds    accessibleIds  OR assigned_to = me
+  Tasks               ALL     module_id IN     module_id IN     assigned to me
+                              accessibleIds    accessibleIds
+                   OR assignee = me       OR assignee = me
+  Vault               ALL     user_id = me    user_id = me     user_id = me
+  Notes               ALL     user_id = me    user_id = me     user_id = me
+  SMTP Profiles       ALL     —               —                —
+  Activity Logs       ALL     —               —                —
+
+  Implementation approach:
+    GlobalSearchService receives User, resolves accessibleModuleIds upfront.
+    Each module search method receives the same accessibleIds + User.
+    Ownership scoping uses the SAME logic as RbacScope::apply() from app/Helpers.
+
+=======================================================================
+5. UI DESIGN
+=======================================================================
+
+  5.1 Full Search Page (/search?q=...)
+  -------------------------------------
+    - Existing search/index.blade.php preserved and enhanced
+    - Header: "Search Results for "{query}""
+    - Grouped by module with module icon + label
+    - Each group shows up to 5 results (configurable)
+    - Each result row shows:
+        [Badge] Title (highlighted)
+        Subtitle (highlighted)
+        → link to show route
+    - "View all {N} results" link at bottom of each group
+        → navigates to module index with ?search=query pre-filled
+    - Empty state: "No results found for "{query}". Try different keywords."
+    - Minimum 2 characters enforced (already implemented)
+    - Search input at top of page for refinement
+
+  5.2 Ctrl+K Command Palette (admin.blade.php)
+  ---------------------------------------------
+    - Existing cmdPalette modal preserved for page navigation
+    - ADD a second tab/section: "Search Records"
+    - Two sections in modal:
+      1. "Pages" — current client-side cmdPages filtering
+      2. "Records" — results from /api/search?q=... (AJAX, debounced)
+    - "Records" section only appears when user types 2+ characters
+    - Each record result shows: Module badge + Title + Subtitle
+    - Keyboard: ↑↓ to navigate, Enter to open
+    - Close: Esc
+    - Debounce: 300ms
+    - Abort previous request on new keystroke
+
+  5.3 Dashboard "Search Everything" Quick Action
+  -----------------------------------------------
+    - Already present as the sidebar search form + Cmd+K button
+    - Add explicit "Search Everything" quick action link in
+      QuickActionsWidget (already has "Cmd+K" button in dashboard header)
+    - The existing "Cmd+K" button + shortcut IS the "Search Everything"
+      entry point — no additional widget link needed.
+
+  5.4 Highlighting
+  -----------------
+    Helper: App\Helpers\SearchHelper::highlight($text, $query)
+    Implementation:
+      preg_replace(
+        '/(' . preg_quote($query, '/') . ')/iu',
+        '<mark class="bg-amber-200 dark:bg-amber-800 rounded px-0.5">$1</mark>',
+        e($text)
+      )
+    Applied to: title and subtitle in each SearchResultItem
+    Blade: {!! $item->title !!} (unescaped, but safely escaped in helper)
+
+  5.5 Recent Searches
+  --------------------
+    Storage: user_search_history table
+      id          bigint auto-increment PK
+      user_id     bigint FK -> users
+      query       string (max 100 chars)
+      created_at  timestamp
+
+    Behavior:
+      - Save on search submission (web route) and on API search (AJAX)
+      - Max 10 per user; delete oldest on insert if > 10
+      - Display on search page when query is empty
+      - Display at top of Ctrl+K modal when input is empty
+      - Each recent search is clickable (re-runs that query)
+      - "Clear recent searches" button
+
+    Fallback (if no migration desired):
+      Store in localStorage key: 'recent_searches'
+      JSON array of strings, max 10
+
+=======================================================================
+6. API & CONTROLLER DESIGN
+=======================================================================
+
+  6.1 GlobalSearchService
+  -----------------------
+    Namespace: App\Services\GlobalSearchService
+    Method: search(string $query, User $user, int $perModuleLimit = 5): array
+    Returns: array of SearchResultGroup (or DTO collections)
+
+    Internal structure:
+      - Resolves accessibleModuleIds via $user->getAccessibleModuleIds('read')
+      - Defines $modules config (key -> [model, columns, title_col, subtitle_col,
+        badge_col, route_name, permission_callback, scope_callback])
+      - Iterates modules, builds query with LIKE on each column
+      - Applies ownership/permission scoping
+      - Limits per module, constructs SearchResultItem DTOs
+      - Applies highlighting
+      - Returns grouped results
+
+    Search logic per module:
+      $query->where(function($q) use ($term, $columns) {
+          foreach ($columns as $col) {
+              $q->orWhere($col, 'like', $term);
+          }
+      });
+
+  6.2 API SearchController
+  -------------------------
+    Namespace: App\Http\Controllers\Api\SearchController
+    (Enhance existing api controller)
+
+    Endpoint: GET /api/search?q=...
+    Middleware: auth:sanctum, suspended, throttle:search
+
+    Response:
+    {
+      "groups": [
+        {
+          "key": "domains",
+          "label": "Domains",
+          "route": "/domains",
+          "items": [
+            {
+              "id": 1,
+              "title": "<mark>example</mark>.com",
+              "subtitle": "Provider: Namecheap",
+              "url": "/domains/1",
+              "badge": "active"
+            }
+          ]
+        }
+      ],
+      "recent": ["example", "server", ...]  // only when q is empty
+    }
+
+    Cache: 60-second cache keyed by "search:api:{$user->id}:".md5($query)
+    This is already implemented in the existing Api\SearchController.
+
+  6.3 Web SearchController Enhancement
+  -------------------------------------
+    Refactor the existing index() method:
+      - Delegate search logic to GlobalSearchService
+      - Collect all groups
+      - Pass to view
+      - Save recent search to DB/localStorage
+    Minimal changes to the existing view.
+
+=======================================================================
+7. CACHE & PERFORMANCE STRATEGY
+=======================================================================
+
+   7.1 Per-User Query Cache
+   ------------------------
+     Key: "search:{$user->id}:".md5($query)
+     TTL: 60 seconds (matching existing API cache)
+     Store: Cache::remember (default driver — file/database/redis)
+
+   7.2 Query Optimization
+   ----------------------
+     - Select ONLY needed columns (id, title_col, subtitle_col, badge_col,
+       route-related FK)
+     - Use ->take($perModuleLimit) on each subquery
+     - Eager load only used relations (eager load via with(), not lazy)
+     - No eager loading of polymorphic relations in search results
+       (use stored column values instead)
+
+   7.3 Index Recommendations (future migration)
+   --------------------------------------------
+     - domains.name -> INDEX
+     - hostings.name -> INDEX
+     - vps.name, vps.ip_address -> INDEX
+     - assets.asset_tag (unique, already), assets.serial_number -> INDEX
+     - expiry_trackers.name -> INDEX
+     - tasks.title -> INDEX
+     - password_vault.service_name -> INDEX
+     - users.name, users.email -> INDEX
+     - notes.content -> FULLTEXT (MySQL 5.7+ only)
+     - activity_log.description -> FULLTEXT (MySQL 5.7+ only)
+
+     Without these indexes, LIKE '%term%' on large tables will be slow.
+     Initial implementation uses LIKE with LIMIT; fulltext is documented
+     as a future optimization.
+
+   7.4 Avoiding N+1
+   -----------------
+     All queries use ->take(5) to limit results.
+     Eager load only when essential for subtitle/display.
+     For route URLs, use route() helper with the ID — no need to load model.
+
+   7.5 Shared-Hosting Compatibility
+   ---------------------------------
+     - No Redis, no Elasticsearch, no Meilisearch, no Algolia
+     - LIKE search works on SQLite, MySQL, MariaDB, PostgreSQL
+     - All caching uses default Laravel cache driver
+     - No raw SQL that varies by database driver
+     - Thread-safe: no file-based race conditions
+
+=======================================================================
+8. SECURITY CHECKLIST
+=======================================================================
+
+   [X] Vault passwords NOT exposed — encrypted_password column is hidden
+       on the model and never included in search selects
+   [X] No hidden credentials leaked — Vault results only show
+       service_name, username, service_url
+   [X] RBCA respected — each module checks can_read via
+       getAccessibleModuleIds('read') or user_id ownership
+   [X] Super Admin sees all — no user_id or module_id filter for SA
+   [X] Admin sees assigned modules — module_id IN accessibleModuleIds
+   [X] IT Support sees permitted modules — same module_id scoping
+   [X] Read Only sees read-only permitted modules — uses can_read
+       permission (same as all searches)
+   [X] Users see only allowed/owned records — user_id = current user
+   [X] SMTP passwords never returned — hidden on model
+   [X] Hosting passwords never returned — hidden on model
+   [X] VPS passwords never returned — hidden on model
+   [X] VoIP passwords never returned — hidden on model
+   [X] Domain Email passwords never returned — hidden on model
+   [X] Other Service passwords never returned — hidden on model
+   [X] Expiry Tracker "password" — column removed from DB, model
+       reference is inert
+   [X] Activity log does not leak activity from modules the user
+       cannot access (filtered by subject_type + subject_id ownership)
+   [X] Search results limited to 5 per module (no data dumping)
+   [X] Minimum 2 characters required (prevents full table scans)
+   [X] throttle:search middleware on both web and API routes
+   [X] API requires auth:sanctum
+
+=======================================================================
+9. TESTING PLAN
+=======================================================================
+
+  Test file: tests/Feature/Search/GlobalSearchTest.php (new)
+
+  Test Categories:
+
+  9.1 Super Admin Search
+  -----------------------
+    - search_all_modules_returns_results_for_super_admin
+    - super_admin_searches_domains_by_name
+    - super_admin_searches_assets_by_serial_number
+    - super_admin_searches_vps_by_ip_address
+    - super_admin_searches_hosting_by_cpanel_id (username)
+    - super_admin_searches_tasks_by_title
+    - super_admin_searches_vault_by_service_name
+    - super_admin_searches_users_by_name
+    - super_admin_searches_users_by_email
+    - super_admin_searches_activity_logs_by_description
+    - super_admin_searches_smtp_profiles_by_name
+
+  9.2 Admin Scoped Search
+  ------------------------
+    - admin_sees_only_assigned_module_records
+    - admin_does_not_see_other_module_records
+    - admin_searches_tasks_assigned_to_them
+    - admin_searches_expiry_trackers_in_accessible_modules
+
+  9.3 Read Only Scoped Search
+  ----------------------------
+    - read_only_searches_their_own_records_only
+    - read_only_does_not_see_other_users_records
+
+  9.4 Vault Security
+  -------------------
+    - vault_password_not_leaked_in_search_results
+      (assert that 'encrypted_password' does not appear in response)
+    - vault_results_limited_to_own_entries_for_non_super_admin
+
+  9.5 Asset Search
+  -----------------
+    - asset_search_by_asset_tag_returns_correct_result
+    - asset_search_by_serial_number_returns_correct_result
+    - asset_search_by_department_returns_correct_result
+
+  9.6 Domain Search
+  ------------------
+    - domain_search_by_name_returns_correct_result
+    - domain_search_returns_subtitle_with_provider
+
+  9.7 General
+  ------------
+    - empty_search_returns_no_results
+    - single_character_search_returns_no_results
+    - search_highlighting_wraps_match_in_mark_tag
+    - search_results_limited_to_5_per_module
+    - search_across_multiple_columns_for_same_module
+
+  9.8 Recent Search
+  ------------------
+    - recent_search_saved_after_search
+    - recent_searches_limited_to_10
+    - recent_searches_cleared
+
+  9.9 API Search
+  ---------------
+    - api_search_returns_json_structure
+    - api_search_respects_permissions
+    - api_search_requires_authentication
+
+  9.10 Permission Leakage
+  ------------------------
+    - user_cannot_search_users_module
+    - user_cannot_search_smtp_profiles
+    - user_cannot_search_activity_logs
+    - admin_cannot_search_users_module
+    - non_super_admin_cannot_see_super_admin_only_modules
+
+=======================================================================
+10. IMPLEMENTATION ORDER
+=======================================================================
+
+  Phase 7A — Backend (Search Engine)
+  ───────────────────────────────────
+  Step 1:  Create App\DTOs\SearchResultItem and SearchResultGroup classes
+  Step 2:  Create App\Helpers\SearchHelper with highlight() method
+  Step 3:  Create App\Services\GlobalSearchService
+           - Module configuration array
+           - Permission/ownership scoping
+           - Multi-column LIKE search per module
+           - DTO construction with highlighting
+  Step 4:  Create database/migrations/xxxx_create_user_search_history_table.php
+           (or skip migration and use localStorage as noted)
+  Step 5:  Refactor App\Http\Controllers\Web\SearchController::index()
+           - Delegate to GlobalSearchService
+           - Save recent search
+           - Pass SearchResultItem DTOs to view
+  Step 6:  Enhance App\Http\Controllers\Api\SearchController
+           - Use GlobalSearchService
+           - Return JSON with groups + recent searches
+           - Maintain existing 60s cache
+  Step 7:  Create App\Models\UserSearchHistory model (if migration created)
+
+  Phase 7B — UI (Frontend)
+  ─────────────────────────
+  Step 8:  Update resources/views/search/index.blade.php
+           - New result card design with highlighting
+           - Recent searches section
+           - "View all N results" links to filtered index page
+  Step 9:  Update admin.blade.php Ctrl+K palette
+           - Add "Records" section with AJAX search
+           - Integrate with /api/search endpoint
+           - Debounced input (300ms)
+           - Display recent searches when input empty
+           - Keyboard navigation
+  Step 10: Update sidebar search placeholder if needed
+
+  Phase 7C — Tests
+  ────────────────
+  Step 11: Create tests/Feature/Search/GlobalSearchTest.php
+           - Implement all tests from §9
+  Step 12: Run full test suite, fix regressions
+
+=======================================================================
+11. FUTURE CONSIDERATIONS (DOCUMENTED ONLY — NOT IMPLEMENTED)
+=======================================================================
+
+  11.1 Full-Text Search
+       MySQL / MariaDB: ALTER TABLE ... ADD FULLTEXT INDEX on text columns
+       PostgreSQL: Use tsvector/tsquery via Laravel Scout
+       Requires: Database-specific migration + conditional query logic
+       Benefit: 10-100x faster than LIKE '%term%' on large datasets
+       Risk: Not shared-hosting compatible; MySQL 5.7+ required
+
+  11.2 Search Synonyms
+       Map common terms: "vps" -> "server", "email" -> "mail", "host" -> "hosting"
+       Store in config/search-synonyms.php
+       Apply before query: expand term to include synonyms
+
+  11.3 Fuzzy Search
+       Allow typos: "exmaple" -> "example"
+       Implement via: Levenshtein distance (MySQL), pg_trgm (PostgreSQL),
+       or client-side suggestion
+       NOT for initial implementation — adds complexity and performance cost
+
+  11.4 Search Relevance Scoring
+       Weight columns: title 10x, subtitle 3x, other 1x
+       Order results by relevance score
+       Currently: grouped by module, limited per module — relevance across
+       modules is less important than module grouping
+
+  11.5 Saved Searches
+       Allow users to save named searches for quick access
+       Different from recent searches — persisted indefinitely
+       Could be stored in the same user_search_history table with
+       an is_saved flag
+
+  11.6 Autocomplete Suggestions
+       Show suggestions as user types (before pressing Enter)
+       Based on: recent searches, popular searches (if tracked),
+       matching terms from database
+       Currently: only on Ctrl+K modal (debounced API call)

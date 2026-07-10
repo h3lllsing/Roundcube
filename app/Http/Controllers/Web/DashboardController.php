@@ -2,118 +2,129 @@
 
 namespace App\Http\Controllers\Web;
 
+use App\Dashboard\ActivityWidget;
+use App\Dashboard\AssetsWidget;
+use App\Dashboard\MonitoringWidget;
+use App\Dashboard\OperationsWidget;
+use App\Dashboard\QuickActionsWidget;
+use App\Dashboard\RenewalsWidget;
+use App\Dashboard\ServerHealthWidget;
+use App\Dashboard\SmtpWidget;
+use App\Dashboard\TasksWidget;
+use App\Dashboard\VaultWidget;
 use App\Http\Controllers\Controller;
-use App\Models\Domain;
-use App\Models\DomainEmail;
-use App\Models\ExpiryTracker;
-use App\Models\Feature;
-use App\Models\Hosting;
-use App\Models\Module;
-use App\Models\Note;
-use App\Models\OtherService;
-use App\Models\ServiceProvider;
-use App\Models\Task;
-use App\Models\User;
-use App\Models\Voip;
-use App\Models\Vps;
-use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
-use Spatie\Activitylog\Models\Activity;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
 
 class DashboardController extends Controller
 {
+    private array $allWidgets = [
+        OperationsWidget::class,
+        RenewalsWidget::class,
+        TasksWidget::class,
+        AssetsWidget::class,
+        MonitoringWidget::class,
+        QuickActionsWidget::class,
+        ActivityWidget::class,
+        VaultWidget::class,
+        SmtpWidget::class,
+        ServerHealthWidget::class,
+    ];
+
     public function index(): View
     {
         $user = Auth::user();
-        $isSuperAdmin = $user->hasRole('super-admin');
+        $user->loadMissing('roles');
+        $version = Cache::get('dashboard:version', 0);
+        $isSA = $user->hasRole('super-admin');
+        $accessibleIds = $isSA ? null : $user->getAccessibleModuleIds('read');
 
-        if ($isSuperAdmin) {
-            $moduleIds = collect();
-            $totalFeatures = Feature::count();
-            $totalModules = Module::count();
-        } else {
-            $moduleIds = Module::whereHas('rolePermissions', function ($q) use ($user) {
-                $q->whereIn('role_id', $user->roles()->pluck('roles.id'))
-                  ->where('can_read', true);
-            })->pluck('id');
-            $totalFeatures = Feature::whereHas('modules', fn($q) => $q->whereIn('id', $moduleIds))->count();
-            $totalModules = $moduleIds->count();
+        $widgetClasses = $this->getWidgetsForRole($user);
+
+        $data = ['dashboardRole' => $this->getRoleGroup($user)];
+        foreach ($widgetClasses as $class) {
+            $slug = $class::SLUG;
+            $key = "dashboard:w:{$slug}:{$user->id}:v{$version}";
+
+            try {
+                $instance = app($class);
+                $ttl = method_exists($instance, 'cacheTtl') ? $instance->cacheTtl() : 300;
+
+                $widgetData = Cache::remember($key, $ttl, fn () => $instance->data($user, $accessibleIds));
+                $data = array_merge($data, $widgetData);
+            } catch (\Throwable $e) {
+                Log::warning("Dashboard widget [{$slug}] failed", [
+                    'error' => $e->getMessage(),
+                ]);
+            }
         }
 
-        $taskQuery = Task::query();
-        if (!$isSuperAdmin) {
-            $taskQuery->where(function ($q) use ($moduleIds, $user) {
-                if ($moduleIds->isNotEmpty()) {
-                    $q->whereIn('module_id', $moduleIds);
-                }
-                $q->orWhereHas('assignees', fn($a) => $a->where('user_id', $user->id));
-            });
+        return view('dashboard.index', $data);
+    }
+
+    protected function getRoleGroup($user): string
+    {
+        $priority = ['super-admin', 'admin', 'editor', 'user', 'customer'];
+        $userRoles = $user->roles->pluck('slug')->toArray();
+
+        foreach ($priority as $role) {
+            if (in_array($role, $userRoles)) {
+                return $role;
+            }
         }
-        $totalTasks = (clone $taskQuery)->count();
-        $tasksByStatus = (clone $taskQuery)
-            ->selectRaw("status, COUNT(*) as count")
-            ->groupBy('status')
-            ->pluck('count', 'status');
 
-        $totalNotes = Note::count();
-        $myNotes = Note::where('user_id', $user->id)->count();
-        $unreadNotifications = $user->unreadNotifications()->count();
-        $totalUsers = $isSuperAdmin ? User::count() : null;
+        return 'user';
+    }
 
-        $serviceModels = [
-            'Domains' => Domain::class, 'Hostings' => Hosting::class, 'VPS' => Vps::class,
-            'VoIP' => Voip::class, 'Service Providers' => ServiceProvider::class,
-            'Domain Emails' => DomainEmail::class, 'Other Services' => OtherService::class,
-            'Expiry Trackers' => ExpiryTracker::class,
+    protected function getWidgetsForRole($user): array
+    {
+        if ($user->hasRole('super-admin')) {
+            return $this->allWidgets;
+        }
+
+        $widgetMap = [
+            'admin' => [
+                OperationsWidget::class,
+                RenewalsWidget::class,
+                TasksWidget::class,
+                AssetsWidget::class,
+                MonitoringWidget::class,
+                QuickActionsWidget::class,
+                ActivityWidget::class,
+                VaultWidget::class,
+            ],
+            'editor' => [
+                TasksWidget::class,
+                AssetsWidget::class,
+                MonitoringWidget::class,
+                QuickActionsWidget::class,
+                ActivityWidget::class,
+                VaultWidget::class,
+            ],
+            'user' => [
+                OperationsWidget::class,
+                MonitoringWidget::class,
+                TasksWidget::class,
+                QuickActionsWidget::class,
+                ActivityWidget::class,
+                VaultWidget::class,
+            ],
+            'customer' => [
+                TasksWidget::class,
+                QuickActionsWidget::class,
+                ActivityWidget::class,
+                VaultWidget::class,
+            ],
         ];
 
-        $totalServices = 0;
-        $servicesByType = [];
-        $expiringSoon = 0;
-        $upcomingExpiries = [];
-        $today = Carbon::today();
-        $thirtyDays = Carbon::today()->addDays(30);
-
-        foreach ($serviceModels as $label => $modelClass) {
-            $activeQuery = $modelClass::where('status', 'active');
-            if (!$isSuperAdmin) {
-                $activeQuery->where('user_id', $user->id);
-            }
-            $activeCount = (clone $activeQuery)->count();
-            $totalServices += $activeCount;
-            $servicesByType[$label] = $activeCount;
-
-            $expiring = (clone $activeQuery)
-                ->whereNotNull('expiry_date')
-                ->whereDate('expiry_date', '>=', $today)
-                ->whereDate('expiry_date', '<=', $thirtyDays)
-                ->count();
-            $expiringSoon += $expiring;
-
-            $closest = (clone $activeQuery)
-                ->whereNotNull('expiry_date')
-                ->whereDate('expiry_date', '>=', $today)
-                ->orderBy('expiry_date')
-                ->take(5)
-                ->get(['name', 'expiry_date'])
-                ->map(fn($i) => ['name' => $i->name, 'expiry' => Carbon::parse($i->expiry_date)->format('M d')]);
-            if ($closest->isNotEmpty()) {
-                $upcomingExpiries[$label] = $closest;
+        foreach ($widgetMap as $slug => $widgets) {
+            if ($user->hasRole($slug)) {
+                return $widgets;
             }
         }
 
-        $activityQuery = Activity::with('causer');
-        if (!$isSuperAdmin) {
-            $activityQuery->where('causer_id', $user->id);
-        }
-        $recentActivity = $activityQuery->latest()->take(10)->get();
-
-        return view('dashboard.index', compact(
-            'totalFeatures', 'totalModules', 'totalTasks', 'tasksByStatus',
-            'totalNotes', 'myNotes', 'unreadNotifications', 'totalUsers',
-            'totalServices', 'servicesByType', 'expiringSoon', 'upcomingExpiries',
-            'recentActivity',
-        ));
+        return $widgetMap['user'];
     }
 }

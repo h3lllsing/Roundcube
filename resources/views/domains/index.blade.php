@@ -4,75 +4,94 @@
 
 @section('content')
 <div class="max-w-7xl mx-auto">
-    <div class="flex items-center justify-between mb-6">
-        <h1 class="text-2xl font-semibold">Domains</h1>
-        <a href="{{ route('domains.create') }}" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg">+ Create</a>
-    </div>
+    <x-page-header title="Domains" subtitle="Track registered domains.">
+        <x-slot:actions>
+            @if($canExport)
+            <x-button href="{{ route('export', 'domains') }}" variant="success" size="sm">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                Export CSV
+            </x-button>
+            @endif
+            @if($canCreate)
+            <x-button href="{{ route('domains.create') }}" variant="primary" size="sm">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                Create
+            </x-button>
+            @endif
+        </x-slot:actions>
+    </x-page-header>
 
     <form method="GET" class="flex flex-wrap gap-3 mb-6">
-        <input type="text" name="search" value="{{ request('search') }}" placeholder="Search domains..."
-            class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
-        <select name="status"
-            class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none">
-            <option value="">All statuses</option>
-            <option value="active" @selected(request('status') === 'active')>Active</option>
-            <option value="expired" @selected(request('status') === 'expired')>Expired</option>
-            <option value="suspended" @selected(request('status') === 'suspended')>Suspended</option>
-        </select>
-        <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors">Filter</button>
+        <x-filter-input name="search" value="{{ request('search') }}" placeholder="Search domains..." />
+        <x-filter-select name="status" placeholder="All statuses" :options="['active' => 'Active', 'expired' => 'Expired', 'suspended' => 'Suspended']" />
+        <x-button type="submit" variant="primary" size="sm">Filter</x-button>
         @if(request()->anyFilled(['search', 'status']))
-            <a href="{{ route('domains.index') }}" class="px-4 py-2 bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 text-sm rounded-lg transition-colors">Clear</a>
+            <x-button href="{{ route('domains.index') }}" variant="outline" size="sm">Clear</x-button>
         @endif
     </form>
 
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-        <table class="w-full text-sm">
-            <thead>
-                <tr class="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
-                    <th class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Name</th>
-                    <th class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Module</th>
-                    <th class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Registrar</th>
-                    <th class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Expiry</th>
-                    <th class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Cost</th>
-                    <th class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Status</th>
-                    <th class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Actions</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-                @forelse ($domains as $domain)
-                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                        <td class="px-6 py-3 font-medium">{{ $domain->name }}</td>
-                        <td class="px-6 py-3 text-gray-500">{{ $domain->module->name ?? '—' }}</td>
-                        <td class="px-6 py-3 text-gray-500">{{ $domain->registrar }}</td>
-                        <td class="px-6 py-3 text-gray-500">{{ $domain->expiry_date?->format('Y-m-d') ?? '—' }}</td>
-                        <td class="px-6 py-3 text-gray-500">{{ $domain->cost ? '$' . number_format($domain->cost, 2) : '—' }}</td>
+    <form method="POST" action="{{ route('bulk-action') }}" class="mb-6" id="bulk-form">
+        @csrf
+        <input type="hidden" name="type" value="domains">
+        <x-bulk-actions type="domains" colspan="9" :actions="$bulkActions" />
+    </form>
+
+        <x-table>
+            <x-slot:head>
+                <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Name</th>
+                <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Hosting</th>
+                <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Provider</th>
+                <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Expiry</th>
+                <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Cost</th>
+                <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Status</th>
+                <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Cloudflare</th>
+                <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Actions</th>
+            </x-slot:head>
+                    @forelse ($domains as $domain)
+                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                            <td class="px-4 py-3"><input type="checkbox" name="ids[]" value="{{ $domain->id }}" aria-label="Select {{ $domain->name }}" class="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500 bulk-item" form="bulk-form"></td>
+                            <td class="px-6 py-3 font-medium">{{ $domain->name }}</td>
+                        <td class="px-6 py-3 text-gray-500">{{ $domain->hosting->name ?? '—' }}</td>
+                        <td class="px-6 py-3 text-gray-500">{{ $domain->serviceProvider->name ?? '—' }}</td>
+                        <td class="px-6 py-3 text-gray-500">
+                            @if($domain->expiry_date)
+                                <x-date :value="$domain->expiry_date" />
+                            @else
+                                <span class="text-gray-400">—</span>
+                            @endif
+                        </td>
+                        <td class="px-6 py-3 text-gray-500">
+                            @if($domain->cost)
+                                <x-money :value="$domain->cost" />
+                            @else
+                                <span class="text-gray-400">—</span>
+                            @endif
+                        </td>
                         <td class="px-6 py-3">
-                            <span @class([
-                                'inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium',
-                                'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' => $domain->status === 'active',
-                                'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' => $domain->status === 'expired',
-                                'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300' => $domain->status === 'suspended',
-                            ])>{{ $domain->status }}</span>
+                            <x-badge :variant="$domain->status">{{ $domain->status }}</x-badge>
+                        </td>
+                        <td class="px-6 py-3">
+                            @if($domain->cloudflare_status)
+                                <x-badge :variant="$domain->cloudflare_status">{{ ucfirst($domain->cloudflare_status) }}</x-badge>
+                            @else
+                                <span class="text-gray-400">—</span>
+                            @endif
                         </td>
                         <td class="px-6 py-3 whitespace-nowrap">
-                            <a href="{{ route('domains.show', $domain->id) }}" class="text-blue-600 hover:text-blue-800 text-xs mr-2">View</a>
-                            <a href="{{ route('domains.edit', $domain->id) }}" class="text-amber-600 hover:text-amber-800 text-xs mr-2">Edit</a>
-                            <form method="POST" action="{{ route('domains.destroy', $domain->id) }}" class="inline" onsubmit="return confirm('Are you sure?')">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="text-red-600 hover:text-red-800 text-xs">Delete</button>
-                            </form>
+                            <x-action href="{{ route('domains.show', $domain->id) }}" color="indigo" icon="view" label="" title="View" />
+                            <x-permission-check :module="$domain->module" action="update">
+                            <x-action href="{{ route('domains.edit', $domain->id) }}" color="amber" icon="edit" label="" title="Edit" />
+                            </x-permission-check>
+                            <x-permission-check :module="$domain->module" action="delete">
+                            <x-action action="{{ route('domains.destroy', $domain->id) }}" color="red" icon="delete" label="" title="Delete" confirm="Are you sure?" method="DELETE" />
+                            </x-permission-check>
                         </td>
                     </tr>
                 @empty
-                    <tr>
-                        <td colspan="7" class="px-6 py-8 text-center text-gray-400">No domains found.</td>
-                    </tr>
+                    <tr><x-empty-state :colspan="9" icon="globe" title="No domains found." message="Register or add domains to track them." /></tr>
                 @endforelse
             </tbody>
-        </table>
-    </div>
+        </x-table>
 
-    <div class="mt-4">{{ $domains->links() }}</div>
-</div>
+        <div class="mt-4">{{ $domains->links() }}</div>
 @endsection

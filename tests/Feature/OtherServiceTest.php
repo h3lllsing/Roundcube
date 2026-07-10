@@ -2,8 +2,11 @@
 
 namespace Tests\Feature;
 
-use App\Models\User;
+use App\Models\Module;
+use App\Models\ModuleRolePermission;
 use App\Models\OtherService;
+use App\Models\User;
+use HasinHayder\Tyro\Database\Seeders\TyroSeeder;
 use HasinHayder\Tyro\Models\Role;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -15,13 +18,14 @@ class OtherServiceTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->seed(\HasinHayder\Tyro\Database\Seeders\TyroSeeder::class);
+        $this->seed(TyroSeeder::class);
     }
 
     private function superAdmin(): User
     {
         $user = User::factory()->create();
         $user->assignRole(Role::where('slug', 'super-admin')->firstOrFail());
+
         return $user;
     }
 
@@ -94,5 +98,70 @@ class OtherServiceTest extends TestCase
 
         $this->withHeader('Authorization', "Bearer $token")
             ->deleteJson("/api/other-services/{$os->id}")->assertStatus(403);
+    }
+
+    public function test_list_shows_own_services_for_regular_user(): void
+    {
+        $owner = User::factory()->create();
+        $module = Module::factory()->create();
+        $otherModule = Module::factory()->create();
+        $userRole = Role::where('slug', 'user')->firstOrFail();
+        ModuleRolePermission::create(['module_id' => $module->id, 'role_id' => $userRole->id, 'can_read' => true]);
+        $owner->assignRole($userRole);
+        OtherService::factory()->create(['user_id' => $owner->id, 'name' => 'mine', 'service_type' => 'monitoring', 'module_id' => $module->id]);
+        $admin = User::factory()->create();
+        $admin->assignRole(Role::where('slug', 'super-admin')->firstOrFail());
+        OtherService::factory()->create(['user_id' => $admin->id, 'name' => 'theirs', 'service_type' => 'dns', 'module_id' => $otherModule->id]);
+
+        $token = $owner->createToken('test')->plainTextToken;
+        $response = $this->withHeader('Authorization', "Bearer $token")->getJson('/api/other-services');
+
+        $response->assertOk()->assertJsonCount(1, 'data');
+        $this->assertEquals('mine', $response->json('data.0.name'));
+    }
+
+    public function test_list_with_trashed(): void
+    {
+        $admin = User::factory()->create();
+        $admin->assignRole(Role::where('slug', 'super-admin')->firstOrFail());
+        $os = OtherService::factory()->create(['user_id' => $admin->id, 'service_type' => 'monitoring']);
+        $os->delete();
+
+        $this->actingAs($admin)->getJson('/api/other-services?with_trashed=true')->assertOk()->assertJsonCount(1, 'data');
+    }
+
+    public function test_create_with_password_saves_encrypted(): void
+    {
+        $u = $this->superAdmin();
+        $this->actingAs($u)->postJson('/api/other-services', [
+            'name' => 'Secure Service',
+            'service_type' => 'monitoring',
+            'password' => 'other_secret!',
+        ])->assertStatus(201);
+
+        $os = OtherService::where('name', 'Secure Service')->first();
+        $this->assertNotNull($os);
+        $this->assertNotEquals('other_secret!', $os->getRawOriginal('password'));
+        $this->assertEquals('other_secret!', $os->password);
+    }
+
+    public function test_blank_password_update_preserves_existing(): void
+    {
+        $u = $this->superAdmin();
+        $os = OtherService::factory()->create(['user_id' => $u->id, 'password' => 'original_pw']);
+
+        $this->actingAs($u)->putJson("/api/other-services/{$os->id}", [
+            'name' => 'Renamed',
+        ])->assertOk();
+
+        $this->assertEquals('original_pw', $os->fresh()->password);
+    }
+
+    public function test_password_not_visible_in_listing_response(): void
+    {
+        $u = $this->superAdmin();
+        $os = OtherService::factory()->create(['user_id' => $u->id, 'password' => 'invisible_pw']);
+        $this->actingAs($u)->getJson('/api/other-services')
+            ->assertJsonMissingPath('data.0.password');
     }
 }

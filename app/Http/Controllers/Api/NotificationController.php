@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use OpenApi\Attributes as OA;
 
@@ -14,6 +15,7 @@ class NotificationController extends Controller
         security: [['sanctum' => []]],
         tags: ['Notifications'],
         parameters: [
+            new OA\Parameter(name: 'search', in: 'query', required: false, schema: new OA\Schema(type: 'string')),
             new OA\Parameter(name: 'per_page', in: 'query', required: false, schema: new OA\Schema(type: 'integer', default: 20)),
         ],
         responses: [
@@ -22,12 +24,19 @@ class NotificationController extends Controller
             ])),
         ]
     )]
-    public function index(Request $request): \Illuminate\Http\JsonResponse
+    public function index(Request $request): JsonResponse
     {
         $perPage = min((int) $request->per_page ?: 20, 100);
-        $notifications = $request->user()
-            ->notifications()
-            ->paginate($perPage);
+        $query = $request->user()->notifications();
+
+        if ($search = $request->get('search')) {
+            $query->where(function ($q) use ($search) {
+                $q->where('type', 'like', "%{$search}%")
+                    ->orWhere('data', 'like', "%{$search}%");
+            });
+        }
+
+        $notifications = $query->paginate($perPage);
 
         return response()->json($notifications);
     }
@@ -38,6 +47,7 @@ class NotificationController extends Controller
         security: [['sanctum' => []]],
         tags: ['Notifications'],
         parameters: [
+            new OA\Parameter(name: 'search', in: 'query', required: false, schema: new OA\Schema(type: 'string')),
             new OA\Parameter(name: 'per_page', in: 'query', required: false, schema: new OA\Schema(type: 'integer', default: 20)),
         ],
         responses: [
@@ -46,12 +56,19 @@ class NotificationController extends Controller
             ])),
         ]
     )]
-    public function unread(Request $request): \Illuminate\Http\JsonResponse
+    public function unread(Request $request): JsonResponse
     {
         $perPage = min((int) $request->per_page ?: 20, 100);
-        $notifications = $request->user()
-            ->unreadNotifications()
-            ->paginate($perPage);
+        $query = $request->user()->unreadNotifications();
+
+        if ($search = $request->get('search')) {
+            $query->where(function ($q) use ($search) {
+                $q->where('type', 'like', "%{$search}%")
+                    ->orWhere('data', 'like', "%{$search}%");
+            });
+        }
+
+        $notifications = $query->paginate($perPage);
 
         return response()->json($notifications);
     }
@@ -68,7 +85,7 @@ class NotificationController extends Controller
             new OA\Response(response: 200, description: 'Notification marked as read', content: new OA\JsonContent(ref: '#/components/schemas/MessageResponse')),
         ]
     )]
-    public function markAsRead(Request $request, string $id): \Illuminate\Http\JsonResponse
+    public function markAsRead(Request $request, string $id): JsonResponse
     {
         $notification = $request->user()->notifications()->findOrFail($id);
         $notification->markAsRead();
@@ -85,7 +102,7 @@ class NotificationController extends Controller
             new OA\Response(response: 200, description: 'All notifications marked as read', content: new OA\JsonContent(ref: '#/components/schemas/MessageResponse')),
         ]
     )]
-    public function markAllAsRead(Request $request): \Illuminate\Http\JsonResponse
+    public function markAllAsRead(Request $request): JsonResponse
     {
         $request->user()->unreadNotifications->markAsRead();
 
@@ -104,11 +121,40 @@ class NotificationController extends Controller
             new OA\Response(response: 200, description: 'Notification deleted', content: new OA\JsonContent(ref: '#/components/schemas/MessageResponse')),
         ]
     )]
-    public function destroy(Request $request, string $id): \Illuminate\Http\JsonResponse
+    public function destroy(Request $request, string $id): JsonResponse
     {
         $notification = $request->user()->notifications()->findOrFail($id);
         $notification->delete();
 
         return $this->message('Notification deleted');
+    }
+
+    public function bulkDelete(Request $request): JsonResponse
+    {
+        $request->validate([
+            'ids' => 'required|array|min:1',
+            'ids.*' => 'string',
+        ]);
+
+        $count = $request->user()->notifications()
+            ->whereIn('id', $request->input('ids'))
+            ->delete();
+
+        return $this->success(['affected' => $count], "Deleted {$count} notification(s)");
+    }
+
+    public function bulkMarkAsRead(Request $request): JsonResponse
+    {
+        $request->validate([
+            'ids' => 'required|array|min:1',
+            'ids.*' => 'string',
+        ]);
+
+        $count = $request->user()->notifications()
+            ->whereIn('id', $request->input('ids'))
+            ->whereNull('read_at')
+            ->update(['read_at' => now()]);
+
+        return $this->success(['affected' => $count], "Marked {$count} notification(s) as read");
     }
 }

@@ -1,59 +1,106 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+﻿# OpsPilot
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+**Role-based access control & resource management system** built on Laravel 12 + Tyro.
 
-## About Laravel
+Manage features, modules, tasks, domains, hosting, VPS, VoIP, vault, webhooks, and more — all behind granular module-level permissions.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## Features
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+- **RBAC** — Role-based access with per-module CRUD permissions (create/read/update/delete/approve/export)
+- **Resource Management** — Domains, hosting, VPS, VoIP, service providers, domain emails, other services
+- **Task Management** — Multi-assignee tasks with status/priority/due_date, activity logging
+- **Password Vault** — AES-256-CBC encrypted storage, reveal with audit trail
+- **Monitoring** — HTTP/port monitoring with failure notifications
+- **Expiry Tracking** — Track renewal dates across all resources with email notifications
+- **Webhooks** — Event-driven outbound webhooks
+- **Polymorphic Notes & Attachments** — Attach notes/files to any resource
+- **Activity Logs** — Full audit trail via Spatie Activitylog
+- **CSV Import/Export** — Bulk operations across resource types
+- **REST API** — Sanctum token auth, Swagger docs at `/api/documentation`
+- **E2E Tests** — Playwright browser tests
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## Stack
 
-## Learning Laravel
+| Layer | Stack |
+|-------|-------|
+| Backend | PHP 8.2, Laravel 12 |
+| Auth | Laravel Sanctum (API tokens) |
+| RBAC | Tyro (roles, privileges, module permissions) |
+| Database | MySQL 8.0 |
+| Frontend | Blade + Vite (admin panel) |
+| Testing | PHPUnit (~448 tests) + Playwright E2E |
+| Static Analysis | PHPStan level 7 |
+| CI | GitHub Actions (PHP 8.1–8.3 matrix) |
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+## Quick Start
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+```bash
+# 1. Clone & install
+composer install
+cp .env.example .env
+php artisan key:generate
 
-## Laravel Sponsors
+# 2. Database
+# Create MySQL database, update .env, then:
+php artisan migrate --seed
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+# 3. Run
+php artisan serve
+```
 
-### Premium Partners
+**Default login (development only):** `admin@tyro.project` / `tyro`
+> ⚠️ **Security:** Change the default credentials and `APP_KEY` before deploying to production.
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+## Running Tests
 
-## Contributing
+```bash
+# All tests
+php artisan test
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+# With coverage
+php artisan test --coverage
 
-## Code of Conduct
+# Specific test
+php artisan test --filter="RoleTest"
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+# Static analysis
+php vendor/bin/phpstan analyse
 
-## Security Vulnerabilities
+# Lint
+php vendor/bin/pint --test
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+# E2E (requires Playwright + server running)
+cd e2e && npx playwright test
+```
+
+## Project Structure
+
+```
+app/
+├── Console/Commands/     # Artisan commands (monitor:check, expiry:check)
+├── Events/               # TaskCreated/Updated, VaultPasswordRevealed, etc.
+├── Http/
+│   ├── Controllers/
+│   │   ├── Api/          # REST API controllers (Sanctum auth)
+│   │   └── Web/          # Admin panel controllers (session auth)
+│   ├── Middleware/        # LogApiRequests
+│   ├── Requests/         # Form request validation
+│   └── Resources/        # API resource transformers
+├── Listeners/            # Event handlers (notifications, logging)
+├── Models/               # Eloquent models (30 total)
+├── Notifications/        # Database/mail notifications (5)
+├── Services/             # Business logic layer (38 classes)
+└── Traits/               # Blameable, HasAttachments, HasModulePermissions
+```
+
+## API
+
+Full reference: [API_REFERENCE.md](API_REFERENCE.md) | Swagger UI: `/api/documentation`
+
+## Deployment
+
+See [DEPLOY.md](DEPLOY.md) for shared hosting deployment guide.
 
 ## License
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+MIT

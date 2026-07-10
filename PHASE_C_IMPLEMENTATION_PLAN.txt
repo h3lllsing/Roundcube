@@ -1,0 +1,688 @@
+================================================================================
+PHASE C — NEW FIELD IMPLEMENTATION PLAN
+================================================================================
+STATUS: PRE-IMPLEMENTATION VERIFICATION ONLY — No code changes made.
+
+================================================================================
+1. MIGRATIONS NEEDED
+================================================================================
+
+Create ONE new migration file for each table (4 total).
+
+--- 1a. Add fields to vps table ---
+NEW FILE: database/migrations/2026_06_25_000001_add_vps_new_fields.php
+
+  up():
+    Schema::table('vps', function (Blueprint $table) {
+        $table->string('department', 255)->nullable()->after('cpu_cores');
+        $table->string('location', 255)->nullable()->after('department');
+        $table->json('login_ids')->nullable()->after('location');
+        $table->json('additional_ips')->nullable()->after('login_ids');
+    });
+
+  down():
+    Schema::table('vps', function (Blueprint $table) {
+        $table->dropColumn(['department', 'location', 'login_ids', 'additional_ips']);
+    });
+
+  EXACT PATTERN USED: Follows 2026_06_22_235118_add_voip_new_fields_to_voip_table.php
+  JSON COLUMNS: Same as voip.extensions — stored as JSON, cast to 'array' in Model
+  NULLABLE: Yes, all fields nullable
+  DEFAULTS: None (null)
+  PLACEMENT: after('cpu_cores') groups related detail fields together
+
+--- 1b. Add fields to hostings table ---
+NEW FILE: database/migrations/2026_06_25_000002_add_hosting_ip_fields.php
+
+  up():
+    Schema::table('hostings', function (Blueprint $table) {
+        $table->string('domain_ip', 45)->nullable()->after('domain');
+        $table->string('mail_domain_ip', 45)->nullable()->after('domain_ip');
+        $table->string('cpanel_ip', 45)->nullable()->after('mail_domain_ip');
+    });
+
+  down():
+    Schema::table('hostings', function (Blueprint $table) {
+        $table->dropColumn(['domain_ip', 'mail_domain_ip', 'cpanel_ip']);
+    });
+
+  TYPE: string(45) for IPv6 compatibility (same as ip_address in VPS migration)
+  NULLABLE: Yes
+  PLACEMENT: after('domain') groups IP addresses with other connectivity fields
+
+--- 1c. Add email to service_providers table ---
+NEW FILE: database/migrations/2026_06_25_000003_add_email_to_service_providers.php
+
+  up():
+    Schema::table('service_providers', function (Blueprint $table) {
+        $table->string('email', 255)->nullable()->after('provider');
+    });
+
+  down():
+    Schema::table('service_providers', function (Blueprint $table) {
+        $table->dropColumn('email');
+    });
+
+  TYPE: string(255) — standard email column
+  NULLABLE: Yes
+  PLACEMENT: after('provider') groups with other contact fields
+
+--- 1d. Add cloudflare_status to domains table ---
+NEW FILE: database/migrations/2026_06_25_000004_add_cloudflare_status_to_domains.php
+
+  up():
+    Schema::table('domains', function (Blueprint $table) {
+        $table->string('cloudflare_status', 20)->nullable()->after('status');
+    });
+
+  down():
+    Schema::table('domains', function (Blueprint $table) {
+        $table->dropColumn('cloudflare_status');
+    });
+
+  TYPE: string(20) — stores values 'enabled', 'disabled', 'unknown', or null
+  NULLABLE: Yes (null = not configured)
+  NO ENUM: Using string column (not DB enum) for flexibility; validation at app level
+  PLACEMENT: after('status') groups with other status fields
+
+NOTE: The existing 2026_06_24_* migrations already have ->index() on relevant
+foreign keys and date columns per H10 fixes. No additional ->index() needed
+unless search or filter patterns require it (unlikely for these new fields).
+
+SAFE ROLLBACK: Each migration has a clean down() that drops only the added
+columns. All existing data in other columns is preserved. No foreign keys or
+indexes are added, so rollback is O(1) per table.
+
+================================================================================
+2. MODEL CHANGES
+================================================================================
+
+--- 2a. app/Models/Vps.php ---
+  $fillable: ADD 'department', 'location', 'login_ids', 'additional_ips'
+  $casts:    ADD 'login_ids' => 'array', 'additional_ips' => 'array'
+  $hidden:   UNCHANGED (['password'])
+  Relationships: UNCHANGED
+
+  EXACT CODE:
+    protected $fillable = ['user_id', 'module_id', 'service_provider_id', 'name',
+        'plan', 'ip_address', 'password', 'os', 'ram_mb', 'disk_gb', 'cpu_cores',
+        'department', 'location', 'login_ids', 'additional_ips', 'cost',
+        'start_date', 'expiry_date', 'status', 'notes', 'monitoring_url',
+        'last_ping_at'];
+
+    protected function casts(): array
+    {
+        return [
+            'ram_mb' => 'integer',
+            'disk_gb' => 'integer',
+            'cpu_cores' => 'integer',
+            'start_date' => 'date',
+            'expiry_date' => 'date',
+            'cost' => 'decimal:2',
+            'password' => 'encrypted',
+            'last_ping_at' => 'datetime',
+            'login_ids' => 'array',
+            'additional_ips' => 'array',
+        ];
+    }
+
+--- 2b. app/Models/Hosting.php ---
+  $fillable: ADD 'domain_ip', 'mail_domain_ip', 'cpanel_ip'
+  $casts:    UNCHANGED (no casts needed for string fields)
+  $hidden:   UNCHANGED (['password'])
+  Relationships: UNCHANGED
+
+  EXACT CODE:
+    protected $fillable = ['user_id', 'module_id', 'service_provider_id', 'name',
+        'username', 'password', 'cpanel_url', 'plan', 'domain', 'domain_ip',
+        'mail_domain_ip', 'cpanel_ip', 'start_date', 'expiry_date', 'cost',
+        'status', 'notes', 'monitoring_url', 'last_ping_at'];
+
+--- 2c. app/Models/ServiceProvider.php ---
+  $fillable: ADD 'email'
+  $casts:    UNCHANGED
+  $hidden:   UNCHANGED (['password'])
+  Relationships: UNCHANGED
+
+  EXACT CODE:
+    protected $fillable = ['user_id', 'module_id', 'name', 'type', 'provider',
+        'email', 'website', 'password', 'cost', 'start_date', 'expiry_date',
+        'status', 'notes', 'monitoring_url', 'last_ping_at'];
+
+--- 2d. app/Models/Domain.php ---
+  $fillable: ADD 'cloudflare_status'
+  $casts:    UNCHANGED
+  $hidden:   UNCHANGED (none)
+  Relationships: UNCHANGED
+
+  EXACT CODE:
+    protected $fillable = [
+        'user_id', 'module_id', 'hosting_id', 'service_provider_id', 'name',
+        'registration_date', 'expiry_date', 'auto_renew', 'cost', 'status',
+        'cloudflare_status', 'dns_servers', 'notes', 'monitoring_url',
+        'last_ping_at',
+    ];
+
+RELATIONSHIPS UNCHANGED: Zero relationship changes across all 4 models.
+No new models, no new tables, no new service classes.
+
+================================================================================
+3. FORMREQUEST VALIDATION CHANGES
+================================================================================
+
+--- 3a. StoreVpsRequest + UpdateVpsRequest ---
+  ADD rules:
+    'department' => 'nullable|string|max:255',
+    'location' => 'nullable|string|max:255',
+    'login_ids' => 'nullable|json',
+    'additional_ips' => 'nullable|json',
+
+  UNIQUE CONSTRAINT: No — these fields are informational, not unique.
+  EXISTING fields unchanged.
+
+--- 3b. StoreHostingRequest + UpdateHostingRequest ---
+  ADD rules:
+    'domain_ip' => 'nullable|string|max:45',
+    'mail_domain_ip' => 'nullable|string|max:45',
+    'cpanel_ip' => 'nullable|string|max:45',
+
+  LENGTH = 45 for IPv6 compatibility.
+  EXISTING fields unchanged.
+
+--- 3c. StoreServiceProviderRequest + UpdateServiceProviderRequest ---
+  ADD rules:
+    'email' => 'nullable|string|email|max:255',
+
+  Using `string|email` (not `email:rfc,dns`) — basic format validation only,
+  consistent with existing patterns. No DNS lookup validation to avoid false
+  rejections on internal domains.
+
+  EXISTING fields unchanged.
+
+--- 3d. StoreDomainRequest + UpdateDomainRequest ---
+  ADD rules:
+    'cloudflare_status' => 'nullable|string|in:enabled,disabled,unknown',
+
+  Using `in:enabled,disabled,unknown` for strict validation at app level.
+  No DB enum — allows future values without migration.
+
+  EXISTING fields unchanged.
+
+================================================================================
+4. CREATE/EDIT FORM CHANGES
+================================================================================
+
+--- 4a. VPS create.blade.php ---
+  ADD after the cpu_cores row (before cost row):
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <x-form.input name="department" label="Department" :value="old('department')" />
+        <x-form.input name="location" label="Location" :value="old('location')" />
+    </div>
+    <x-form.textarea name="login_ids" label="Login IDs (JSON array)" :value="old('login_ids')" />
+    <x-form.textarea name="additional_ips" label="Additional IPs (JSON array)" :value="old('additional_ips')" />
+
+--- 4b. VPS edit.blade.php ---
+  ADD after the cpu_cores row:
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <x-form.input name="department" label="Department" :value="old('department', $vps->department)" />
+        <x-form.input name="location" label="Location" :value="old('location', $vps->location)" />
+    </div>
+    <x-form.textarea name="login_ids" label="Login IDs (JSON array)" :value="old('login_ids', $vps->login_ids ? json_encode($vps->login_ids) : '')" />
+    <x-form.textarea name="additional_ips" label="Additional IPs (JSON array)" :value="old('additional_ips', $vps->additional_ips ? json_encode($vps->additional_ips) : '')" />
+
+  PATTERN NOTE: JSON fields follow the same textarea approach used for
+  domain.dns_servers — stored as JSON in DB, displayed as textarea with
+  JSON-formatted value for manual editing. The 'array' cast auto-converts.
+
+--- 4c. Hosting create.blade.php ---
+  ADD after the domain/cost row:
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <x-form.input name="domain_ip" label="Domain IP" :value="old('domain_ip')" />
+        <x-form.input name="mail_domain_ip" label="Mail Domain IP" :value="old('mail_domain_ip')" />
+    </div>
+    <x-form.input name="cpanel_ip" label="cPanel IP" :value="old('cpanel_ip')" />
+
+--- 4d. Hosting edit.blade.php ---
+  ADD after the domain/cost row:
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <x-form.input name="domain_ip" label="Domain IP" :value="old('domain_ip', $hosting->domain_ip)" />
+        <x-form.input name="mail_domain_ip" label="Mail Domain IP" :value="old('mail_domain_ip', $hosting->mail_domain_ip)" />
+    </div>
+    <x-form.input name="cpanel_ip" label="cPanel IP" :value="old('cpanel_ip', $hosting->cpanel_ip)" />
+
+--- 4e. Service Providers create.blade.php ---
+  ADD after provider row, before password:
+    <x-form.input name="email" label="Email" :value="old('email')" type="email" />
+
+--- 4f. Service Providers edit.blade.php ---
+  ADD after provider row, before password:
+    <x-form.input name="email" label="Email" :value="old('email', $provider->email)" type="email" />
+
+--- 4g. Domains create.blade.php ---
+  ADD after status/cost row, before module:
+    <x-form.select name="cloudflare_status" label="Cloudflare Status" :options="[null => 'Not configured', 'enabled' => 'Enabled', 'disabled' => 'Disabled', 'unknown' => 'Unknown']" :value="old('cloudflare_status')" />
+
+--- 4h. Domains edit.blade.php ---
+  ADD after status/cost row, before module:
+    <x-form.select name="cloudflare_status" label="Cloudflare Status" :options="[null => 'Not configured', 'enabled' => 'Enabled', 'disabled' => 'Disabled', 'unknown' => 'Unknown']" :value="old('cloudflare_status', $domain->cloudflare_status)" />
+
+================================================================================
+5. INDEX/LIST VIEW CHANGES
+================================================================================
+
+Update each index.blade.php to add the new columns (and re-add skipped Plan B
+columns where applicable). All actions remain icon-only per Plan B.
+
+--- 5a. VPS index (resources/views/vps/index.blade.php) ---
+  CURRENT columns (Plan B):
+    Checkbox | VPS | Vendor | VPS IP | VPS Pass | Associate | Actions
+
+  NEW columns:
+    Checkbox | VPS | Vendor | VPS IP | VPS Pass | Department | Location | Associate | Actions
+
+  ADD two TH cells after "VPS Pass":
+    <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Department</th>
+    <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Location</th>
+
+  ADD two TD cells after the password column (before Associate):
+    <td class="px-6 py-3 text-gray-500">{{ $vps->department ?? '—' }}</td>
+    <td class="px-6 py-3 text-gray-500">{{ $vps->location ?? '—' }}</td>
+
+  Do NOT display login_ids or additional_ips in list table (too bulky for list;
+    available on show page).
+  Update colspan: 7 → 9
+  Empty state colspan: 7 → 9
+
+  Module: Remains hidden from list (per Plan B), intact in system.
+
+--- 5b. Hosting index (resources/views/hostings/index.blade.php) ---
+  CURRENT columns (Plan B):
+    Checkbox | Serial | Domain | Cpanel Link | Cpanel ID | Cpanel PW | Actions
+
+  NEW columns:
+    Checkbox | Serial | Domain | Domain IP | Mail Domain IP | Cpanel Link | Cpanel ID | Cpanel PW | Cpanel IP | Actions
+
+  ADD three TH cells after "Domain":
+    <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Domain IP</th>
+    <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Mail Domain IP</th>
+    <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Cpanel IP</th>
+
+  ADD three TD cells after Domain column (before Cpanel Link):
+    <td class="px-6 py-3 text-gray-500 font-mono">{{ $hosting->domain_ip ?? '—' }}</td>
+    <td class="px-6 py-3 text-gray-500 font-mono">{{ $hosting->mail_domain_ip ?? '—' }}</td>
+
+  Add Cpanel IP after Cpanel PW:
+    <td class="px-6 py-3 text-gray-500 font-mono">{{ $hosting->cpanel_ip ?? '—' }}</td>
+
+  Update colspan: 7 → 10
+  Empty state colspan: 7 → 10
+
+--- 5c. Domain Emails index (resources/views/domain-emails/index.blade.php) ---
+  No new fields for Domain Emails in this phase.
+  UNCHANGED from Plan B: Serial | Emails | Passwords | Actions
+
+--- 5d. Service Providers index (resources/views/service-providers/index.blade.php) ---
+  CURRENT columns (Plan B):
+    Checkbox | Serial | Password | Type | Provider | Status | Details | Actions
+
+  NEW columns:
+    Checkbox | Serial | Password | Type | Provider | Email | Status | Details | Actions
+
+  ADD one TH cell after "Provider":
+    <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Email</th>
+
+  ADD one TD cell after Provider column (before Status):
+    <td class="px-6 py-3 text-gray-500">{{ $provider->email ?? '—' }}</td>
+
+  Update colspan: 8 → 9
+  Empty state colspan: 8 → 9
+
+--- 5e. VoIP index (resources/views/voip/index.blade.php) ---
+  No new fields for VoIP in this phase.
+  UNCHANGED from Plan B.
+
+--- 5f. Domains index (resources/views/domains/index.blade.php) ---
+  CURRENT columns (Plan B):
+    Checkbox | Name | Hosting | Provider | Expiry | Cost | Status | Actions
+
+  NEW columns:
+    Checkbox | Name | Hosting | Provider | Expiry | Cost | Status | Cloudflare Status | Actions
+
+  ADD one TH cell after "Status":
+    <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Cloudflare</th>
+
+  ADD one TD cell after Status column (before Actions):
+    <td class="px-6 py-3">
+        @if($domain->cloudflare_status)
+            <span @class([
+                'inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium',
+                'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' => $domain->cloudflare_status === 'enabled',
+                'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-300' => $domain->cloudflare_status === 'disabled',
+                'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300' => $domain->cloudflare_status === 'unknown',
+            ])>{{ ucfirst($domain->cloudflare_status) }}</span>
+        @else
+            <span class="text-gray-400">—</span>
+        @endif
+    </td>
+
+  Update colspan: 8 → 9
+  Empty state colspan: 8 → 9
+
+================================================================================
+6. SHOW VIEW CHANGES
+================================================================================
+
+--- 6a. VPS show.blade.php ---
+  ADD four new info rows in the grid (after CPU Cores block, before Cost):
+
+    <div>
+        <p class="text-sm text-gray-500 dark:text-gray-400">Department</p>
+        <p class="font-medium">{{ $vps->department ?? '—' }}</p>
+    </div>
+    <div>
+        <p class="text-sm text-gray-500 dark:text-gray-400">Location</p>
+        <p class="font-medium">{{ $vps->location ?? '—' }}</p>
+    </div>
+    <div>
+        <p class="text-sm text-gray-500 dark:text-gray-400">Login IDs</p>
+        <p class="font-medium">
+            @if($vps->login_ids)
+                <span class="text-xs font-mono bg-gray-100 dark:bg-black px-2 py-1 rounded">{{ json_encode($vps->login_ids) }}</span>
+            @else
+                —
+            @endif
+        </p>
+    </div>
+    <div>
+        <p class="text-sm text-gray-500 dark:text-gray-400">Additional IPs</p>
+        <p class="font-medium">
+            @if($vps->additional_ips)
+                <span class="text-xs font-mono bg-gray-100 dark:bg-black px-2 py-1 rounded">{{ json_encode($vps->additional_ips) }}</span>
+            @else
+                —
+            @endif
+        </p>
+    </div>
+
+--- 6b. Hosting show.blade.php ---
+  ADD three new info rows (after Domain, before Cost):
+
+    <div>
+        <p class="text-sm text-gray-500 dark:text-gray-400">Domain IP</p>
+        <p class="font-medium">{{ $hosting->domain_ip ?? '—' }}</p>
+    </div>
+    <div>
+        <p class="text-sm text-gray-500 dark:text-gray-400">Mail Domain IP</p>
+        <p class="font-medium">{{ $hosting->mail_domain_ip ?? '—' }}</p>
+    </div>
+    <div>
+        <p class="text-sm text-gray-500 dark:text-gray-400">cPanel IP</p>
+        <p class="font-medium">{{ $hosting->cpanel_ip ?? '—' }}</p>
+    </div>
+
+--- 6c. Service Providers show.blade.php ---
+  ADD one new info row (after Provider, before Website):
+
+    <div>
+        <p class="text-sm text-gray-500 dark:text-gray-400">Email</p>
+        <p class="font-medium">
+            @if($provider->email)
+                <a href="mailto:{{ $provider->email }}" class="text-indigo-600 dark:text-indigo-400 hover:underline">{{ $provider->email }}</a>
+            @else
+                —
+            @endif
+        </p>
+    </div>
+
+--- 6d. Domains show.blade.php ---
+  ADD one new info row (after Status, before Module):
+
+    <div>
+        <p class="text-sm text-gray-500 dark:text-gray-400">Cloudflare</p>
+        <p class="font-medium">{{ $domain->cloudflare_status ? ucfirst($domain->cloudflare_status) : '—' }}</p>
+    </div>
+
+================================================================================
+7. EXPORT/IMPORT IMPACT
+================================================================================
+
+--- 7a. Web ExportController (@ app/Http/Controllers/Web/ExportController.php) ---
+  $this->types array — ADD columns to the relevant type entries:
+
+  'vps' => columns: ADD 'department', 'location', 'login_ids', 'additional_ips'
+      AFTER 'cpu_cores' (before 'cost')
+      Result: ['name', 'service_provider_id', 'plan', 'ip_address', 'os', 'ram_mb',
+               'disk_gb', 'cpu_cores', 'department', 'location', 'login_ids',
+               'additional_ips', 'cost', 'start_date', 'expiry_date', 'status',
+               'notes', 'created_at']
+
+  'hostings' => columns: ADD 'domain_ip', 'mail_domain_ip', 'cpanel_ip'
+      AFTER 'domain' (before 'start_date')
+      Result: ['name', 'service_provider_id', 'plan', 'domain', 'domain_ip',
+               'mail_domain_ip', 'cpanel_ip', 'start_date', 'expiry_date',
+               'cost', 'status', 'notes', 'created_at']
+
+  'service-providers' => columns: ADD 'email'
+      AFTER 'website' (or before 'cost')
+      Result: ['name', 'type', 'website', 'email', 'cost', 'status', 'notes',
+               'created_at']
+
+  'domains' => columns: ADD 'cloudflare_status'
+      AFTER 'status' (before 'dns_servers')
+      Result: ['name', 'service_provider_id', 'registration_date', 'expiry_date',
+               'auto_renew', 'cost', 'status', 'cloudflare_status', 'dns_servers',
+               'notes', 'created_at']
+
+--- 7b. API ExportController (@ app/Http/Controllers/Api/ExportController.php) ---
+  IDENTICAL changes to $this->types array as Web ExportController above.
+  Both controllers must be kept in sync.
+
+--- 7c. Web ImportController (@ app/Http/Controllers/Web/ImportController.php) ---
+  No code changes needed.
+  Import automatically works because:
+  - ImportController reads $model->getFillable() dynamically
+  - Fillable is updated in step 2
+  - CSV headers matching fillable names are auto-mapped
+  - New fields are nullable -> empty CSV cell = null = valid
+  - JSON fields are stored as JSON in CSV; import passes string value
+    which the 'array' cast will attempt to decode (string like '["admin"]'
+    will be stored as-is if not valid JSON, but manual import is responsible)
+
+--- 7d. API ImportController (@ app/Http/Controllers/Api/ImportController.php) ---
+  Same as Web ImportController — no code changes needed (auto-maps via fillable).
+
+================================================================================
+8. SEARCH IMPACT
+================================================================================
+
+--- 8a. VPS Service (@ app/Services/VpsService.php) ---
+  Current search: name, ip_address
+  EXPAND to: name, ip_address, department, location
+  EXACT CODE CHANGE in list() method, inside search closure:
+    $query->where(function ($q) use ($filters) {
+        $q->where('name', 'like', '%'.$filters['search'].'%')
+            ->orWhere('ip_address', 'like', '%'.$filters['search'].'%')
+            ->orWhere('department', 'like', '%'.$filters['search'].'%')
+            ->orWhere('location', 'like', '%'.$filters['search'].'%');
+    });
+
+  Do NOT include login_ids or additional_ips in search — JSON text search
+  across JSON columns is not supported reliably across MySQL/MariaDB/SQLite
+  and would cause migration compatibility issues.
+
+--- 8b. Hosting Service (@ app/Services/HostingService.php) ---
+  Current search: name, domain
+  EXPAND to: name, domain, domain_ip, mail_domain_ip, cpanel_ip
+  EXACT CODE CHANGE:
+    $q->where('name', 'like', '%'.$filters['search'].'%')
+        ->orWhere('domain', 'like', '%'.$filters['search'].'%')
+        ->orWhere('domain_ip', 'like', '%'.$filters['search'].'%')
+        ->orWhere('mail_domain_ip', 'like', '%'.$filters['search'].'%')
+        ->orWhere('cpanel_ip', 'like', '%'.$filters['search'].'%');
+
+--- 8c. ServiceProvider Service (@ app/Services/ServiceProviderService.php) ---
+  Current search: name, provider, type
+  EXPAND to: name, provider, type, email
+  EXACT CODE CHANGE in list() method, inside search closure (line 31):
+      ->orWhere('email', 'like', '%'.$filters['search'].'%');
+
+  FULL current closure (add email line):
+    $query->where(function ($q) use ($filters) {
+        $q->where('name', 'like', '%'.$filters['search'].'%')
+            ->orWhere('provider', 'like', '%'.$filters['search'].'%')
+            ->orWhere('type', 'like', '%'.$filters['search'].'%')
+            ->orWhere('email', 'like', '%'.$filters['search'].'%');
+    });
+
+  Web ServiceProviderController::index() currently:
+    $query->where('name', 'like', '%'.$request->search.'%');
+  Update to use a group (for consistency with API):
+    $query->where(function ($q) use ($request) {
+        $q->where('name', 'like', '%'.$request->search.'%');
+    });
+
+--- 8d. Domain Service (@ app/Services/DomainService.php) ---
+  Current search: name
+  EXPAND to: name, cloudflare_status
+  EXACT CODE CHANGE:
+    $q->where('name', 'like', '%'.$filters['search'].'%')
+        ->orWhere('cloudflare_status', 'like', '%'.$filters['search'].'%');
+
+--- 8e. Global Search (Web SearchController + API SearchController) ---
+  UNCHANGED. Global search only searches a single primary column per resource
+  (e.g., name, title, email). Adding cloudflare_status, department, location,
+  or IP addresses to global search would add noise without value. The
+  resource-specific search (via index endpoint) already handles these.
+
+================================================================================
+9. TESTS REQUIRED
+================================================================================
+
+--- 9a. Migration tests ---
+  Add to existing test or create new:
+  - Verify columns exist after migration (check DB schema)
+  - Verify columns are nullable
+  - Verify columns have correct type
+  - Verify rollback drops columns
+
+  Pattern: Use Schema::hasColumn() in a feature test
+  Location: Could be added to any existing feature test that creates data
+  Estimate: 1 test per table (4 total) OR extend existing model tests
+
+--- 9b. Model tests ---
+  Add to existing model unit tests or feature tests:
+  - Verify new fields are in $fillable
+  - Verify JSON fields have 'array' cast (VPS only)
+  - Verify fillable via factory -> create with new field -> assert DB value
+  - Verify hidden unchanged (no passwords exposed)
+  - Verify relationships unchanged (test count, type)
+
+  Location:
+    tests/Unit/VpsTest.php — already exists
+    tests/Feature/VpsTest.php — already has CRUD (add test for new fields)
+    tests/Feature/HostingTest.php — add test
+    tests/Feature/ServiceProviderTest.php — add test (already has 11 methods)
+    tests/Feature/DomainTest.php — add test
+
+--- 9c. Validation tests ---
+  In each resource's feature test:
+  - Store with valid new field data returns 201
+  - Store with invalid data returns 422 (where relevant)
+    VPS: invalid JSON for login_ids/additional_ips
+    Domains: invalid cloudflare_status value
+  - Update with new field data works
+  - Validation rules are respected
+
+--- 9d. Store/Update/Show/Index feature tests ---
+  For each of the 4 resources:
+  - Store new field value is persisted
+  - Store null defaults to null
+  - Update changes new field value
+  - Show displays new field value (if include in JSON response)
+  - Index includes new field data (check response structure)
+  - Index search works with new searchable fields
+
+  Estimated: 5 tests per resource x 4 = 20 tests
+
+--- 9e. Export/Import tests ---
+  Existing ExportTest and ImportTest already cover CSV structure:
+  - Export CSV includes new columns (test CSV header row)
+  - Export rows contain new field data
+  - Import CSV with new columns maps correctly
+  - Import null/empty values for new columns is valid
+
+  Estimated: 2-3 tests total (1 export + 1-2 import)
+
+--- 9f. Search tests ---
+  Update existing search tests in each resource's feature test:
+  - Search by new field returns match
+  - Search by non-matching new field returns empty
+
+  Estimated: 2 tests per resource with search expansion x 3 = 6 tests
+
+--- 9g. Total estimated test count ---
+  ~35 new test methods across ~8 test files
+  All existing 1366 tests must continue to pass unchanged.
+
+================================================================================
+10. RISK CHECK
+================================================================================
+
+RBAC / MODULE LOGIC:    UNCHANGED
+  - No module_id references changed
+  - No role/permission checks added or modified
+  - No canOnModule() calls changed
+  - Module column remains hidden from list tables per Plan B but fully intact
+    in all backend logic (forms, models, controllers, search, export, import)
+
+ROUTES:                 UNCHANGED
+  - No new routes added
+  - No route parameter changes
+  - No middleware changes
+
+CONTROLLERS:            MINIMAL changes only
+  - Web VpsController::index() — select() untouched (already fetches all)
+  - Web HostingController::index() — select() untouched
+  - Web ServiceProviderController::index() — search expansion
+  - Web DomainController::index() — search expansion
+  - API controllers — no changes (services are called)
+  - No new controller methods
+
+SERVICES:               SEARCH EXPANSION ONLY
+  - VpsService — search expanded to 4 columns
+  - HostingService — search expanded to 5 columns
+  - ServiceProviderService — search expanded to include email
+  - DomainService — search expanded to include cloudflare_status
+  - No new service classes
+
+NEW MODEL/TABLE/SERVICE: NONE
+  - Zero new models, zero new tables, zero new service classes
+
+JSON FIELDS:            FOLLOW existing VoIP.extensions pattern
+  - 'login_ids' and 'additional_ips' use same 'array' cast as voip.extensions
+  - DB column type: json (same as extensions)
+  - Form display: textarea with JSON-encoded value (same as domain.dns_servers)
+  - Import: CSV stores JSON string, auto-mapped via fillable, cast decodes it
+  - Serialization: toArray() returns array (via array cast); no manual encoding
+
+CLOUDFLARE API:         NOT INTEGRATED
+  - 'cloudflare_status' is a manually-set string field (enabled/disabled/unknown)
+  - No Cloudflare API calls, no SDK, no webhook, no sync
+  - Purely informational/manual — user sets it in form, sees it in list/show
+  - No automatic detection, no DNS checks, no API integration
+
+DATA LOSS:              NONE
+  - All new columns are nullable with no defaults
+  - No existing columns are modified
+  - No data migrations needed
+  - Rollback is clean: dropColumn on the new columns only
+
+TEST REGRESSION:        NONE
+  - All new fields are nullable -> existing tests without these fields pass
+  - No required validation on new fields
+  - All existing assertions unchanged
+  - All 1366 existing tests must pass after implementation
+
+================================================================================
+END OF PLAN
+================================================================================

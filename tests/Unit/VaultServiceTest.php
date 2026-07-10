@@ -2,6 +2,7 @@
 
 namespace Tests\Unit;
 
+use App\Models\Module;
 use App\Models\User;
 use App\Models\VaultEntry;
 use App\Services\VaultService;
@@ -139,8 +140,8 @@ class VaultServiceTest extends TestCase
     public function test_list_filters_by_module_id(): void
     {
         $user = User::factory()->create();
-        $module1 = \App\Models\Module::factory()->create();
-        $module2 = \App\Models\Module::factory()->create();
+        $module1 = Module::factory()->create();
+        $module2 = Module::factory()->create();
         $this->service->create(['user_id' => $user->id, 'service_name' => 'A', 'password' => 'p', 'module_id' => $module1->id]);
         $this->service->create(['user_id' => $user->id, 'service_name' => 'B', 'password' => 'p', 'module_id' => $module2->id]);
 
@@ -163,8 +164,8 @@ class VaultServiceTest extends TestCase
     public function test_list_filters_by_accessible_module_ids(): void
     {
         $user = User::factory()->create();
-        $module1 = \App\Models\Module::factory()->create();
-        $module2 = \App\Models\Module::factory()->create();
+        $module1 = Module::factory()->create();
+        $module2 = Module::factory()->create();
         $this->service->create(['user_id' => $user->id, 'service_name' => 'A', 'password' => 'p', 'module_id' => $module1->id]);
         $this->service->create(['user_id' => $user->id, 'service_name' => 'B', 'password' => 'p', 'module_id' => $module2->id]);
 
@@ -206,5 +207,28 @@ class VaultServiceTest extends TestCase
         $result = $this->service->list(['per_page' => 200]);
 
         $this->assertEquals(100, $result->perPage());
+    }
+
+    public function test_list_filters_by_accessible_module_ids_as_collection(): void
+    {
+        $user = User::factory()->create();
+        $module1 = Module::factory()->create();
+        $module2 = Module::factory()->create();
+        $this->service->create(['user_id' => $user->id, 'service_name' => 'A', 'password' => 'p', 'module_id' => $module1->id]);
+        $this->service->create(['user_id' => $user->id, 'service_name' => 'B', 'password' => 'p', 'module_id' => $module2->id]);
+
+        $result = $this->service->list(['accessible_module_ids' => collect([$module1->id])]);
+
+        $this->assertCount(1, $result->items());
+    }
+
+    public function test_list_invalid_sort_order_falls_back_to_asc(): void
+    {
+        $user = User::factory()->create();
+        $this->service->create(['user_id' => $user->id, 'service_name' => 'A', 'password' => 'p']);
+
+        $result = $this->service->list(['sort_order' => 'invalid']);
+
+        $this->assertCount(1, $result->items());
     }
 }

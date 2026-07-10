@@ -19,6 +19,4 @@ use OpenApi\Attributes as OA;
     ],
     type: 'object'
 )]
-class VaultData
-{
-}
+class VaultData {}

@@ -6,7 +6,7 @@ use App\Events\VaultPasswordRevealed;
 use App\Models\User;
 use App\Models\VaultEntry;
 use App\Notifications\VaultPasswordRevealed as VaultPasswordRevealedNotification;
-use HasinHayder\Tyro\Models\Role;
+use HasinHayder\Tyro\Database\Seeders\TyroSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
@@ -18,7 +18,7 @@ class AlertVaultOwnerTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->seed(\HasinHayder\Tyro\Database\Seeders\TyroSeeder::class);
+        $this->seed(TyroSeeder::class);
     }
 
     public function test_notifies_owner_when_another_user_reveals_password(): void
@@ -72,7 +72,8 @@ class AlertVaultOwnerTest extends TestCase
         VaultPasswordRevealed::dispatch($entry, $causer);
 
         Notification::assertSentTo($owner, VaultPasswordRevealedNotification::class, function ($notification) {
-            $data = $notification->toArray(new User());
+            $data = $notification->toArray(new User);
+
             return $data['type'] === 'vault_password_revealed'
                 && $data['service'] === 'GitHub Token'
                 && $data['revealed_by'] === 'John Doe';
@@ -89,7 +90,8 @@ class AlertVaultOwnerTest extends TestCase
         VaultPasswordRevealed::dispatch($entry, null);
 
         Notification::assertSentTo($owner, VaultPasswordRevealedNotification::class, function ($notification) {
-            $data = $notification->toArray(new User());
+            $data = $notification->toArray(new User);
+
             return $data['revealed_by'] === 'System';
         });
     }

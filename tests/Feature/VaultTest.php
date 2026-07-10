@@ -6,9 +6,10 @@ use App\Models\Module;
 use App\Models\ModuleRolePermission;
 use App\Models\User;
 use App\Models\VaultEntry;
+use Database\Seeders\FeatureModuleSeeder;
+use HasinHayder\Tyro\Database\Seeders\TyroSeeder;
 use HasinHayder\Tyro\Models\Role;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Spatie\Activitylog\Models\Activity;
 use Tests\TestCase;
 
 class VaultTest extends TestCase
@@ -18,8 +19,8 @@ class VaultTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->seed(\HasinHayder\Tyro\Database\Seeders\TyroSeeder::class);
-        $this->seed(\Database\Seeders\FeatureModuleSeeder::class);
+        $this->seed(TyroSeeder::class);
+        $this->seed(FeatureModuleSeeder::class);
     }
 
     public function test_create_vault_entry()
@@ -61,7 +62,7 @@ class VaultTest extends TestCase
         $user->assignRole($role);
         $token = $user->createToken('test')->plainTextToken;
 
-        $entry = new VaultEntry();
+        $entry = new VaultEntry;
         $entry->user_id = $user->id;
         $entry->service_name = 'Test App';
         $entry->username = 'admin';
@@ -82,7 +83,7 @@ class VaultTest extends TestCase
         $user->assignRole($role);
         $token = $user->createToken('test')->plainTextToken;
 
-        $entry = new VaultEntry();
+        $entry = new VaultEntry;
         $entry->user_id = $user->id;
         $entry->service_name = 'Reveal Test';
         $entry->encryptPassword('my-plain-password');
@@ -101,7 +102,7 @@ class VaultTest extends TestCase
         $other = User::factory()->create();
         $token = $other->createToken('test')->plainTextToken;
 
-        $entry = new VaultEntry();
+        $entry = new VaultEntry;
         $entry->user_id = $owner->id;
         $entry->service_name = 'Secret';
         $entry->encryptPassword('hidden');
@@ -120,7 +121,7 @@ class VaultTest extends TestCase
         $user->assignRole($role);
         $token = $user->createToken('test')->plainTextToken;
 
-        $entry = new VaultEntry();
+        $entry = new VaultEntry;
         $entry->user_id = $user->id;
         $entry->service_name = 'Delete Test';
         $entry->encryptPassword('delete-me');
@@ -140,7 +141,7 @@ class VaultTest extends TestCase
         $user->assignRole($role);
         $token = $user->createToken('test')->plainTextToken;
 
-        $entry = new VaultEntry();
+        $entry = new VaultEntry;
         $entry->user_id = $user->id;
         $entry->service_name = 'Audit Test';
         $entry->encryptPassword('reveal-me');
@@ -165,13 +166,13 @@ class VaultTest extends TestCase
         $user->assignRole($role);
         $token = $user->createToken('test')->plainTextToken;
 
-        $entryA = new VaultEntry();
+        $entryA = new VaultEntry;
         $entryA->user_id = $user->id;
         $entryA->service_name = 'Z Service';
         $entryA->encryptPassword('p1');
         $entryA->save();
 
-        $entryB = new VaultEntry();
+        $entryB = new VaultEntry;
         $entryB->user_id = $user->id;
         $entryB->service_name = 'A Service';
         $entryB->encryptPassword('p2');
@@ -195,7 +196,7 @@ class VaultTest extends TestCase
         $user->assignRole($role);
         $token = $user->createToken('test')->plainTextToken;
 
-        $entry = new VaultEntry();
+        $entry = new VaultEntry;
         $entry->user_id = $user->id;
         $entry->service_name = 'Trash Me';
         $entry->encryptPassword('delete-me');
@@ -217,7 +218,7 @@ class VaultTest extends TestCase
         $user->assignRole($role);
         $token = $user->createToken('test')->plainTextToken;
 
-        $entry = new VaultEntry();
+        $entry = new VaultEntry;
         $entry->user_id = $user->id;
         $entry->service_name = 'Original Name';
         $entry->encryptPassword('secret');
@@ -239,7 +240,7 @@ class VaultTest extends TestCase
         $other = User::factory()->create();
         $token = $other->createToken('test')->plainTextToken;
 
-        $entry = new VaultEntry();
+        $entry = new VaultEntry;
         $entry->user_id = $owner->id;
         $entry->service_name = 'Secret';
         $entry->encryptPassword('hidden');
@@ -290,7 +291,7 @@ class VaultTest extends TestCase
         $viewer->assignRole($adminRole);
         $token = $viewer->createToken('test')->plainTextToken;
 
-        $entry = new VaultEntry();
+        $entry = new VaultEntry;
         $entry->user_id = $owner->id;
         $entry->service_name = 'Shared Vault';
         $entry->module_id = $module->id;
@@ -350,7 +351,7 @@ class VaultTest extends TestCase
         $user->assignRole($role);
         $token = $user->createToken('test')->plainTextToken;
 
-        $entry = new VaultEntry();
+        $entry = new VaultEntry;
         $entry->user_id = $user->id;
         $entry->service_name = 'Password Change Test';
         $entry->encryptPassword('old-password');
@@ -365,5 +366,163 @@ class VaultTest extends TestCase
         $reveal = $this->withHeader('Authorization', "Bearer $token")
             ->postJson("/api/vault/{$entry->id}/reveal");
         $reveal->assertJsonPath('data.password', 'new-password');
+    }
+
+    public function test_non_owner_cannot_update_vault()
+    {
+        $owner = User::factory()->create();
+        $other = User::factory()->create();
+        $token = $other->createToken('test')->plainTextToken;
+
+        $entry = new VaultEntry;
+        $entry->user_id = $owner->id;
+        $entry->service_name = 'Protected Entry';
+        $entry->encryptPassword('secret');
+        $entry->save();
+
+        $response = $this->withHeader('Authorization', "Bearer $token")
+            ->putJson("/api/vault/{$entry->id}", ['service_name' => 'Hacked']);
+
+        $response->assertStatus(403);
+    }
+
+    public function test_non_owner_cannot_delete_vault()
+    {
+        $owner = User::factory()->create();
+        $other = User::factory()->create();
+        $token = $other->createToken('test')->plainTextToken;
+
+        $entry = new VaultEntry;
+        $entry->user_id = $owner->id;
+        $entry->service_name = 'Protected Entry';
+        $entry->encryptPassword('secret');
+        $entry->save();
+
+        $response = $this->withHeader('Authorization', "Bearer $token")
+            ->deleteJson("/api/vault/{$entry->id}");
+
+        $response->assertStatus(403);
+    }
+
+    public function test_non_admin_can_list_own_vault_entries()
+    {
+        $role = Role::where('slug', 'admin')->firstOrFail();
+        $user = User::factory()->create();
+        $user->assignRole($role);
+        $token = $user->createToken('test')->plainTextToken;
+
+        $entry = new VaultEntry;
+        $entry->user_id = $user->id;
+        $entry->service_name = 'My Entry';
+        $entry->encryptPassword('secret');
+        $entry->save();
+
+        $response = $this->withHeader('Authorization', "Bearer $token")
+            ->getJson('/api/vault');
+
+        $response->assertStatus(200);
+        $this->assertStringContainsString('My Entry', $response->getContent());
+    }
+
+    public function test_my_vault_search_filter(): void
+    {
+        $user = User::factory()->create();
+        $role = Role::where('slug', 'super-admin')->firstOrFail();
+        $user->assignRole($role);
+        $token = $user->createToken('test')->plainTextToken;
+
+        $entry = new VaultEntry;
+        $entry->user_id = $user->id;
+        $entry->service_name = 'MySuperService';
+        $entry->encryptPassword('secret');
+        $entry->save();
+
+        $entry2 = new VaultEntry;
+        $entry2->user_id = $user->id;
+        $entry2->service_name = 'OtherService';
+        $entry2->encryptPassword('secret2');
+        $entry2->save();
+
+        $response = $this->withHeader('Authorization', "Bearer $token")
+            ->getJson('/api/my-vault?search=Super');
+
+        $response->assertStatus(200);
+        $this->assertStringContainsString('MySuperService', $response->getContent());
+        $this->assertStringNotContainsString('OtherService', $response->getContent());
+    }
+
+    public function test_blank_password_update_preserves_existing(): void
+    {
+        $user = User::factory()->create();
+        $role = Role::where('slug', 'super-admin')->firstOrFail();
+        $user->assignRole($role);
+
+        $entry = new VaultEntry;
+        $entry->user_id = $user->id;
+        $entry->service_name = 'Preserve Test';
+        $entry->encryptPassword('preserve_me');
+        $entry->save();
+
+        $this->actingAs($user)->putJson("/api/vault/{$entry->id}", [
+            'service_name' => 'Preserved Name',
+        ])->assertOk();
+
+        $reveal = $this->actingAs($user)->postJson("/api/vault/{$entry->id}/reveal");
+        $reveal->assertJsonPath('data.password', 'preserve_me');
+    }
+
+    public function test_api_reveal_denied_without_can_reveal(): void
+    {
+        $module = Module::first();
+        $adminRole = Role::where('slug', 'admin')->firstOrFail();
+        ModuleRolePermission::create([
+            'module_id' => $module->id,
+            'role_id' => $adminRole->id,
+            'can_read' => true,
+            'can_reveal' => false,
+        ]);
+
+        $user = User::factory()->create();
+        $user->assignRole($adminRole);
+        $token = $user->createToken('test')->plainTextToken;
+
+        $entry = new VaultEntry;
+        $entry->user_id = User::factory()->create()->id;
+        $entry->service_name = 'No Reveal';
+        $entry->module_id = $module->id;
+        $entry->encryptPassword('secret');
+        $entry->save();
+
+        $this->withHeader('Authorization', "Bearer $token")
+            ->postJson("/api/vault/{$entry->id}/reveal")
+            ->assertStatus(403);
+    }
+
+    public function test_api_reveal_allowed_with_can_reveal(): void
+    {
+        $module = Module::first();
+        $adminRole = Role::where('slug', 'admin')->firstOrFail();
+        ModuleRolePermission::create([
+            'module_id' => $module->id,
+            'role_id' => $adminRole->id,
+            'can_read' => true,
+            'can_reveal' => true,
+        ]);
+
+        $user = User::factory()->create();
+        $user->assignRole($adminRole);
+        $token = $user->createToken('test')->plainTextToken;
+
+        $entry = new VaultEntry;
+        $entry->user_id = User::factory()->create()->id;
+        $entry->service_name = 'Allow Reveal';
+        $entry->module_id = $module->id;
+        $entry->encryptPassword('revealable');
+        $entry->save();
+
+        $this->withHeader('Authorization', "Bearer $token")
+            ->postJson("/api/vault/{$entry->id}/reveal")
+            ->assertStatus(200)
+            ->assertJsonPath('data.password', 'revealable');
     }
 }

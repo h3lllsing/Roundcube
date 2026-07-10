@@ -9,7 +9,10 @@ use App\Http\Resources\ModuleResource;
 use App\Models\Feature;
 use App\Models\Module;
 use App\Services\ModuleService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use OpenApi\Attributes as OA;
 
@@ -38,7 +41,7 @@ class ModuleController extends Controller
             ])),
         ]
     )]
-    public function index(Request $request, Feature $feature): \Illuminate\Http\Resources\Json\AnonymousResourceCollection
+    public function index(Request $request, Feature $feature): AnonymousResourceCollection
     {
         $version = Cache::get('features:version', 0);
         $filters = $request->only(['is_active', 'search', 'per_page', 'sort_by', 'sort_order']);
@@ -46,8 +49,9 @@ class ModuleController extends Controller
         if ($request->user()->hasRole('super-admin') && $request->boolean('with_trashed')) {
             $filters['with_trashed'] = true;
         }
-        $cacheKey = 'modules:list:v' . $version . ':' . $feature->id . ':' . md5(json_encode($filters) ?: '');
-        $modules = Cache::remember($cacheKey, 60, fn() => $this->moduleService->listForFeature($feature, $filters));
+        $cacheKey = 'modules:list:v'.$version.':'.$feature->id.':'.md5(json_encode($filters) ?: '');
+        $modules = Cache::remember($cacheKey, 60, fn () => $this->moduleService->listForFeature($feature, $filters));
+
         return ModuleResource::collection($modules);
     }
 
@@ -74,7 +78,10 @@ class ModuleController extends Controller
     )]
     public function store(StoreModuleRequest $request, Feature $feature): ModuleResource
     {
+        abort_unless($request->user()->hasRole('super-admin'), 403);
+
         $module = $this->moduleService->create($feature, $request->validated());
+
         return new ModuleResource($module);
     }
 
@@ -93,6 +100,7 @@ class ModuleController extends Controller
     public function show(Module $module): ModuleResource
     {
         $module->loadMissing('feature', 'rolePermissions.role');
+
         return new ModuleResource($module);
     }
 
@@ -119,7 +127,11 @@ class ModuleController extends Controller
     )]
     public function update(UpdateModuleRequest $request, Module $module): ModuleResource
     {
-        $module = $this->moduleService->update($module, $request->validated());
+    abort_unless($request->user()->hasRole('super-admin'), 403);
+    $this->checkOptimisticLock($module, $request);
+
+    $module = $this->moduleService->update($module, $request->validated());
+
         return new ModuleResource($module);
     }
 
@@ -135,9 +147,12 @@ class ModuleController extends Controller
             new OA\Response(response: 200, description: 'Module deleted', content: new OA\JsonContent(ref: '#/components/schemas/MessageResponse')),
         ]
     )]
-    public function destroy(Module $module): \Illuminate\Http\JsonResponse
+    public function destroy(Module $module): JsonResponse
     {
+        abort_unless(Auth::user()->hasRole('super-admin'), 403);
+
         $this->moduleService->delete($module);
+
         return $this->message('Module deleted');
     }
 }

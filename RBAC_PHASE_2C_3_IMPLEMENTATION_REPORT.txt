@@ -1,0 +1,84 @@
+RBAC PHASE 2C-3: PASSWORD REVEAL/COPY BUTTON VISIBILITY
+=====================================================
+Date: 2026-06-25
+
+GOAL
+----
+Hide password reveal/copy buttons on all resource index and show pages
+when the user lacks `can_reveal` permission on the record's module.
+
+IMPLEMENTATION
+--------------
+All changes are cosmetic/UI only. Server-side `can_reveal` guards (Phase 2B-3)
+remain authoritative.
+
+1. Index Views — Copy Password Buttons (6 files)
+   Modified 6 index views to wrap the copy-password button in:
+   @if(auth()->user()->hasRole('super-admin') || ($record->module && auth()->user()->canOnModule($record->module, 'reveal')))
+   - resources/views/hostings/index.blade.php
+   - resources/views/vps/index.blade.php
+   - resources/views/voip/index.blade.php
+   - resources/views/service-providers/index.blade.php
+   - resources/views/domain-emails/index.blade.php
+   - resources/views/other-services/index.blade.php
+   The masked password span (••••••••) remains visible without permission.
+
+2. Show Views — Show + Copy Password Buttons (7 files)
+   Modified 7 show views to wrap the Show and Copy buttons in:
+   @if(auth()->user()->hasRole('super-admin') || ($record->module && auth()->user()->canOnModule($record->module, 'reveal')))
+   - resources/views/hostings/show.blade.php
+   - resources/views/vps/show.blade.php
+   - resources/views/voip/show.blade.php
+   - resources/views/service-providers/show.blade.php
+   - resources/views/domain-emails/show.blade.php
+   - resources/views/other-services/show.blade.php
+   - resources/views/vault/show.blade.php
+   The masked password span (••••••••) remains visible without permission.
+
+3. Controllers — Bug Fixes (2 controllers)
+   Added `'password'` to the `select()` call in index methods to ensure
+   `$record->password` is available for the view's @if check:
+   - app/Http/Controllers/Web/OtherServiceController.php
+   - app/Http/Controllers/Web/ServiceProviderController.php
+   Without this, the copy button would never render because `@if($record->password)`
+   was always false (the column was not selected from the DB).
+
+TESTING
+-------
+14 test methods in tests/Feature/RbacPhase2C3Test.php covering:
+  - Super Admin: sees copy button on index, show button on show
+  - Admin with can_reveal=true: sees buttons (hostings index, vps show)
+  - Admin with can_reveal=false: buttons hidden (other-services index, other-services show)
+  - Vault show: reveal form visible/hidden with can_reveal
+  - User overrides: override true/false work correctly
+  - Server-side guard: 403 still returned for forbidden reveal endpoint
+  - Per-module coverage: hostings index, vault show
+
+RESULTS
+-------
+All 14 tests pass.
+Full RBAC test suite: 138 tests, 277 assertions — all pass.
+
+FILES MODIFIED
+--------------
+Views (13):
+  resources/views/hostings/index.blade.php
+  resources/views/hostings/show.blade.php
+  resources/views/vps/index.blade.php
+  resources/views/vps/show.blade.php
+  resources/views/voip/index.blade.php
+  resources/views/voip/show.blade.php
+  resources/views/service-providers/index.blade.php
+  resources/views/service-providers/show.blade.php
+  resources/views/domain-emails/index.blade.php
+  resources/views/domain-emails/show.blade.php
+  resources/views/other-services/index.blade.php
+  resources/views/other-services/show.blade.php
+  resources/views/vault/show.blade.php
+
+Controllers (2):
+  app/Http/Controllers/Web/OtherServiceController.php
+  app/Http/Controllers/Web/ServiceProviderController.php
+
+Tests (1):
+  tests/Feature/RbacPhase2C3Test.php

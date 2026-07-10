@@ -6,6 +6,8 @@ use App\Models\Module;
 use App\Models\ModuleRolePermission;
 use App\Models\User;
 use App\Services\ModulePermissionService;
+use Database\Seeders\FeatureModuleSeeder;
+use HasinHayder\Tyro\Database\Seeders\TyroSeeder;
 use HasinHayder\Tyro\Models\Role;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -19,8 +21,8 @@ class ModulePermissionServiceTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->seed(\HasinHayder\Tyro\Database\Seeders\TyroSeeder::class);
-        $this->seed(\Database\Seeders\FeatureModuleSeeder::class);
+        $this->seed(TyroSeeder::class);
+        $this->seed(FeatureModuleSeeder::class);
         $this->service = app(ModulePermissionService::class);
     }
 
@@ -88,7 +90,7 @@ class ModulePermissionServiceTest extends TestCase
 
         $this->service->removeForRole($module, $role->id);
 
-        $this->assertDatabaseMissing('module_role_permissions', [
+        $this->assertSoftDeleted('module_role_permissions', [
             'module_id' => $module->id,
             'role_id' => $role->id,
         ]);

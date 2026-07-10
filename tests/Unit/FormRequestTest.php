@@ -22,16 +22,14 @@ use App\Http\Requests\UpdateTaskRequest;
 use App\Http\Requests\UpdateUserRequest;
 use App\Http\Requests\UpdateVaultRequest;
 use App\Models\Feature;
-use App\Models\Domain;
 use App\Models\User;
+use HasinHayder\Tyro\Database\Seeders\TyroSeeder;
 use HasinHayder\Tyro\Models\Role;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Routing\Route;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\MessageBag;
 use Tests\TestCase;
 
 class FormRequestTest extends TestCase
@@ -41,7 +39,7 @@ class FormRequestTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->seed(\HasinHayder\Tyro\Database\Seeders\TyroSeeder::class);
+        $this->seed(TyroSeeder::class);
     }
 
     public function test_login_request_validates_email_required(): void
@@ -96,8 +94,8 @@ class FormRequestTest extends TestCase
         $v = Validator::make([
             'name' => 'Test User',
             'email' => 'fresh@example.com',
-            'password' => 'password123',
-            'password_confirmation' => 'password123',
+            'password' => 'Password123',
+            'password_confirmation' => 'Password123',
         ], $rules);
         $this->assertTrue($v->passes());
     }
@@ -149,7 +147,7 @@ class FormRequestTest extends TestCase
         $route->method('parameter')->with('user')->willReturn($user);
 
         $request = new UpdateUserRequest;
-        $request->setRouteResolver(fn() => $route);
+        $request->setRouteResolver(fn () => $route);
 
         $rules = $request->rules();
 
@@ -166,7 +164,7 @@ class FormRequestTest extends TestCase
         $this->actingAs($user);
 
         $req = new UpdateProfileRequest;
-        $req->setUserResolver(fn() => $user);
+        $req->setUserResolver(fn () => $user);
         $rules = $req->rules();
 
         $v = Validator::make([
@@ -185,14 +183,14 @@ class FormRequestTest extends TestCase
         $this->actingAs($user);
 
         $req = new UpdateProfileRequest;
-        $req->setUserResolver(fn() => $user);
+        $req->setUserResolver(fn () => $user);
         $rules = $req->rules();
 
         $v = Validator::make([
             'name' => 'Test',
             'email' => $user->email,
-            'password' => 'newpassword123',
-            'password_confirmation' => 'newpassword123',
+            'password' => 'Newpassword123',
+            'password_confirmation' => 'Newpassword123',
             'current_password' => 'currentpass',
         ], $rules);
         $this->assertTrue($v->passes());
@@ -282,7 +280,7 @@ class FormRequestTest extends TestCase
         $route->method('parameter')->with('feature')->willReturn($feature);
 
         $request = new UpdateFeatureRequest;
-        $request->setRouteResolver(fn() => $route);
+        $request->setRouteResolver(fn () => $route);
 
         $this->assertTrue(Validator::make(['name' => 'Updated'], $request->rules())->passes());
     }

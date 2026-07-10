@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Password;
 use OpenApi\Attributes as OA;
@@ -24,7 +25,7 @@ class PasswordResetController extends Controller
             new OA\Response(response: 422, description: 'Validation error', content: new OA\JsonContent(ref: '#/components/schemas/ValidationErrorResponse')),
         ]
     )]
-    public function sendResetLink(Request $request): \Illuminate\Http\JsonResponse
+    public function sendResetLink(Request $request): JsonResponse
     {
         $request->validate(['email' => 'required|email']);
 
@@ -55,12 +56,12 @@ class PasswordResetController extends Controller
             new OA\Response(response: 422, description: 'Validation error', content: new OA\JsonContent(ref: '#/components/schemas/ValidationErrorResponse')),
         ]
     )]
-    public function reset(Request $request): \Illuminate\Http\JsonResponse
+    public function reset(Request $request): JsonResponse
     {
         $request->validate([
             'token' => 'required',
             'email' => 'required|email',
-            'password' => 'required|string|confirmed|min:8',
+            'password' => 'required|string|confirmed|min:8|regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/',
         ]);
 
         $status = Password::reset(

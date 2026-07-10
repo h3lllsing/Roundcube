@@ -1,0 +1,269 @@
+================================================================================
+RBAC PHASE 1 — IMPLEMENTATION REPORT
+================================================================================
+Date: 2026-06-25
+Project: unknwn (Laravel RBAC scoping)
+================================================================================
+
+1.  FILES CHANGED
+    -------------------------------------------------------------------------
+    NEW:
+      app/Helpers/RbacScope.php                     — 3-tier global scope helper (28 lines)
+
+    MODIFIED (10 controllers — all under app/Http/Controllers/Web/):
+      DomainController.php          — userOwnedFilter() → RbacScope::apply(Domain::class)
+      HostingController.php         — userOwnedFilter() → RbacScope::apply(Hosting::class)
+      VpsController.php             — userOwnedFilter() → RbacScope::apply(Vps::class)
+      VoipController.php            — userOwnedFilter() → RbacScope::apply(Voip::class)
+      ServiceProviderController.php — userOwnedFilter() → RbacScope::apply(ServiceProvider::class)
+      DomainEmailController.php     — userOwnedFilter() → RbacScope::apply(DomainEmail::class)
+      OtherServiceController.php    — userOwnedFilter() → RbacScope::apply(OtherService::class)
+      ExpiryTrackerController.php   — userOwnedFilter() → RbacScope::apply(ExpiryTracker::class)
+      VaultController.php           — userOwnedFilter() → RbacScope::apply(VaultEntry::class)
+      TaskController.php            — custom 3-tier with assignee OR (see §3)
+      DashboardController.php       — inline module-based counting for admin (see §4)
+
+      (These controllers previously used simple ownership scoping —
+       i.e., `where('user_id', Auth::id())` for non-super-admin.)
+
+    NEW TEST FILE:
+      tests/Feature/RbacPhase1Test.php
+
+    INTENTIONALLY LEFT ALONE (unchanged, no RbacScope integration):
+      AttachmentController.php      — no module_id; kept simple ownership scope
+      WebhookController.php         — no module_id; kept simple ownership scope
+      NoteController.php            — no module_id; kept simple ownership scope
+
+    NO other files were touched.
+
+2.  EXACT SCOPING LOGIC — RbacScope::apply()
+    -------------------------------------------------------------------------
+    File: app/Helpers/RbacScope.php
+
+    The single entry point is:
+
+        RbacScope::apply(string $modelClass): void
+
+    It inspects the authenticated user and registers a Laravel global scope
+    on the given Eloquent model class.  The logic is a strict 3-tier guard:
+
+      TIER 1 — Super-admin
+      ┌─────────────────────────────────────────────────────────────┐
+      │ if ($user->hasRole('super-admin'))     → NO SCOPE          │
+      │   Sees every record across all modules and users.          │
+      └─────────────────────────────────────────────────────────────┘
+
+      TIER 2 — Admin with module permissions
+      ┌─────────────────────────────────────────────────────────────┐
+      │ if ($user->hasRole('admin')) {                             │
+      │   $ids = $user->getAccessibleModuleIds('read')             │
+      │   if (!empty($ids))  →  whereIn('module_id', $ids)        │
+      │ }                                                          │
+      │   Sees records whose module_id is in the set of modules    │
+      │   where the admin's role has can_read = true.              │
+      │   Ignores the record's user_id — sees *everyone's* records │
+      │   within those permitted modules.                          │
+      └─────────────────────────────────────────────────────────────┘
+
+      TIER 3 — Fallback (admin without perms OR normal user)
+      ┌─────────────────────────────────────────────────────────────┐
+      │ →  where('user_id', $user->id)                             │
+      │   Sees only records they created/own.                      │
+      └─────────────────────────────────────────────────────────────┘
+
+    NOTE: The fallback applies to:
+      - Admins whose role has zero ModuleRolePermission rows
+      - Non-admin users (user role, etc.)
+
+3.  TASK CONTROLLER — Special 3-Tier Logic
+    -------------------------------------------------------------------------
+    File: app/Http/Controllers/Web/TaskController.php
+    Method: userOwnedFilter()  (unused import of RbacScope left for clarity)
+
+    Tasks have an additional visibility rule: a user can see a task if they
+    are personally assigned to it, even if the task belongs to a module
+    the user cannot normally see.
+
+      TIER 1 — Super-admin
+        No scope → sees all tasks.
+
+      TIER 2 — Admin with module permissions
+        whereIn('module_id', $accessibleIds)
+          ->orWhereHas('assignees', fn $q => $q->where('user_id', $user->id))
+
+        An admin sees tasks that either:
+          (a) belong to a permitted module, OR
+          (b) are assigned to them personally.
+
+      TIER 3 — Fallback (admin without perms OR normal user)
+        where('created_by', $user->id)
+          ->orWhereHas('assignees', fn $q => $q->where('user_id', $user->id))
+
+        A normal user (or permissionless admin) sees tasks they created OR
+        tasks they are assigned to.
+
+4.  DASHBOARD CONTROLLER — Admin Module-Based Counting
+    -------------------------------------------------------------------------
+    File: app/Http/Controllers/Web/DashboardController.php
+    Method: computeDashboardData(User $user)
+
+    The dashboard does NOT call RbacScope.  Instead it recomputes the 3-tier
+    filter inline for each service model query inside its counting loop.
+
+      Step 1 — Resolve $moduleIds
+        if ($isSuperAdmin)
+          → collect()  (empty; no module filter needed)
+        else
+          → Module::whereHas('rolePermissions', fn ...
+               ->whereIn('role_id', $user->roles()->pluck('roles.id'))
+               ->where('can_read', true)
+             )->pluck('id')
+
+      Step 2 — 3-tier for each service model (Domains, Hostings, VPS, etc.)
+        foreach service model:
+          if ($isSuperAdmin)
+            → no where clause (sees all)
+          elseif ($user->hasRole('admin') && $moduleIds->isNotEmpty())
+            → whereIn('module_id', $moduleIds)
+          else
+            → where('user_id', $user->id)
+
+    Task counts on the dashboard also use the OR-assignee pattern
+    (same logic as TaskController§3 Tier 2).
+
+    Notes, Vault, Activity logs on the dashboard remain ownership-scoped
+    for non-super-admins (Notes have no module_id).
+
+5.  CONTROLLERS INTENTIONALLY UNCHANGED
+    -------------------------------------------------------------------------
+    AttachmentController.php  — no module_id column; uses simple ownership
+                                scope (where('user_id', Auth::id())).
+
+    WebhookController.php     — no module_id column; uses simple ownership
+                                scope (where('user_id', Auth::id())).
+
+    NoteController.php        — no module_id column; uses simple ownership
+                                scope (where('user_id', Auth::id())).
+
+    These three controllers already had the correct behaviour for Phase 1:
+    non-super-admin users see only their own records.  Future work could add
+    module_id to these tables if multi-user visibility is desired.
+
+6.  CONFIRMED: WHAT WAS NOT CHANGED
+    -------------------------------------------------------------------------
+    ☑  No new migrations                  (module_id already existed on all models)
+    ☑  No route changes                   (existing web routes untouched)
+    ☑  No API controller changes          (Api/* controllers not touched)
+    ☑  No RBAC schema changes             (module_role_permissions table unchanged)
+    ☑  No password reveal permission changes
+    ☑  No import/export permission changes
+    ☑  No blade/view template changes
+    ☑  No model changes
+    ☑  No config changes
+
+7.  TESTS ADDED
+    -------------------------------------------------------------------------
+    File: tests/Feature/RbacPhase1Test.php
+    Test database: uses RefreshDatabase, seeds TyroSeeder + FeatureModuleSeeder
+
+    Test roles set up:
+      super-admin   → sees all
+      admin         → has can_read on moduleA only
+      admin-no-perms → a dedicated Role with zero ModuleRolePermission rows
+      normal user   → user role (no can_read on anything)
+
+    12 tests / 41 assertions:
+
+      #  Test name                                        What it verifies
+      ── ─────────────────────────────────────────────── ──────────────────────
+      1  super_admin_sees_all_records                     Tier 1: VPS from both modules visible
+      2  admin_sees_records_from_assigned_modules         Tier 2: sees moduleA VPS, not moduleB VPS
+      3  admin_does_not_see_from_modules_without_can_read Tier 2: moduleB domains hidden
+      4  admin_without_module_permissions_falls_to_own    Tier 2→3 fallback: sees own Hosting, not others'
+      5  normal_user_sees_only_own_records                Tier 3: user sees own VPS, not admin's
+      6  all_9_module_models_apply_3_tier_scope           3 models tested → can_read filter works
+      7  admin_sees_records_owned_by_other_users          Tier 2: ignores user_id, shows others' domains
+      8  task_admin_sees_module_and_assigned              Task Tier 2: moduleA + assigned tasks visible
+      9  normal_user_sees_own_and_assigned_tasks          Task Tier 3: own + assigned tasks visible
+     10  note_webhook_attachment_behavior_unchanged       Note ownership scope unchanged
+     11  super_admin_sees_all_via_dashboard               Dashboard: super-admin request succeeds
+     12  vault_admin_sees_module_scoped_records           VaultEntry: moduleA visible, moduleB hidden
+
+8.  TEST RESULT
+    -------------------------------------------------------------------------
+    > php artisan test --filter=RbacPhase1 tests/Feature/RbacPhase1Test.php
+
+      PASS  Tests\Feature\RbacPhase1Test
+      ✓ super admin sees all records
+      ✓ admin sees records from assigned modules
+      ✓ admin does not see records from modules without can read
+      ✓ admin without module permissions falls to own records
+      ✓ normal user sees only own records
+      ✓ all 9 module models apply 3 tier scope
+      ✓ admin sees records owned by other users in assigned modules
+      ✓ task admin sees module tasks and assigned tasks
+      ✓ normal user sees own tasks and assigned tasks
+      ✓ note webhook attachment behavior unchanged
+      ✓ super admin sees all via dashboard
+      ✓ vault admin sees module scoped records
+
+      Tests:    12 passed (41 assertions)
+      Duration: 7.98s
+
+9.  FAILURES / SKIPPED ITEMS
+    -------------------------------------------------------------------------
+    No failures.  No skipped items.
+
+    (A test setup issue was fixed: adminWithoutPerms previously shared the
+    same Role as admin, which gave it module permissions.  A dedicated
+    admin-no-perms Role was created to correctly test the Tier 2→Tier 3
+    fallback behaviour.)
+
+10. REMAINING WORK — RBAC PHASE 2 RECOMMENDATIONS
+    -------------------------------------------------------------------------
+    The following areas were intentionally left out of Phase 1 and should
+    be addressed in a follow-up phase:
+
+    (a) API Controllers
+        app/Http/Controllers/Api/*  — currently not scoped by RbacScope.
+        Should apply the same 3-tier logic (or a Traits-based approach)
+        to all API endpoints that return service-model data.
+
+    (b) Show / Edit / Update / Destroy Actions (write operations)
+        Phase 1 scopes only the index() query via global scopes.
+        show(), edit(), update(), destroy() methods also call
+        userOwnedFilter() in the 9 standard controllers, so the global
+        scope applies — BUT this should be verified with explicit tests
+        for each action type (especially update and delete by an admin
+        on a record outside their module scope).
+
+    (c) Import / Export Permissions
+        Import and export actions are not yet scoped.  An admin with
+        can_read on certain modules could theoretically export all
+        records via the import/export feature.
+
+    (d) Password Reveal Logging & Permissions
+        The vault password reveal action is not controlled by module
+        permissions in this phase.  can_read permission is checked,
+        but reveals should probably also respect can_create/update
+        or have a dedicated permission.
+
+    (e) Note / Webhook / Attachment module_id
+        These tables currently lack module_id.  If multi-user visibility
+        is desired, a schema migration would be needed, followed by
+        RbacScope integration.
+
+    (f) Dashboard: non-admin non-super-admin counts
+        The dashboard's 3-tier counting for service models checks
+        $user->hasRole('admin') explicitly.  This means a normal user
+        sees only `where('user_id', $user->id)` — correct for Phase 1,
+        but if custom roles are introduced later, this check will need
+        to be more flexible.
+
+    (g) RbacScope import cleanup in TaskController
+        TaskController has `use App\Helpers\RbacScope;` but never calls
+        it.  The import is dead code and should be removed.
+
+================================================================================
+END OF REPORT
+================================================================================

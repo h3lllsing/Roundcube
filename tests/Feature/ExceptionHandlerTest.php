@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use Database\Seeders\FeatureModuleSeeder;
+use HasinHayder\Tyro\Database\Seeders\TyroSeeder;
 use HasinHayder\Tyro\Models\Role;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -14,8 +16,8 @@ class ExceptionHandlerTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->seed(\HasinHayder\Tyro\Database\Seeders\TyroSeeder::class);
-        $this->seed(\Database\Seeders\FeatureModuleSeeder::class);
+        $this->seed(TyroSeeder::class);
+        $this->seed(FeatureModuleSeeder::class);
     }
 
     public function test_unknown_api_route_returns_404_json()
@@ -55,10 +57,11 @@ class ExceptionHandlerTest extends TestCase
     public function test_authorization_error_returns_403_json()
     {
         $user = User::factory()->create();
+        $feature = \App\Models\Feature::factory()->create();
         $token = $user->createToken('test')->plainTextToken;
 
         $response = $this->withHeader('Authorization', "Bearer $token")
-            ->deleteJson('/api/features/1');
+            ->deleteJson("/api/features/{$feature->id}");
 
         $response->assertStatus(403)
             ->assertJson(['message' => 'Forbidden']);

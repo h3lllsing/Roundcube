@@ -1,0 +1,726 @@
+================================================================================
+ENTERPRISE ARCHITECTURE AUDIT v1.1
+================================================================================
+Project:   Tyro RBAC (informal project name)
+Date:      2026-06-26
+Auditor:   Opencode Enterprise Audit
+Scope:     Authentication, RBAC, User Management, Navigation, SMTP Profiles,
+           Renewal Email Engine
+Metrics:   SOLID, DRY, KISS, Scalability, Maintainability, Shared Hosting
+           Compatibility, Performance, Security, Technical Debt
+================================================================================
+
+TABLE OF CONTENTS
+  1. Executive Summary
+  2. Maturity Score & Ratings
+  3. Production Readiness Assessment
+  4. Technical Debt Estimate
+  5. Authentication Architecture
+  6. RBAC Architecture
+  7. User Management
+  8. Navigation System
+  9. SMTP Profiles
+  10. Renewal Email Engine
+  11. Dead Code & Unused Assets
+  12. Architecture Smells & Future Risks
+  13. Recommended Priorities
+  14. Key File Index
+
+================================================================================
+1. EXECUTIVE SUMMARY
+================================================================================
+
+This is a Laravel 12 + Sanctum application with a custom module-level RBAC layer
+built on top of the HasinHayder/Tyro role/privilege package. It manages 10+
+service entity types (Domain, Hosting, VPS, VoIP, ServiceProvider, Vault, etc.)
+with full CRUD + bulk operations + export/import + monitoring + notifications.
+
+The application is structurally sound with clear MVC separation, good test
+coverage (1700 tests), and strong security fundamentals (encrypted secrets,
+RBAC, audit trails, rate limiting). It is approaching production readiness
+but has several critical issues that must be resolved before deployment.
+
+PROJECT MATURITY SCORE: 7.2 / 10
+  - Functional completeness:  9/10 (near-feature-complete)
+  - Code quality (SOLID):     6/10 (SRP/DRY violations, no interfaces)
+  - Security posture:         7/10 (critical gaps: no email verification,
+                                   suspended user enforcement missing)
+  - Test coverage:            8/10 (1700 tests, 4294 assertions, good)
+  - Performance:              6/10 (N+1 queries, no queuing, no chunking)
+  - Scalability:              5/10 (file sessions, sync sends, no caching)
+  - Documentation:            4/10 (no API docs beyond Swagger schemas,
+                                   no architecture docs, no SECURITY.md)
+
+================================================================================
+2. MATURITY SCORE & RATINGS
+================================================================================
+
+  DIMENSION              SCORE  NOTES
+  ─────────────────────────────────────────────────────────────────────
+  Authentication         7/10  Solid basics; no email verification,
+                               suspended enforcement gap, session
+                               encryption disabled
+  RBAC                   7/10  Comprehensive module-level permissions;
+                               privilege system underutilized; N+1
+                               in permission checks; suspension not
+                               enforced
+  User Management         7/10  Well-structured CRUD; web profile
+                               password change lacks current_password;
+                               notification accessor is fat model
+  Navigation              5/10  N+1 sidebar queries; menu defined in
+                               6 places (DRY violation); no MenuBuilder
+  SMTP Profiles           7/10  Encrypted at rest; critical password
+                               double-encryption bug on duplicate
+  Renewal Email Engine    7/10  Well-tested; SRP/DRY violations; no
+                               queue; no chunking; dead back-compat
+                               aliases
+  ─────────────────────────────────────────────────────────────────────
+  SOLID                   6/10  SRP violated in Service (10+ resp.);
+                               DIP violated (no interfaces); OCP
+                               limited
+  DRY                     5/10  4x duplicated days-left calc; 3x send
+                               loop; menu in 6 places; Export $types
+                               duplicated
+  KISS                    7/10  Generally straightforward; back-compat
+                               aliases and command palette JS add
+                               unnecessary complexity
+  Performance             6/10  N+1 in sidebar, index pages, perms;
+                               no query caching; sync email sends
+  Security                7/10  Good encryption/audit/rate-limit;
+                               critical gaps in suspension, email
+                               verification, tinker in prod require
+  Maintainability         6/10  Good sepration overall; too many
+                               responsibilities in single classes;
+                               dead code in service
+  Shared Hosting Compat   8/10  File sessions+cache weak for multi-
+                               server; DB queues OK; no exotic reqs
+  Test Coverage           8/10  1700 tests, 4294 assertions; gaps
+                               in profile/password-reset/bulk-action
+
+================================================================================
+3. PRODUCTION READINESS ASSESSMENT
+================================================================================
+
+  OVERALL: NOT READY
+
+  CRITICAL (Must fix before production):
+
+  [C1] laravel/tinker in production require -- composer.json
+       Tinker is an interactive PHP REPL. If accidentally exposed
+       (e.g., via composer install --no-dev not being run), an
+       attacker can execute arbitrary PHP code.
+
+  [C2] APP_DEBUG=true & APP_ENV=local in .env
+       Exposes full stack traces and environment dumps to end users.
+
+  [C3] Hardcoded secrets in .env (DB password, APP_KEY)
+       The .env file is visible in the working directory. Secrets
+       are not rotated and are committed to version control.
+
+  HIGH (Strongly recommended before production):
+
+  [H1] No HTTPS enforcement on session cookies
+       SESSION_SECURE_COOKIE not set. Sessions can be transmitted
+       over HTTP.
+
+  [H2] Session encryption disabled (SESSION_ENCRYPT=false)
+       Session data stored in plaintext in file-based sessions.
+
+  [H3] FTP deployment with SSL disabled (deploy.sh)
+       Credentials and files transferred in plaintext.
+
+  [H4] No maintenance mode during deployment
+       Users see broken state during deploy.
+
+  [H5] No CI/CD pipeline
+       No automated testing or deployment pipeline.
+
+  [H6] No email verification
+       MustVerifyEmail is commented out. Users register and
+       immediately access the app without verifying ownership
+       of the email address.
+
+  [H7] Suspended user enforcement not implemented
+       isSuspended() exists on User model but is never checked
+       in middleware or controllers. Suspended users with active
+       tokens can still access all resources.
+
+  MEDIUM:
+
+  [M1] MAIL_MAILER=log -- emails silently discarded
+  [M2] File-based cache (CACHE_STORE=file) -- not shared across servers
+  [M3] No SECURITY.md or vulnerability disclosure policy
+  [M4] robots.txt allows crawling of /api/, /docs/ paths
+  [M5] Docker volume mount of entire source tree (anti-pattern)
+  [M6] Stale .env.example.bak file
+
+================================================================================
+4. TECHNICAL DEBT ESTIMATE
+================================================================================
+
+  TOTAL ESTIMATED DEBT: ~65-85 engineer-hours
+
+  BREAKDOWN BY SEVERITY:
+
+  CRITICAL (15-20 hrs):
+  ────────────────────────────────────────────────────────────────────
+  - Fix SMTP profile password double-encryption on duplicate    2 hrs
+    (app/Http/Controllers/Web/SmtpProfileController.php:98)
+  - Remove laravel/tinker from production require               1 hr
+    (composer.json)
+  - Add suspension enforcement middleware                       6 hrs
+    (app/Http/Middleware/ + routes)
+  - Implement email verification                                8 hrs
+    (config + MustVerifyEmail + routes + views)
+
+  HIGH (25-30 hrs):
+  ────────────────────────────────────────────────────────────────────
+  - Fix N+1 in SidebarComposer                                  4 hrs
+    (app/Http/View/Composers/SidebarComposer.php:47-57)
+  - Add caching for ModuleRolePermission queries                6 hrs
+    (app/Traits/HasModulePermissions.php, ModulePermissionService)
+  - Remove duplicate cache-based lockout in API Auth            2 hrs
+    (app/Http/Controllers/Api/AuthController.php:51-61)
+  - Add chunking to sendReminders()                             2 hrs
+    (app/Services/RenewalNotificationService.php:19-22)
+  - Add queuing for email dispatch                              4 hrs
+    (app/Services/RenewalNotificationService.php:274-280)
+  - Extract days-left calculation DRY                           2 hrs
+    (app/Services/RenewalNotificationService.php)
+  - Web profile password change: add current_password           1 hr
+    (app/Http/Controllers/Web/AuthController.php:162-181)
+  - Fix login audit query bug                                   1 hr
+    (app/Http/Controllers/Web/UserController.php:287)
+
+  MEDIUM (15-20 hrs):
+  ────────────────────────────────────────────────────────────────────
+  - Remove dead back-compat aliases                             1 hr
+    (app/Services/RenewalNotificationService.php:354-390)
+  - Create MenuBuilder service                                  8 hrs
+    (to eliminate 6-way menu duplication)
+  - Extract ExportController $types to shared config            3 hrs
+    (app/Http/Controllers/Web/ExportController.php)
+  - Create SmtpProfileFactory                                   1 hr
+  - Fix BulkActionService view/service mismatch                 1 hr
+  - Refactor notification accessor out of User model            2 hrs
+    (app/Models/User.php:119-166)
+  - Remove dead pagination views (8 files)                      1 hr
+
+  LOW (10-15 hrs):
+  ────────────────────────────────────────────────────────────────────
+  - Add missing FK constraint on notifications                  1 hr
+  - Add STARTTLS to SMTP encryption validation                  1 hr
+  - Fix mixed return type on resolveMailer()                    1 hr
+  - Mark dead code @deprecated                                  2 hrs
+  - Extract duplicate logAudit() method into trait              2 hrs
+  - Add current_password to web profile                         1 hr
+  - Add indexes on users.name/email for search                  1 hr
+  - Remove unused .env variables in .env.example                1 hr
+  - Clean up stale .env.example.bak                             1 hr
+  - Add @throws PHPDoc annotations                              3 hrs
+
+================================================================================
+5. AUTHENTICATION ARCHITECTURE
+================================================================================
+
+  OVERVIEW:
+  Dual auth system: Web (session-based + Blade) and API (Sanctum tokens).
+  Single guard ('web'), single provider ('users').
+
+  FILES:
+    app/Http/Controllers/Web/AuthController.php
+    app/Http/Controllers/Api/AuthController.php
+    app/Http/Controllers/Api/PasswordResetController.php
+    app/Http/Controllers/Api/ProfileController.php
+    app/Http/Controllers/Web/TokenController.php
+    app/Http/Controllers/Api/TokenController.php
+    app/Http/Requests/LoginRequest.php
+    app/Http/Requests/UpdateProfileRequest.php
+    app/Models/LoginAudit.php
+
+  STRENGTHS:
+    ✅ Dual rate limiting (route-level + cache-based)
+    ✅ Login audit logging (success, failure, suspension, lockout)
+    ✅ Account suspension (suspended_at timestamp)
+    ✅ Sanctum token expiration (8 hours)
+    ✅ Session regeneration on login/logout
+    ✅ BCrypt with 12 rounds
+    ✅ Exception handler provides proper JSON for API errors
+
+  WEAKNESSES:
+    ❌ No email verification (MustVerifyEmail commented out)
+    ❌ No suspension enforcement middleware (isSuspended() never checked)
+    ❌ Session encryption disabled (SESSION_ENCRYPT=false)
+    ❌ No HTTPS enforcement on cookies (SESSION_SECURE_COOKIE not set)
+    ❌ Password reset token in URL (visible in browser history)
+    ❌ Duplicate rate limiting (route throttle + custom cache lockout)
+    ❌ No password complexity rules (min:8 only)
+    ❌ No password history / breach detection
+    ❌ Token abilities not used (all tokens have full access)
+    ❌ Web profile update lacks current_password validation
+    ❌ Duplicate logAudit() method in Web + Api controllers
+    ❌ Inconsistent hashing: bcrypt() in PasswordResetController
+
+  SHARED HOSTING:
+    - File-based sessions: problematic on multi-server shared hosting
+    - DB queues: good for shared hosting (no Redis required)
+    - No esoteric PHP extensions required
+
+================================================================================
+6. RBAC ARCHITECTURE
+================================================================================
+
+  OVERVIEW:
+  Two-layer RBAC: (1) Tyro package offers Role/Privilege base, (2) custom
+  ModuleRolePermission + UserModulePermission matrix with 7 boolean action
+  columns per module. Permission inheritance: user override -> role perms ->
+  default false. Super-admin bypasses all checks.
+
+  FILES:
+    app/Traits/HasModulePermissions.php
+    app/Models/Module.php
+    app/Models/ModuleRolePermission.php
+    app/Models/UserModulePermission.php
+    app/Models/RoleTemplate.php
+    app/Services/ModulePermissionService.php
+    app/Helpers/RbacScope.php
+    app/Http/View/Composers/SidebarComposer.php
+    vendor/hasinhayder/tyro/src/Concerns/HasTyroRoles.php
+
+  STRENGTHS:
+    ✅ Defense in depth (route middleware + inline checks + scopes + Blade)
+    ✅ Super-admin safeguards (cannot self-demote, cannot delete last)
+    ✅ Protected roles (admin/super-admin undeletable)
+    ✅ Dangeruos template requires confirmation
+    ✅ Activity logging for all role/permission changes
+    ✅ Comprehensive RBAC test coverage (10 test files)
+    ✅ Wildcard role/privilege handled correctly
+
+  WEAKNESSES:
+    ❌ Suspension not enforced in any middleware or controller
+    ❌ Privilege system (hasPrivilege()) underutilized -- only ExportController
+    ❌ Permission check patterns inconsistent across controllers
+       (3 different patterns: route middleware, inline hasRole, inline canOnModule)
+    ❌ can_approve / can_import columns never checked in code
+    ❌ customer / editor roles seeded but never assigned in UI or tested
+    ❌ N+1: canOnModule() issues 2 queries per call, no caching
+    ❌ Cache not invalidated on ModuleRolePermission changes
+    ❌ API ExportController missing can_export check for admin role
+    ❌ RbacScope global scope is fragile (can be unintentionally removed)
+    ❌ No policy classes (authorization ad-hoc in FormRequests)
+
+  SOLID ASSESSMENT:
+    S: Partially violated (UserController 511 lines, DashboardController 136)
+    O: OK -- extensible via new modules and can_* columns
+    L: OK -- trait-based approach
+    I: Partially OK -- HasModulePermissions has many methods
+    D: Partially violated -- controllers directly query models
+
+================================================================================
+7. USER MANAGEMENT
+================================================================================
+
+  FILES:
+    app/Models/User.php
+    app/Http/Controllers/Web/UserController.php
+    app/Http/Controllers/Api/UsersController.php
+    app/Http/Requests/StoreUserRequest.php
+    app/Http/Requests/UpdateUserRequest.php
+    app/Services/BulkActionService.php
+    resources/views/users/*.blade.php (8 view files)
+
+  STRENGTHS:
+    ✅ Comprehensive CRUD with search/filter/pagination
+    ✅ Soft deletes with restore/force-delete
+    ✅ Account suspension with login enforcement
+    ✅ Clone feature (roles + permissions + overrides)
+    ✅ Self-demotion protection
+    ✅ Last super-admin delete protection
+    ✅ Transaction wrapping for critical operations
+    ✅ 67 automated tests
+
+  WEAKNESSES:
+    ❌ Web profile update lacks current_password (security gap)
+    ❌ Notification count accessor is fat model (48 lines)
+    ❌ INLINE LIKE search causes full table scans (no indexes)
+    ❌ Bulk action view offers restore/force-delete but service rejects them
+    ❌ Role filter dropdown uses hardcoded strings (super-admin/admin/user)
+    ❌ UpdateUserRequest uses route-model-binding but web UserController uses int $id
+    ❌ No user preferences/settings system
+    ❌ enable_clone checkbox has no server-side validation (JS-only UI)
+    ❌ Clone logic duplicated between store() and cloneStore()
+
+================================================================================
+8. NAVIGATION SYSTEM
+================================================================================
+
+  FILES:
+    app/Http/View/Composers/SidebarComposer.php
+    resources/views/layouts/admin.blade.php (lines 58-130 sidebar, 384-477 cmd palette)
+    resources/views/components/nav-link.blade.php
+    resources/views/components/breadcrumbs.blade.php
+
+  ARCHITECTURE:
+  View Composer pattern. SidebarComposer computes 10 boolean visibility flags,
+  injects into layouts.admin. No MenuBuilder class, no config/menu.php,
+  no dedicated service provider.
+
+  STRENGTHS:
+    ✅ Super-admin bypasses all DB queries (early return)
+    ✅ Vault special logic (show My Credentials if owns entries regardless of perms)
+    ✅ Command palette (Cmd+K) for keyboard navigation
+    ✅ Simple and functional
+
+  WEAKNESSES:
+    ❌ CRITICAL PERFORMANCE: N+1 queries on every page load for non-super-admins
+       - 1 query from getAccessibleModuleIds()
+       - 9 queries from foreach loop (one per module)
+       - 1 vault module query
+       - 1 vault entry existence query
+       = 12 DB queries every page load just for the sidebar
+    ❌ Menu defined in 6 separate places that must be manually kept in sync
+       (admin.blade.php HTML, admin.blade.php JS cmd palette, SidebarComposer
+        slug map, breadcrumbs.blade.php labels, FeatureModuleSeeder, NavigationTest)
+    ❌ No caching of sidebar permissions
+    ❌ Role-based gating duplicated (@hasrole in Blade + $showX from composer)
+    ❌ showReports not computed by composer -- uses @hasrole directly
+    ❌ JavaScript command palette (130+ lines) embedded inline in Blade
+    ❌ Breadcrumb labels in separate hardcoded array
+
+  SOLID: D (Open/Closed -- adding menu requires editing 6 files)
+
+================================================================================
+9. SMTP PROFILES
+================================================================================
+
+  FILES:
+    app/Models/SmtpProfile.php
+    app/Http/Controllers/Web/SmtpProfileController.php
+    app/Http/Requests/StoreSmtpProfileRequest.php
+    app/Http/Requests/UpdateSmtpProfileRequest.php
+    database/migrations/2026_06_25_100000_create_smtp_profiles_table.php
+    resources/views/smtp-profiles/*.blade.php (4 view files)
+
+  STRENGTHS:
+    ✅ Encryption at rest (AES-256-CBC via Laravel encrypt())
+    ✅ Hidden from JSON/array serialization ($hidden array)
+    ✅ Excluded from activity log
+    ✅ Comprehensive test coverage (17 dedicated tests)
+    ✅ Test functionality with status tracking
+    ✅ Consumer tables registry for usage counting
+    ✅ Fallback to default mailer when profile is inactive
+
+  WEAKNESSES:
+    ❌ CRITICAL BUG: Password double-encrypted on duplicate
+       replicate() copies already-encrypted value; save() re-encrypts it
+       File: SmtpProfileController.php:98
+    ❌ N+1: usageCount() in index loop (20+ queries per page)
+       File: index.blade.php:57
+    ❌ Global config mutation in resolveMailer() not thread-safe for queue workers
+       File: RenewalNotificationService.php:198-205
+    ❌ consumerTables() is fragile (hardcoded array, violates OCP)
+    ❌ 5 dead back-compat methods in RenewalNotificationService
+       (sendForTracker, getRecipients, logNotification, hasBeenSentToday,
+        getMailerForTrackerPublic) -- zero callers
+    ❌ Mixed return type mixed on resolveMailer()
+    ❌ No SmtpProfileFactory (boilerplate in 4 test files)
+    ❌ Missing foreign key constraint on notifications.smtp_profile_id
+    ❌ STARTTLS not in encryption validation options
+
+================================================================================
+10. RENEWAL EMAIL ENGINE
+================================================================================
+
+  FILES:
+    app/Services/RenewalNotificationService.php (391 lines)
+    app/Mail/ExpiryTrackerReminder.php
+    app/Console/Commands/SendEmailReminders.php
+    app/Http/Controllers/Web/ExpiryTrackerController.php
+    app/Models/ExpiryTracker.php
+    app/Models/ExpiryTrackerNotification.php
+    routes/console.php
+    resources/views/emails/expiry-tracker-reminder.blade.php
+    resources/views/expiry-trackers/_notification-form.blade.php
+
+  ARCHITECTURE:
+  3 layers: Command -> Service -> Mailable. Service handles sendReminders
+  (cron), sendNow (manual), sendTest (preview), dedup, history, mailer
+  resolution, and preview rendering.
+
+  STRENGTHS:
+    ✅ Clear 3-layer separation
+    ✅ Good error handling (try/catch + sanitizeErrorMessage + history recording)
+    ✅ preventDuplicate dedup by tracker+day+recipient+source
+    ✅ trigger_source distinction (cron/manual/test)
+    ✅ Error passwords redacted from DB via sanitizeErrorMessage()
+    ✅ strong test coverage (59 tests across 6 test files)
+    ✅ Secure (passwords encrypted, hidden from serialization, excluded from logs)
+    ✅ Generic service architecture ready for other entity types
+
+  WEAKNESSES:
+    ❌ DRY violations:
+       - Days-left calculation duplicated 4 times (L29, L90, L140, L169)
+       - Recipient iteration loop duplicated between sendReminders/sendNow
+       - Tracker timestamp update duplicated (L74, L126)
+       - $tracker->load(...) duplicated (L88, L138, L167)
+    ❌ SRP violation: Service handles 10+ distinct responsibilities
+       (sendReminders, sendNow, sendTest, preview, buildMailable,
+        resolveMailer, buildRecipients, recordHistory, preventDuplicate,
+        testSmtpProfile)
+    ❌ No chunking in sendReminders (loads ALL at once -- memory risk)
+    ❌ No queuing (sync sends in cron process -- time risk)
+    ❌ sendTest() has void return -- controller always shows success
+    ❌ 5 dead back-compat aliases (L354-390, zero callers)
+    ❌ notify_days -> notify_days_before mapping duplicated in controller
+    ❌ ExpiryTrackerFactory omits notification fields
+    ❌ Mailable implements Queueable but sends sync (misleading)
+    ❌ Tightly coupled to ExpiryTracker (not ready for Domain/Hosting/etc.)
+    ❌ Dual notification system (expiry:check + renewals:send-email)
+       creates potential confusion
+
+================================================================================
+11. DEAD CODE & UNUSED ASSETS
+================================================================================
+
+  FOUND IN APPLICATION:
+
+  File/Directory                                        Status
+  ───────────────────────────────────────────────────────────────────────────
+  resources/views/welcome.blade.php                     DEAD (no route returns it)
+  resources/views/vendor/pagination/*.blade.php        8 DEAD (using Tailwind only)
+  app/Services/RenewalNotificationService.php:354-390  5 DEAD methods (no callers)
+  app/Http/Controllers/Api/AuthController.php:51-61    DEAD duplicate rate limiting
+                                                        (@codeCoverageIgnore)
+  .env: BROADCAST_CONNECTION                           SET BUT NEVER READ
+  .env: BCRYPT_ROUNDS                                  SET BUT NEVER READ
+  can_approve column                                   IN SCHEMA BUT NEVER CHECKED
+  can_import column                                    IN SCHEMA BUT NEVER CHECKED
+  customer role                                        SEEDED BUT NEVER USED/ASSIGNED
+  editor role                                          SEEDED BUT NEVER USED/ASSIGNED
+  Privilege/hasPrivilege() system                      UNDERUTILIZED in app code
+  tyro.abilities config                                NEVER REFERENCED
+  .env.example.bak                                     STALE BACKUP FILE
+
+  TYRO PACKAGE (vendor) -- 47 unused artisan commands:
+  tyro:about, tyro:add-privilege, tyro:add-role, tyro:assign-role,
+  tyro:attach-privilege, tyro:create-user, tyro:delete-privilege,
+  tyro:delete-role, tyro:delete-user, tyro:delete-user-role,
+  tyro:detach-privilege, tyro:doc, tyro:flush-roles, tyro:install,
+  tyro:audit-logs, tyro:privileges, tyro:roles, tyro:roles-with-privileges,
+  tyro:users, tyro:users-with-roles, tyro:login, tyro:logout-all,
+  tyro:logout-all-users, tyro:logout, tyro:me, tyro:postman,
+  tyro:prepare-user-model, tyro:publish-config, tyro:publish-migrations,
+  tyro:purge-audit-logs, tyro:purge-privileges, tyro:quick-token,
+  tyro:role-users, tyro:tests, tyro:seed, tyro:seed-privileges,
+  tyro:seed-roles, tyro:star, tyro:suspend-user, tyro:suspended-users,
+  tyro:unsuspend-user, tyro:update-privilege, tyro:update-role,
+  tyro:update-user, tyro:user-privileges, tyro:user-roles, tyro:version,
+  tyro:update-config (not registered)
+
+================================================================================
+12. ARCHITECTURE SMELLS & FUTURE RISKS
+================================================================================
+
+  SMELL 1: Dual notification systems
+  ────────────────────────────────────────────────────────────────────────
+  ExpiryNotificationService (in-app DB notifications, expiry:check
+  command) and RenewalNotificationService (email reminders,
+  renewals:send-email-reminders) both target ExpiryTracker with similar
+  trigger logic but completely separate code paths. Users may receive
+  overlapping notifications with different timing.
+
+  SMELL 2: Tight coupling to ExpiryTracker
+  ────────────────────────────────────────────────────────────────────────
+  RenewalNotificationService is exclusively bound to ExpiryTracker model.
+  Every public method takes ExpiryTracker as parameter. No interface, no
+  generic "Expirable" contract. Adding Domain/Hosting/VPS email reminders
+  requires rewriting the service.
+
+  SMELL 3: Global config() mutation in queue context
+  ────────────────────────────────────────────────────────────────────────
+  resolveMailer() mutates config('mail.mailers.smtp_profile') at runtime.
+  If two queue jobs run in the same worker process, their profile configs
+  will collide. Currently only used in CLI (safe), but future queue usage
+  will break.
+
+  SMELL 4: N+1 quagmire
+  ────────────────────────────────────────────────────────────────────────
+  4+ locations with N+1 query patterns:
+   - SidebarComposer (12 queries per page load)
+   - canOnModule() (2 queries per call)
+   - SmtpProfile index (usageCount in loop)
+   - getAccessibleModuleIds() (3-4 queries per call)
+  At scale (100s of concurrent users), these will cause DB load spikes.
+
+  SMELL 5: No application-level caching for permissions
+  ────────────────────────────────────────────────────────────────────────
+  ModuleRolePermission queries hit the database on every request. No
+  cache layer despite permissions changing infrequently.
+
+  SMELL 6: Synchronous email sending at scale
+  ────────────────────────────────────────────────────────────────────────
+  No queue, no chunking, no batching. The 02:00 cron will become a
+  bottleneck as tracker count grows. 10,000 trackers x 3 recipients =
+  30,000 sequential SMTP connections.
+
+  SMELL 7: Inconsistent permission check patterns
+  ────────────────────────────────────────────────────────────────────────
+  4 different patterns used (route middleware, inline hasRole, inline
+  canOnModule, @hasrole in Blade). Some controllers check super-admin
+  before module perms; some check module perms first. The API
+  ExportController skips can_export for admin roles entirely.
+
+  SMELL 8: Controllers doing business logic
+  ────────────────────────────────────────────────────────────────────────
+  UserController (511 lines), DashboardController::computeDashboardData()
+  (136 lines), RoleTemplateController::executeApply() (71 lines) all
+  handle business logic that belongs in service classes.
+
+  FUTURE RISKS:
+  - Adding a 3rd notification system for other entity types (Domain,
+    Hosting) would exacerbate the dual-notification confusion
+  - Permission caching gap will become critical at 1000+ concurrent users
+  - File-based sessions+cache prevent horizontal scaling
+  - No CI/CD pipeline means no automated regression checks on deploy
+  - FTP-based deployment with SSL disabled is a security incident waiting
+    to happen
+
+================================================================================
+13. RECOMMENDED PRIORITIES
+================================================================================
+
+  IMMEDIATE (Week 1-2):
+  ────────────────────────────────────────────────────────────────────────
+  1. Move laravel/tinker from require to require-dev (security)
+  2. Fix SMTP profile password double-encryption on duplicate (bug)
+  3. Add suspension enforcement middleware (security gap)
+  4. Add current_password validation to web profile update (security)
+  5. Set APP_DEBUG=false, APP_ENV=production in deployment .env
+  6. Remove duplicate cache-based lockout in API AuthController
+  7. Fix login audit query bug (event = 'login' -> 'login_success')
+  8. Rotate exposed secrets (APP_KEY, DB password)
+
+  SHORT-TERM (Week 3-4):
+  ────────────────────────────────────────────────────────────────────────
+  9.  Fix N+1 in SidebarComposer (batch-load modules)
+  10. Add query-level caching for ModuleRolePermission queries
+  11. Extract days-left calculation DRY in NotificationService
+  12. Remove 5 dead back-compat aliases (zero callers)
+  13. Fix BulkActionService view/service mismatch
+  14. Add indexes on users.name, users.email
+  15. Enable session encryption and HTTPS cookies
+  16. Create MenuBuilder service (eliminate 6-way duplication)
+  17. Start CI/CD pipeline setup (GitHub Actions)
+
+  MEDIUM-TERM (Month 2):
+  ────────────────────────────────────────────────────────────────────────
+  18. Add queue support for email sending
+  19. Add chunking to sendReminders()
+  20. Create generic Expirable interface for multi-entity support
+  21. Extract ExportController $types to centralized config
+  22. Refactor notification accessor out of User model
+  23. Add email verification flow
+  24. Add password complexity rules
+  25. Fix API ExportController admin scope gap
+  26. Add SECURITY.md with vulnerability disclosure policy
+  27. Replace FTP deployment with SFTP/SCP or CI/CD
+
+  LONG-TERM (Month 3+):
+  ────────────────────────────────────────────────────────────────────────
+  28. Implement token ability scoping
+  29. Add automated expired token cleanup
+  30. Add login audit log pruning
+  31. Implement password history/breach checking
+  32. Switch to Redis for sessions + cache for horizontal scaling
+  33. Replace file-based cache with Redis for rate limiting
+  34. Add health checks to Docker Compose
+  35. Write missing tests (profile, bulk action, password reset)
+
+================================================================================
+14. KEY FILE INDEX
+================================================================================
+
+  AUTHENTICATION:
+    app/Http/Controllers/Web/AuthController.php
+    app/Http/Controllers/Api/AuthController.php
+    app/Http/Controllers/Api/PasswordResetController.php
+    app/Http/Controllers/Api/ProfileController.php
+    app/Http/Requests/LoginRequest.php
+    app/Http/Requests/UpdateProfileRequest.php
+    app/Models/LoginAudit.php
+
+  RBAC:
+    app/Traits/HasModulePermissions.php
+    app/Models/Module.php
+    app/Models/ModuleRolePermission.php
+    app/Models/UserModulePermission.php
+    app/Models/RoleTemplate.php
+    app/Services/ModulePermissionService.php
+    app/Helpers/RbacScope.php
+    app/Http/View/Composers/SidebarComposer.php
+    database/seeders/FeatureModuleSeeder.php
+    database/seeders/RolePermissionSeeder.php
+    database/seeders/RoleTemplateSeeder.php
+
+  USER MANAGEMENT:
+    app/Models/User.php
+    app/Http/Controllers/Web/UserController.php
+    app/Http/Controllers/Api/UsersController.php
+    app/Http/Requests/StoreUserRequest.php
+    app/Http/Requests/UpdateUserRequest.php
+    app/Services/BulkActionService.php
+
+  NAVIGATION:
+    app/Http/View/Composers/SidebarComposer.php
+    resources/views/layouts/admin.blade.php
+    resources/views/components/nav-link.blade.php
+    resources/views/components/breadcrumbs.blade.php
+
+  SMTP PROFILES:
+    app/Models/SmtpProfile.php
+    app/Http/Controllers/Web/SmtpProfileController.php
+    app/Http/Requests/StoreSmtpProfileRequest.php
+    app/Http/Requests/UpdateSmtpProfileRequest.php
+
+  RENEWAL EMAIL ENGINE:
+    app/Services/RenewalNotificationService.php
+    app/Mail/ExpiryTrackerReminder.php
+    app/Console/Commands/SendEmailReminders.php
+    app/Http/Controllers/Web/ExpiryTrackerController.php
+    app/Models/ExpiryTracker.php
+    app/Models/ExpiryTrackerNotification.php
+    routes/console.php
+    resources/views/emails/expiry-tracker-reminder.blade.php
+
+  CRITICAL BUG LOCATIONS:
+    app/Http/Controllers/Web/SmtpProfileController.php:98
+      (password double-encryption on duplicate)
+    app/Http/Controllers/Web/AuthController.php:169
+      (missing current_password on web profile update)
+    app/Http/Controllers/Api/ExportController.php:128-130
+      (missing can_export check for admin)
+    app/Http/Controllers/Web/UserController.php:287
+      (wrong event string 'login' instead of 'login_success')
+    app/Services/RenewalNotificationService.php:198-205
+      (global config mutation not thread-safe)
+    app/Http/View/Composers/SidebarComposer.php:47-57
+      (N+1 query for non-super-admin users)
+
+  KEY TEST FILES:
+    tests/Feature/SmtpProfileTest.php (17 tests)
+    tests/Feature/RenewalNotificationServiceTest.php (15 tests)
+    tests/Feature/RenewalSchedulerCommandTest.php (9 tests)
+    tests/Feature/ExpiryReminderMailTest.php (8 tests)
+    tests/Feature/ExpiryTrackerNotificationTest.php (12 tests)
+    tests/Feature/ExpiryTrackerTest.php (10 tests)
+    tests/Feature/NavigationTest.php (10 tests)
+    tests/Feature/UsersTest.php (18 tests)
+    tests/Feature/UserCloneTest.php (13 tests)
+    tests/Feature/UserModulePermissionTest.php (16 tests)
+    tests/Feature/RbacPhase1Test.php (238 lines)
+    tests/Feature/RbacPhase2B1Test.php (266 lines)
+    tests/Feature/RoleTemplateTest.php (596 lines)
+
+================================================================================
+END OF ENTERPRISE ARCHITECTURE AUDIT v1.1
+================================================================================

@@ -2,38 +2,47 @@
 
 namespace App\Providers;
 
-use Illuminate\Cache\RateLimiting\Limit;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\RateLimiter;
+use App\Models\Domain;
+use App\Models\DomainEmail;
+use App\Models\ExpiryTracker;
+use App\Models\Feature;
+use App\Models\Hosting;
+use App\Models\Module;
+use App\Models\ModuleRolePermission;
+use App\Models\Note;
+use App\Models\OtherService;
+use App\Models\ServiceProvider as ServiceProviderModel;
+use App\Models\Task;
+use App\Models\UserModulePermission;
+use App\Models\VaultEntry;
+use App\Models\Voip;
+use App\Models\Vps;
+use App\Observers\DashboardCacheObserver;
+use Illuminate\Pagination\Paginator;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        //
     }
 
     public function boot(): void
     {
-        RateLimiter::for('api', function (Request $request) {
-            return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
-        });
+        Paginator::useTailwind();
 
-        RateLimiter::for('search', function (Request $request) {
-            return Limit::perMinute(20)->by($request->user()?->id ?: $request->ip());
-        });
+        $models = [
+            Domain::class, Hosting::class, Vps::class, Voip::class,
+            ServiceProviderModel::class, DomainEmail::class, OtherService::class,
+            ExpiryTracker::class, Note::class, VaultEntry::class, Task::class,
+            Feature::class, Module::class, ModuleRolePermission::class,
+            UserModulePermission::class,
+        ];
+        foreach ($models as $model) {
+            $model::observe(DashboardCacheObserver::class);
+        }
 
-        RateLimiter::for('export', function (Request $request) {
-            return Limit::perMinute(5)->by($request->user()?->id ?: $request->ip());
-        });
-
-        RateLimiter::for('bulk', function (Request $request) {
-            return Limit::perMinute(10)->by($request->user()?->id ?: $request->ip());
-        });
-
-        RateLimiter::for('import', function (Request $request) {
-            return Limit::perMinute(5)->by($request->user()?->id ?: $request->ip());
-        });
+        Module::deleted(fn () => Cache::increment('perms_generation'));
     }
 }

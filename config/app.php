@@ -65,7 +65,7 @@ return [
     |
     */
 
-    'timezone' => 'UTC',
+    'timezone' => env('APP_TIMEZONE', 'UTC'),
 
     /*
     |--------------------------------------------------------------------------
@@ -75,6 +75,21 @@ return [
     | The application locale determines the default locale that will be used
     | by Laravel's translation / localization methods. This option can be
     | set to any locale for which you plan to have translation strings.
+    |
+    */
+
+    /*
+    |--------------------------------------------------------------------------
+    | English-Only Policy
+    |--------------------------------------------------------------------------
+    |
+    | This application is English-only. All user-facing strings are hardcoded
+    | in English in Blade templates, controllers, and JavaScript files. No
+    | lang/ directory or translation infrastructure is provided or planned.
+    | The __() helper is used only for Laravel built-in strings (pagination,
+    | password reset) and a handful of controller flash messages.
+    |
+    | Adding i18n support would require creating lang/ files for every string.
     |
     */
 
@@ -117,6 +132,29 @@ return [
     | Supported drivers: "file", "cache"
     |
     */
+
+    /*
+    |--------------------------------------------------------------------------
+    | Application Version
+    |--------------------------------------------------------------------------
+    |
+    | Used by ServerHealthWidget and other system info displays.
+    |
+    */
+
+    'version' => env('APP_VERSION', '1.0.0'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Default Pagination Size
+    |--------------------------------------------------------------------------
+    |
+    | Default number of items per page for paginated index/list views.
+    | Individual controllers may override this value with custom page sizes.
+    |
+    */
+
+    'pagination_per_page' => (int) env('APP_PAGINATION_PER_PAGE', 20),
 
     'maintenance' => [
         'driver' => env('APP_MAINTENANCE_DRIVER', 'file'),

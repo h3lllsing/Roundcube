@@ -2,10 +2,11 @@
 
 namespace App\Http\Resources;
 
+use App\Models\Module;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
-/** @mixin \App\Models\Module */
+/** @mixin Module */
 class ModuleResource extends JsonResource
 {
     /** @return array<string, mixed> */
@@ -20,7 +21,7 @@ class ModuleResource extends JsonResource
             'is_active' => $this->is_active,
             'feature' => new FeatureResource($this->whenLoaded('feature')),
             'permissions' => $this->whenLoaded('rolePermissions', function () {
-                return $this->rolePermissions->map(fn($p) => [
+                return $this->rolePermissions->map(fn ($p) => [
                     'role_id' => $p->role_id,
                     'can_create' => $p->can_create,
                     'can_read' => $p->can_read,

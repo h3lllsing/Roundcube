@@ -5,17 +5,14 @@ namespace App\Services;
 use App\Events\ExpiryWarningTriggered;
 use App\Models\Domain;
 use App\Models\DomainEmail;
-use App\Models\ExpiryTracker;
 use App\Models\Hosting;
 use App\Models\OtherService;
 use App\Models\ServiceProvider;
 use App\Models\Voip;
 use App\Models\Vps;
 use App\Notifications\ExpiringSoon;
-use App\Services\WebhookService;
-use Illuminate\Notifications\DatabaseNotification;
 use Carbon\Carbon;
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Notifications\DatabaseNotification;
 
 class ExpiryNotificationService
 {
@@ -25,7 +22,6 @@ class ExpiryNotificationService
 
     /** @var array<class-string, string> */
     private array $models = [
-        ExpiryTracker::class => 'Expiry Tracker',
         Domain::class => 'Domain',
         Hosting::class => 'Hosting',
         Vps::class => 'VPS',
@@ -50,55 +46,46 @@ class ExpiryNotificationService
     {
         $sent = 0;
 
-        $items = $modelClass::with('user')
+        $modelClass::with('user')
             ->whereNotNull('expiry_date')
             ->where('status', 'active')
-            ->get();
+            ->chunk(200, function ($items) use (&$sent, $modelClass, $label) {
+                foreach ($items as $item) {
+                    $days = (int) Carbon::today()->startOfDay()->diffInDays(Carbon::parse($item->expiry_date)->startOfDay(), false);
 
-        foreach ($items as $item) {
-            $days = (int) Carbon::today()->startOfDay()->diffInDays(Carbon::parse($item->expiry_date)->startOfDay(), false);
+                    $threshold = $this->getThresholdCategory($days);
+                    if ($threshold === null) {
+                        continue;
+                    }
 
-            $threshold = $this->getThresholdCategory($days);
-            if ($threshold === null) {
-                continue;
-            }
+                    if ($this->alreadyNotified($item->user_id, $modelClass, $item->id, $threshold)) {
+                        continue;
+                    }
 
-            if ($this->alreadyNotified($item->user_id, $modelClass, $item->id, $threshold)) {
-                continue;
-            }
+                    $user = $item->user;
+                    if (! $user) {
+                        continue; // @codeCoverageIgnore
+                    }
 
-            $user = $item->user;
-            if (!$user) {
-                continue;
-            }
+                    $name = $item->name ?? $item->email ?? 'Unnamed';
 
-            $name = $item->name ?? $item->email ?? 'Unnamed';
+                    $user->notify(new ExpiringSoon(
+                        itemType: $modelClass,
+                        itemId: $item->id,
+                        name: $name,
+                        entityType: $label,
+                        expiryDate: $item->expiry_date,
+                        threshold: $threshold,
+                        daysRemaining: $days,
+                    ));
 
-            $user->notify(new ExpiringSoon(
-                itemType: $modelClass,
-                itemId: $item->id,
-                name: $name,
-                entityType: $label,
-                expiryDate: $item->expiry_date,
-                threshold: $threshold,
-                daysRemaining: $days,
-            ));
+                    $this->webhookService->fire('expiring_soon', $item);
 
-            $this->webhookService->fire('expiring_soon', [
-                'item_type' => $modelClass,
-                'item_id' => $item->id,
-                'name' => $name,
-                'entity_type' => $label,
-                'expiry_date' => $item->expiry_date,
-                'days_remaining' => $days,
-                'threshold' => $threshold,
-                'user_email' => $user->email,
-            ]);
+                    ExpiryWarningTriggered::dispatch($item, $label, $user, $days);
 
-            ExpiryWarningTriggered::dispatch($item, $label, $user, $days);
-
-            $sent++;
-        }
+                    $sent++;
+                }
+            });
 
         return $sent;
     }
@@ -120,9 +107,9 @@ class ExpiryNotificationService
     {
         return DatabaseNotification::where('type', ExpiringSoon::class)
             ->where('notifiable_id', $userId)
-            ->whereJsonContains('data->item_type', $itemType)
-            ->whereJsonContains('data->item_id', $itemId)
-            ->whereJsonContains('data->threshold', $threshold)
+            ->where('data->item_type', $itemType)
+            ->where('data->item_id', $itemId)
+            ->where('data->threshold', $threshold)
             ->exists();
     }
 }

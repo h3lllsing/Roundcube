@@ -5,7 +5,7 @@ namespace Database\Seeders;
 use App\Models\Feature;
 use App\Models\Module;
 use App\Models\ModuleRolePermission;
-use HasinHayder\Tyro\Models\Role;
+use App\Models\Role;
 use Illuminate\Database\Seeder;
 
 class FeatureModuleSeeder extends Seeder
@@ -16,47 +16,63 @@ class FeatureModuleSeeder extends Seeder
 
         $features = [
             [
-                'name' => 'Account Management',
-                'slug' => 'account-management',
-                'description' => 'Manage user accounts and profiles',
-                'icon' => 'users',
+                'name' => 'Infrastructure',
+                'slug' => 'infrastructure',
+                'description' => 'Manage domains, hosting, VPS, VoIP and other infrastructure services',
+                'icon' => 'server',
                 'modules' => [
-                    ['name' => 'User Accounts', 'slug' => 'user-accounts'],
-                    ['name' => 'Account Types', 'slug' => 'account-types'],
-                    ['name' => 'Profile Settings', 'slug' => 'profile-settings'],
-                ],
-            ],
-            [
-                'name' => 'Services',
-                'slug' => 'services',
-                'description' => 'Manage service requests and delivery',
-                'icon' => 'settings',
-                'modules' => [
-                    ['name' => 'Service Requests', 'slug' => 'service-requests'],
-                    ['name' => 'Service Categories', 'slug' => 'service-categories'],
+                    ['name' => 'Domains', 'slug' => 'domains'],
+                    ['name' => 'Hosting', 'slug' => 'hostings'],
+                    ['name' => 'VPS', 'slug' => 'vps'],
+                    ['name' => 'VoIP', 'slug' => 'voip'],
                     ['name' => 'Service Providers', 'slug' => 'service-providers'],
+                    ['name' => 'Domain Emails', 'slug' => 'domain-emails'],
+                    ['name' => 'Other Services', 'slug' => 'other-services'],
+                    ['name' => 'Renewals', 'slug' => 'expiry-trackers'],
+                    ['name' => 'Assets', 'slug' => 'assets'],
+                    ['name' => 'G-Mails', 'slug' => 'g-mails'],
                 ],
             ],
             [
-                'name' => 'Reports',
-                'slug' => 'reports',
-                'description' => 'Generate and manage reports',
-                'icon' => 'bar-chart',
+                'name' => 'Productivity',
+                'slug' => 'productivity',
+                'description' => 'Tasks, notes, vault and monitoring tools',
+                'icon' => 'briefcase',
                 'modules' => [
-                    ['name' => 'Standard Reports', 'slug' => 'standard-reports'],
-                    ['name' => 'Custom Reports', 'slug' => 'custom-reports'],
-                    ['name' => 'Export History', 'slug' => 'export-history'],
+                    ['name' => 'Tasks', 'slug' => 'tasks'],
+                    ['name' => 'Notes', 'slug' => 'notes'],
+                    ['name' => 'Vault', 'slug' => 'vault'],
+                    ['name' => 'Monitor', 'slug' => 'monitor'],
+                    ['name' => 'Calendar', 'slug' => 'calendar'],
                 ],
             ],
             [
-                'name' => 'Settings',
-                'slug' => 'settings',
-                'description' => 'System configuration and preferences',
-                'icon' => 'settings',
+                'name' => 'Administration',
+                'slug' => 'administration',
+                'description' => 'User management, roles, permissions and system settings',
+                'icon' => 'shield',
                 'modules' => [
-                    ['name' => 'General Settings', 'slug' => 'general-settings'],
-                    ['name' => 'Security Settings', 'slug' => 'security-settings'],
-                    ['name' => 'Email Templates', 'slug' => 'email-templates'],
+                    ['name' => 'Users', 'slug' => 'users'],
+                    ['name' => 'Roles', 'slug' => 'roles'],
+                    ['name' => 'Privileges', 'slug' => 'privileges'],
+                    ['name' => 'Module Permissions', 'slug' => 'module-permissions'],
+                    ['name' => 'Activity Logs', 'slug' => 'activity-logs'],
+                    ['name' => 'Login Audits', 'slug' => 'login-audits'],
+                    ['name' => 'Notifications', 'slug' => 'notifications'],
+                    ['name' => 'Attachments', 'slug' => 'attachments'],
+                ],
+            ],
+            [
+                'name' => 'Integration',
+                'slug' => 'integration',
+                'description' => 'Webhooks, tokens, import/export and reporting',
+                'icon' => 'link',
+                'modules' => [
+                    ['name' => 'Webhooks', 'slug' => 'webhooks'],
+                    ['name' => 'API Tokens', 'slug' => 'tokens'],
+                    ['name' => 'Import', 'slug' => 'import'],
+                    ['name' => 'Export', 'slug' => 'export'],
+                    ['name' => 'Reports', 'slug' => 'reports'],
                 ],
             ],
         ];
@@ -67,26 +83,30 @@ class FeatureModuleSeeder extends Seeder
             $modules = $featData['modules'];
             unset($featData['modules']);
 
-            $feature = Feature::create($featData);
+            $feature = Feature::updateOrCreate(
+                ['slug' => $featData['slug']],
+                $featData
+            );
 
             foreach ($modules as $modData) {
-                $module = Module::create([
-                    'feature_id' => $feature->id,
-                    'name' => $modData['name'],
-                    'slug' => $modData['slug'],
-                ]);
+                $module = Module::updateOrCreate(
+                    ['feature_id' => $feature->id, 'slug' => $modData['slug']],
+                    ['name' => $modData['name']]
+                );
 
                 if ($superAdmin) {
-                    ModuleRolePermission::create([
-                        'module_id' => $module->id,
-                        'role_id' => $superAdmin->id,
-                        'can_create' => true,
-                        'can_read' => true,
-                        'can_update' => true,
-                        'can_delete' => true,
-                        'can_approve' => true,
-                        'can_export' => true,
-                    ]);
+                    ModuleRolePermission::updateOrCreate(
+                        ['module_id' => $module->id, 'role_id' => $superAdmin->id],
+                        [
+                            'can_create' => true,
+                            'can_read' => true,
+                            'can_update' => true,
+                            'can_delete' => true,
+                            'can_export' => true,
+                            'can_reveal' => true,
+                            'can_import' => true,
+                        ]
+                    );
                 }
             }
         }

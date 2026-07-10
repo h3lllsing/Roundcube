@@ -1,0 +1,708 @@
+================================================================================
+  PHASE 6A — ENTERPRISE DASHBOARD
+  FINAL PRE-IMPLEMENTATION REVIEW
+================================================================================
+  Project: Tyro / Unknow
+  Status: Planning Only — No Code Implementation
+  Based on: PHASE_6A_SIMPLIFIED_IMPLEMENTATION_PLAN.txt
+================================================================================
+
+TABLE OF CONTENTS
+  1. Widget Class Constants (SLUG)
+  2. Final Widget Order & Layout
+  3. MVP Charts
+  4. Server Health — Expanded Spec
+  5. Empty-State Messages
+  6. Cache TTLs — Final Values
+  7. Dashboard Test Plan
+  8. File Manifest
+
+================================================================================
+1. WIDGET CLASS CONSTANTS
+================================================================================
+
+Replace ReflectionClass-based slug derivation with an explicit public const
+on each widget class. The DashboardController uses WidgetClass::SLUG directly.
+
+1.1  Widget Convention
+
+     ```php
+     namespace App\Dashboard;
+
+     class OperationsWidget
+     {
+         public const SLUG = 'operations';
+
+         public function data(User $user, ?array $accessibleIds = null): array
+         {
+             // ...
+         }
+
+         public function cacheTtl(): int
+         {
+             return 300;
+         }
+     }
+     ```
+
+1.2  DashboardController — resolveWidget()
+
+     ```php
+     private function resolveWidget(object $widget, User $user, int $version): array
+     {
+         $slug = $widget::SLUG;                          // no ReflectionClass
+         $key  = "dashboard:w:{$slug}:{$user->id}:v{$version}";
+         $ttl  = $widget->cacheTtl();
+
+         try {
+             return Cache::remember($key, $ttl,
+                 fn() => $widget->data($user));
+         } catch (\Throwable $e) {
+             Log::warning("Dashboard widget {$slug} failed", [
+                 'error' => $e->getMessage(),
+             ]);
+             return [];
+         }
+     }
+     ```
+
+     Rationale: Faster (no reflection overhead), clearer (slug visible in class
+     definition), safer (no naming convention to guess).
+
+1.3  SLUG Values
+
+     Widget                | SLUG
+     ----------------------+------------------
+     OperationsWidget      | operations
+     RenewalsWidget        | renewals
+     TasksWidget           | tasks
+     AssetsWidget          | assets
+     QuickActionsWidget    | quick-actions
+     ActivityWidget        | activity
+     ChartsWidget          | charts
+     VaultWidget           | vault
+     SmtpWidget            | smtp
+     ServerHealthWidget    | server-health
+
+================================================================================
+2. FINAL WIDGET ORDER & LAYOUT
+================================================================================
+
+2.1  Display Order (top to bottom, left to right)
+
+     Order | Widget           | Col-span (desktop) | Roles
+     ------+------------------+--------------------+---------------------------
+      1    | Operations       | 2                  | All
+      2    | Renewals         | 2                  | SA, Admin, IT, RO (limited)
+      3    | Tasks            | 1                  | SA, Admin, IT, RO (own)
+      4    | Assets           | 2                  | SA, Admin, IT (if access)
+      5    | Quick Actions    | 4                  | SA, Admin (scoped), IT (scoped)
+      6    | Activity         | 4                  | All (scoped by role)
+      7    | Charts           | 4                  | SA, Admin, IT (limited)
+      8    | Vault            | 1                  | SA (all), others (own)
+      9    | SMTP             | 4                  | SA only
+     10    | Server Health    | 4                  | SA only
+
+2.2  Desktop Layout (grid-cols-1 md:grid-cols-2 xl:grid-cols-4)
+
+     +----------------------------------+----------------------------------+
+     | Operations (col-span-2)          | Renewals (col-span-2)            |
+     +------------------+---------------+---------------+------------------+
+     | Tasks (1)        | Assets (col-span-2)            | Vault (1)       |
+     +------------------+------------------+---------------+------------------+
+     | Quick Actions (col-span-4)                                          |
+     +----------------------------------------------------------------------+
+     | Activity (col-span-4)                                                |
+     +----------------------------------------------------------------------+
+     | Charts (col-span-4) — 3 chart cards in a row                        |
+     +----------------------------------------------------------------------+
+     | SMTP (col-span-4) [Super Admin only]                                |
+     +----------------------------------------------------------------------+
+     | Server Health (col-span-4) [Super Admin only]                       |
+     +----------------------------------------------------------------------+
+
+     Design decision: Tasks moved to row 2 left column instead of alongside
+     Vault to avoid placing a 1-column widget directly under Renewals (which
+     would create short/deep columns). Tasks + Assets + Vault now form a
+     balanced second row.
+
+2.3  Blade Template (index.blade.php)
+
+     ```blade
+     <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
+         @if(!empty($operations))
+             @include('dashboard.widgets.operations')
+         @endif
+         @if(!empty($renewals))
+             @include('dashboard.widgets.renewals')
+         @endif
+         @if(!empty($tasks))
+             @include('dashboard.widgets.tasks')
+         @endif
+         @if(!empty($assets))
+             @include('dashboard.widgets.assets')
+         @endif
+         @if(!empty($vault))
+             @include('dashboard.widgets.vault')
+         @endif
+     </div>
+
+     @if(!empty($quick_actions))
+         @include('dashboard.widgets.quick-actions')
+     @endif
+
+     @if(!empty($activity))
+         @include('dashboard.widgets.activity')
+     @endif
+
+     @if(!empty($charts))
+         @include('dashboard.widgets.charts')
+     @endif
+
+     @if(!empty($smtp))
+         @include('dashboard.widgets.smtp')
+     @endif
+
+     @if(!empty($server_health))
+         @include('dashboard.widgets.server-health')
+     @endif
+     ```
+
+================================================================================
+3. MVP CHARTS
+================================================================================
+
+3.1  Scope Reduction
+
+     The original plan included 5 charts:
+       - Tasks by Status (doughnut)     — EXISTING, KEEP
+       - Services by Type (bar)         — EXISTING, KEEP
+       - Asset Status Breakdown (bar)   — NEW
+       - Monthly Expiry (line)          — NEW (post-MVP)
+       - Notification Success (bar)     — NEW (post-MVP)
+
+     MVP scope (3 charts):
+       1. Tasks by Status      — Doughnut chart (reuse existing code)
+       2. Assets by Status     — Doughnut or bar chart (NEW)
+       3. Renewals Expiry      — Bar chart showing upcoming renewals count
+                                per month for next 6 months (NEW)
+
+     Deferred to future:
+       - Services by Type chart — documented as future enhancement
+       - Monthly Expiry (services) — deferred
+       - Notification Success — deferred
+
+3.2  MVP Chart Data Shapes
+
+     ChartsWidget returns:
+     ```php
+     [
+         'charts' => [
+             'tasks_by_status'  => ['pending' => 5, 'in_progress' => 3,
+                                     'completed' => 12, 'cancelled' => 1],
+             'assets_by_status' => ['available' => 10, 'assigned' => 7,
+                                     'lost' => 1, 'decommissioned' => 2],
+             'renewals_expiry'  => [
+                 ['month' => 'Jul', 'count' => 4],
+                 ['month' => 'Aug', 'count' => 7],
+                 ['month' => 'Sep', 'count' => 2],
+                 // ... 6 months
+             ],
+         ],
+     ]
+     ```
+
+3.3  Renewals Expiry Query
+
+     Collects expiry count per month across all ExpiryTrackers (or service
+     models if desired) for the next 6 months:
+
+     ```php
+     $renewalsExpiry = ExpiryTracker::whereIn('status', ['active', 'pending_renewal'])
+         ->whereNotNull('expiry_date')
+         ->whereBetween('expiry_date', [now()->startOfMonth(), now()->addMonths(6)->endOfMonth()])
+         ->selectRaw("DATE_FORMAT(expiry_date, '%b') as month, COUNT(*) as count")
+         ->groupBy('month')
+         ->orderByRaw('MIN(expiry_date)')
+         ->get()
+         ->pluck('count', 'month');
+     ```
+
+     → 1 query (much lighter than the original 8-model monthly expiry merge)
+
+3.4  Chart.js Additions
+
+     ```js
+     // In resources/js/charts.js — add two new chart registrations
+     const assetsChart = document.getElementById('assetsStatusChart');
+     if (assetsChart) { /* doughnut with 4 segments */ }
+
+     const renewalsChart = document.getElementById('renewalsExpiryChart');
+     if (renewalsChart) { /* bar chart, 6 months */ }
+     ```
+
+     No additional Chart.js imports needed (DoughnutController and BarController
+     are already registered).
+
+3.5  Services by Type — Future Enhancement Note
+
+     The Services by Type bar chart is intentionally deferred from MVP because:
+     - It requires iterating all 8 service models (8+ queries on cold cache)
+     - Its value overlaps with the Operations widget's services_by_type data
+     - The cold-cache query budget is better spent on Renewals Expiry and
+       Assets by Status, which provide new information not shown elsewhere
+
+     Revisit when dashboard load time profiling confirms headroom.
+
+================================================================================
+4. SERVER HEALTH — EXPANDED SPEC
+================================================================================
+
+4.1  Full Data Shape
+
+     ```php
+     [
+         'server_health' => [
+             'php_version'        => string,   // e.g., "8.2.18"
+             'laravel_version'    => string,   // e.g., "11.41.3"
+             'app_version'        => string,   // config('app.version', '—')
+             'cache_driver'       => string,   // config('cache.default')
+             'session_driver'     => string,   // config('session.driver')
+             'queue_driver'       => string,   // config('queue.default')
+             'db_connection'      => string,   // config('database.default')
+             'db_status'          => string,   // 'Connected' | 'Error'
+             'db_size_mb'         => float,    // approximate, or null
+             'disk_free'          => string,   // human-readable
+             'disk_total'         => string,   // human-readable
+             'disk_used_pct'      => int,      // 0-100
+             'scheduler_last_run' => string|null, // from Cache
+             'mail_status'        => string,   // see below
+         ],
+     ]
+     ```
+
+4.2  Sources
+
+     Field              | Source                              | Error Fallback
+     -------------------+-------------------------------------+-----------------------------
+     php_version        | PHP_VERSION constant                | N/A (always available)
+     laravel_version    | app()::VERSION                      | '—'
+     app_version        | config('app.version', '—')          | '—'
+     cache_driver       | config('cache.default')             | '—'
+     session_driver     | config('session.driver')            | '—'
+     queue_driver       | config('queue.default')             | '—'
+     db_connection      | config('database.default')          | '—'
+     db_status          | DB::connection()->getPdo() call     | 'Unreachable'
+     db_size_mb         | information_schema query*           | null
+     disk_free           | disk_free_space(storage_path())     | 0
+     disk_total          | disk_total_space(storage_path())    | 0
+     disk_used_pct       | round((1 - free/total) * 100)       | 0
+     scheduler_last_run | Cache::get('scheduler:last_run')   | 'Never'
+     mail_status        | SmtpProfile check**                 | 'Not configured'
+
+     *DB size query (MySQL):
+       ```php
+       DB::select("SELECT ROUND(SUM(data_length+index_length)/1024/1024, 2) as size_mb
+                    FROM information_schema.tables
+                    WHERE table_schema = ?", [config('database.connections.mysql.database')])
+       ```
+       Wrapped in try-catch — returns null for PostgreSQL/SQLite.
+
+     **Mail status logic:
+       - Any SmtpProfile with is_active=true AND last_test_status='success' → 'Working'
+       - Any SmtpProfile with is_active=true → 'Configured (untested)'
+       - Any SmtpProfile exists → 'Configured (inactive)'
+       - None → 'Not configured'
+
+4.3  Authorization
+
+     ServerHealthWidget returns [] for all non-Super Admin users. Sensitive
+     server information (PHP version, disk usage, DB credentials) must not be
+     visible to lower roles.
+
+4.4  Cache
+
+     TTL: 600s. Server info changes infrequently (disk usage may change slowly;
+     PHP/DB configs change only on deployment). 600s reduces disk_free_space()
+     calls, which can be slow on some shared hosts.
+
+================================================================================
+5. EMPTY-STATE MESSAGES
+================================================================================
+
+Every widget must handle the case where no data exists. The Blade partial checks
+for empty data and shows a meaningful message.
+
+5.1  OperationsWidget
+
+     Condition: No active services and no providers.
+     Message: "No services configured yet. Create your first domain or hosting
+               record to get started."
+     Action link: route('domains.create') — "Add Domain"
+
+5.2  RenewalsWidget
+
+     Condition: No expiry trackers.
+     Message: "No renewal trackers found. Trackers help you never miss an
+               expiry date. Add one to monitor any service."
+     Action link: route('expiry-trackers.create') — "Add Tracker"
+
+     Condition: Trackers exist but none expiring within 30 days.
+     Message: "No renewals due in the next 30 days. Everything looks
+               up-to-date."
+
+5.3  TasksWidget
+
+     Condition (no tasks at all):
+     Message: "No tasks yet. Create tasks to track work items, assign team
+               members, and meet deadlines."
+     Action link: route('tasks.create') — "Create Task"
+
+     Condition (tasks exist but none overdue/this-week):
+     Message: "All tasks on track. No overdue or upcoming deadlines this week."
+
+5.4  AssetsWidget
+
+     Condition: No assets.
+     Message: "No assets registered. Add laptops, headphones, mice, and network
+               devices to track your IT inventory."
+     Action link: route('assets.create') — "Add Asset"
+
+     Condition (no recent assignments):
+     Message: "No recent asset activity. Assignments and returns will appear
+               here."
+
+5.5  QuickActionsWidget
+
+     Condition: No quick actions available for this role.
+     Message: "No quick actions available. Contact an administrator if you
+               need additional permissions."
+     Actions: empty (no buttons rendered).
+
+     Note: This state applies only to Read Only role. All other roles see at
+     least one action ("Create Task").
+
+5.6  ActivityWidget
+
+     Condition: No activity log entries.
+     Message: "No recent activity. Activity is logged automatically when
+               records are created, updated, or deleted."
+     Note: New installations with no data will show this. After first record
+     creation, activity appears immediately.
+
+5.7  ChartsWidget
+
+     Condition (no data for any chart):
+     Message: "Chart data will appear once you have tasks, assets, and renewal
+               trackers configured."
+     Note: Each chart canvas individually shows a centered fallback text if
+     its dataset is empty:
+       - Tasks chart: "No tasks to chart."
+       - Assets chart: "No assets to chart."
+       - Renewals chart: "No renewal data to chart."
+
+5.8  VaultWidget
+
+     Condition: No vault entries.
+     Message: "No credentials saved in the vault. Store passwords, API keys,
+               and other secrets securely."
+     Action link: route('vault.create') — "Add Credential"
+
+     Condition (no recent reveals):
+     Message: "No recent vault reveals. Reveals are logged each time a password
+               is viewed."
+
+5.9  SmtpWidget
+
+     Condition: No SMTP profiles.
+     Message: "No SMTP profiles configured. Add an SMTP profile to enable email
+               notifications for renewals and other alerts."
+     Action link: route('smtp-profiles.create') — "Add Profile"
+
+     Condition (profiles exist but all tests failed):
+     Message: "All SMTP profiles have failing tests. Check your credentials and
+               server settings."
+
+5.10 ServerHealthWidget
+
+     Condition: Widget returns empty due to non-SA role (handled in data()).
+     No Blade-level empty state needed — widget partial is not rendered.
+
+     All fields are always populated (PHP version, config values). No true
+     empty state, but individual fields may show fallback values:
+       - db_status: "Unreachable" if connection fails
+       - db_size_mb: "—" if not MySQL
+       - scheduler_last_run: "Never" if never tracked
+       - mail_status: "Not configured" if no profiles
+
+================================================================================
+6. CACHE TTLs — FINAL VALUES
+================================================================================
+
+6.1  Per-Widget TTLs
+
+     Widget           | TTL   | Rationale
+     -----------------+-------+--------------------------------------------------
+     Activity         |  60s  | Real-time feed — users expect recent entries
+     Tasks            | 120s  | Task status changes are moderately frequent;
+                      |       | 2 min window is acceptable for dashboard accuracy
+     Operations       | 300s  | Service counts/costs change slowly (new records
+                      |       | or status changes); 5 min is safe
+     Renewals         | 300s  | Expiry dates change daily or weekly; 5 min
+                      |       | prevents stale "expiring soon" counts
+     Assets           | 300s  | Asset assignments change infrequently;
+                      |       | daily metrics fine within 5 min window
+     Charts           | 300s  | Aggregate chart data changes slowly
+     Quick Actions    | 300s  | Module permissions change only via admin UI
+     Vault            | 300s  | Vault entries and reveals are infrequent
+     SMTP             | 600s  | SMTP configs rarely change; 10 min TTL
+                      |       | reduces DB queries for Super Admin page views
+     Server Health    | 600s  | Disk/filesystem checks can be slow on shared
+                      |       | hosts; config values change only on deploy
+
+6.2  Global Version Key
+
+     Key:  dashboard:version
+     TTL:  permanent (never expires, incremented on model events)
+     Change: Unchanged from existing implementation.
+
+6.3  Cache Key Pattern
+
+     All widget keys follow:
+       dashboard:w:{slug}:{user_id}:v{version}
+
+     Where {slug} is the widget's SLUG constant (section 1.3) and {version} is
+     the current value of dashboard:version.
+
+================================================================================
+7. DASHBOARD TEST PLAN
+================================================================================
+
+7.1  Test File Structure
+
+     tests/Feature/
+     +-- Dashboard/
+         +-- OperationsWidgetTest.php
+         +-- RenewalsWidgetTest.php
+         +-- TasksWidgetTest.php
+         +-- AssetsWidgetTest.php
+         +-- VaultWidgetTest.php
+         +-- SmtpWidgetTest.php
+         +-- ActivityWidgetTest.php
+         +-- QuickActionsWidgetTest.php
+         +-- ChartsWidgetTest.php
+         +-- ServerHealthWidgetTest.php
+         +-- DashboardPageTest.php
+         +-- DashboardCacheTest.php
+         +-- DashboardPermissionTest.php
+         +-- DashboardEmptyStateTest.php
+
+     Each widget test file covers the widget's data shape, role scoping, and
+     boundary conditions. The page-level test files cover rendering, cache
+     behavior, permission gating, and empty states.
+
+7.2  Test Categories
+
+7.2.1  Widget Visibility by Role
+
+     Test Case                                               | Priority
+     --------------------------------------------------------+----------
+     SA sees all non-empty widgets on dashboard page         | P0
+     Admin sees Operations, Renewals, Tasks, Assets,         | P0
+       Quick Actions, Activity, Charts (not SMTP, Health)    |
+     IT Support sees Operations, Renewals, own Tasks,        | P0
+       Assets (if permitted), own Vault, limited Charts      |
+     Read Only sees Operations, limited Renewals, own Tasks, | P0
+       own Vault, own Activity (no Quick Actions, Charts)    |
+     User with no module permissions sees only Operations    | P1
+       and own Activity                                      |
+     Guest redirected to login                               | P0 (existing test)
+
+7.2.2  Cache Behavior
+
+     Test Case                                               | Priority
+     --------------------------------------------------------+----------
+     Widget cache key includes user ID (isolation)           | P1
+     Widget cache key includes version (bust on increment)   | P1
+     Cache hit returns data without DB queries               | P1
+     Cache miss calls widget data() and stores result        | P1
+     Cache::increment busts all widget caches for all users  | P1
+     Individual widget TTLs respected (Activity 60s etc.)    | P2
+     Failed widget returns [] without breaking page          | P1
+     Cache::remember fallback works when cache unavailable   | P2
+
+7.2.3  Permission Checks
+
+     Test Case                                               | Priority
+     --------------------------------------------------------+----------
+     OperationsWidget returns data for all roles             | P0
+     RenewalsWidget returns limited data for Read Only       | P1
+     AssetsWidget returns [] when user lacks module access   | P0
+     SmtpWidget returns [] for non-SA users                  | P0
+     ServerHealthWidget returns [] for non-SA users          | P0
+     VaultWidget scopes to own entries for non-SA users      | P0
+     ActivityWidget scopes to own entries for non-SA users   | P0
+     QuickActionsWidget gates buttons by canOnModule()       | P0
+     ChartsWidget returns [] for Read Only                   | P1
+     Accessible module IDs filter service aggregates         | P1
+
+7.2.4  Empty States
+
+     Test Case                                               | Priority
+     --------------------------------------------------------+----------
+     OperationsWidget shows empty message when no services   | P1
+     RenewalsWidget shows empty message when no trackers     | P1
+     AssetsWidget shows empty message when no assets         | P1
+     TasksWidget shows empty message when no tasks           | P1
+     VaultWidget shows empty message when no entries         | P1
+     ActivityWidget shows empty message when no activity     | P1
+     ChartsWidget shows fallback text on each empty chart    | P2
+     QuickActionsWidget shows message when no actions        | P2
+       available for Read Only role                          |
+     Page still renders if ALL widgets return empty          | P1
+
+7.2.5  Query Regression
+
+     Test Case                                               | Priority
+     --------------------------------------------------------+----------
+     Dashboard page executes ≤20 queries (cold cache, SA)    | P1
+     Operations aggregate uses 8 queries (not 24+)           | P1
+     Assets status uses 1 GROUP BY (not 3 counts)            | P1
+     N+1 module permission queries eliminated (preloaded)    | P2
+
+     Implementation note: Query count assertions use Laravel's
+     DB::listen() or Clockwork. Wrap the dashboard request in:
+     ```php
+     DB::enableQueryLog();
+     $this->actingAs($sa)->get(route('dashboard'));
+     $this->assertLessThanOrEqual(20, count(DB::getQueryLog()));
+     DB::disableQueryLog();
+     ```
+
+7.2.6  Dashboard Page Rendering
+
+     Test Case                                               | Priority
+     --------------------------------------------------------+----------
+     Page returns 200 for authenticated user                 | P0 (existing)
+     Page contains "Dashboard" heading                       | P0 (existing)
+     Page renders without JS errors (Laravel Dusk/Playwright)| P1
+     Page header shows current date                          | P0 (existing)
+     Stat cards animate (number-pulse class present)         | P2
+     Mobile layout renders without horizontal overflow       | P2
+     Widget sections appear in defined order                 | P1
+     Quick Actions section renders correct buttons per role  | P0
+
+7.3  Test Data Setup
+
+     Each test file seeds the minimum data required. Use factories:
+     - User factory + role assignment
+     - Domain factory (3 records: active, expired, pending)
+     - Hosting factory (2 records: active)
+     - Asset factory (4 records: available, assigned, lost, decommissioned)
+     - AssetAssignment factory (with/without returned_at)
+     - Task factory (4 statuses, some overdue)
+     - ExpiryTracker factory (upcoming, expired)
+     - ExpiryTrackerNotification factory (manual/cron/failed)
+     - VaultEntry factory (own, other user)
+     - Activity factory (various events)
+     - SmtpProfile factory (active with test status)
+
+     Shared setup trait: Seeds FeatureModuleSeeder + TyroSeeder + minimal
+     service records.
+
+7.4  Assertion Examples
+
+     ```php
+     // Widget data shape
+     $this->actingAs($sa);
+     $widget = new OperationsWidget();
+     $data = $widget->data($sa);
+     $this->assertArrayHasKey('operations', $data);
+     $this->assertArrayHasKey('total_active_services', $data['operations']);
+     $this->assertIsInt($data['operations']['total_active_services']);
+
+     // Empty state
+     $response = $this->actingAs($ro)->get(route('dashboard'));
+     $response->assertSee('No quick actions available');
+
+     // Permission gating
+     $admin = User::factory()->create()->assignRole('admin');
+     $response = $this->actingAs($admin)->get(route('dashboard'));
+     $response->assertDontSee('Server Health');
+     $response->assertDontSee('SMTP Profiles');
+
+     // Daily metrics
+     AssetAssignment::factory()->create(['assigned_at' => now()]);
+     $data = (new AssetsWidget())->data($sa);
+     $this->assertEquals(1, $data['assets']['assigned_today']);
+     ```
+
+7.5  Test Execution Order
+
+     1. Run existing test suite (verify baseline: 1752 passed, 0 failures)
+     2. Run DashboardPageTest (rendering, role visibility)
+     3. Run individual widget tests (data shape, daily metrics)
+     4. Run DashboardPermissionTest (role gating)
+     5. Run DashboardCacheTest (cache keys, invalidation)
+     6. Run DashboardEmptyStateTest (empty messages)
+     7. Run query regression assertions
+     8. Run full test suite again (verify no regressions)
+
+================================================================================
+8. FILE MANIFEST
+================================================================================
+
+8.1  Files to Create (21)
+
+     Widget classes (10):
+       app/Dashboard/OperationsWidget.php
+       app/Dashboard/RenewalsWidget.php
+       app/Dashboard/TasksWidget.php
+       app/Dashboard/AssetsWidget.php
+       app/Dashboard/QuickActionsWidget.php
+       app/Dashboard/ActivityWidget.php
+       app/Dashboard/ChartsWidget.php
+       app/Dashboard/VaultWidget.php
+       app/Dashboard/SmtpWidget.php
+       app/Dashboard/ServerHealthWidget.php
+
+     Blade partials (10):
+       resources/views/dashboard/widgets/operations.blade.php
+       resources/views/dashboard/widgets/renewals.blade.php
+       resources/views/dashboard/widgets/tasks.blade.php
+       resources/views/dashboard/widgets/assets.blade.php
+       resources/views/dashboard/widgets/quick-actions.blade.php
+       resources/views/dashboard/widgets/activity.blade.php
+       resources/views/dashboard/widgets/charts.blade.php
+       resources/views/dashboard/widgets/vault.blade.php
+       resources/views/dashboard/widgets/smtp.blade.php
+       resources/views/dashboard/widgets/server-health.blade.php
+
+     Test file (1):
+       tests/Feature/Dashboard/DashboardPageTest.php
+       (Alternatively 1 file per widget — see section 7.1 for
+        granularity decision. Minimum: 1 comprehensive file)
+
+8.2  Files to Modify (3)
+
+       app/Http/Controllers/Web/DashboardController.php
+       resources/views/dashboard/index.blade.php
+       resources/js/charts.js
+
+8.3  Files to Modify (One-Line Addition)
+
+       app/Console/Commands/SendEmailReminders.php
+       Change: Add Cache::put('scheduler:last_run', now(), 86400)
+       at end of handle() method.
+
+8.4  Database Migrations
+
+       None. Zero new tables. Zero new columns.
+
+8.5  Composer / NPM Dependencies
+
+       None. Chart.js already installed. No new packages.
+
+================================================================================
+END OF PHASE 6A FINAL PRE-IMPLEMENTATION REVIEW
+================================================================================

@@ -1,0 +1,75 @@
+RBAC Phase 2C-4: Sidebar Navigation Link Visibility
+===================================================
+Date: 2026-06-25
+
+1. OBJECTIVE
+   Hide sidebar navigation links for modules where the user lacks `can_read`
+   permission. Super-admins always see every link. My Vault is visible when the
+   user has vault read permission OR owns vault entries.
+
+2. FILES CREATED
+   - app/Http/View/Composers/SidebarComposer.php
+     View Composer that computes $showXxx flags for each sidebar module link
+     and provides them to the layouts.admin view.
+
+   - tests/Feature/RbacPhase2C4Test.php
+     13 tests covering sidebar link visibility for super-admin, admin with
+     partial permissions, and normal users.
+
+3. FILES MODIFIED
+   - app/Providers/AppServiceProvider.php
+     Registered SidebarComposer via View::composer('layouts.admin', ...) in
+     the boot() method.
+
+   - resources/views/layouts/admin.blade.php
+     Wrapped 9 module links and My Vault link in @if($showXxx) conditions.
+     The following links remain always visible (no @if guard):
+       - Dashboard, Calendar, Notifications, Notes, Tasks, My Tasks,
+         My Permissions, Profile, Logout
+
+   - tests/Feature/RbacPhase2C4Test.php (post-creation fix)
+     Changed My Vault assertions from assertSee/assertDontSee('My Vault')
+     to assertSeeHtml/assertDontSeeHtml('href="' . route('vault.my') . '"')
+     because the dashboard stat cards also render "My Vault" text.
+
+4. ARCHITECTURE
+   - View Composer approach chosen over SidebarService to avoid repeated DB
+     calls and to leverage Laravel's built-in composer pattern.
+   - SidebarComposer::compose() runs before the view is rendered and sets
+     $showXxx variables on the view.
+   - For non-super-admin users, getAccessibleModuleIds('read') is called once
+     on the HasModulePermissions trait to get the set of module IDs the user
+     can read (union of role-based + user-level overrides).
+   - My Vault has special handling: visible if VaultEntry::where('user_id',
+     $user->id)->exists() even without vault read permission.
+
+5. TEST RESULTS (RbacPhase2C4Test only)
+   13 passed, 38 assertions
+
+6. FULL TEST SUITE (all RbacPhase* test files)
+   150 passed, 308 assertions
+
+7. TESTS COVERED
+   - Super-admin sees all 9 module links + My Vault
+   - Admin sees links for accessible modules (hostings, vps, vault)
+   - Admin does NOT see links for denied modules (other-services, providers,
+     domains, emails, voip, expiry-trackers)
+   - Dashboard, Notes, My Permissions always visible
+   - RBAC/System menus (Features, Modules, Permissions, Roles, Privileges)
+     super-admin only (URL-based assertions avoid dashboard stat-card false
+     matches)
+   - Manual URL access unchanged (server-side guards still authoritative)
+   - My Vault visible when user owns vault entries
+   - My Vault visible when user has vault read permission
+   - My Vault hidden when no vault read AND no entries
+   - Normal user sees no module links
+
+8. NOTES
+   - All assertions use URL-based checking (assertSeeHtml('href="' . route(...)
+     . '"')) to avoid false matches with:
+       * Dashboard stat-card labels (Features, Modules, My Vault, etc.)
+       * Command palette JavaScript data (uses single-quoted URLs, not href="")
+   - Server-side guards (Phases 2B-2/2B-3) remain authoritative; UI hiding is
+     cosmetic only.
+   - View Composer caches nothing - each request recomputes permissions.
+     Future optimization: cache accessible module IDs per session.

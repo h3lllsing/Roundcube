@@ -3,13 +3,17 @@
 namespace Tests\Unit;
 
 use App\Models\Domain;
+use App\Models\DomainEmail;
 use App\Models\Hosting;
+use App\Models\OtherService;
+use App\Models\ServiceProvider;
 use App\Models\User;
 use App\Models\Vps;
 use App\Notifications\ExpiringSoon;
 use App\Services\ExpiryNotificationService;
 use App\Services\WebhookService;
 use Carbon\Carbon;
+use HasinHayder\Tyro\Database\Seeders\TyroSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
@@ -21,7 +25,7 @@ class ExpiryNotificationServiceTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->seed(\HasinHayder\Tyro\Database\Seeders\TyroSeeder::class);
+        $this->seed(TyroSeeder::class);
     }
 
     public function test_sends_notification_for_expiring_item(): void
@@ -34,6 +38,7 @@ class ExpiryNotificationServiceTest extends TestCase
             'expiry_date' => Carbon::today()->addDays(5)->toDateString(),
             'status' => 'active',
             'user_id' => $user->id,
+            'service_provider_id' => null,
         ]);
 
         $webhookService = $this->createMock(WebhookService::class);
@@ -56,6 +61,7 @@ class ExpiryNotificationServiceTest extends TestCase
             'expiry_date' => Carbon::today()->addDays(5)->toDateString(),
             'status' => 'expired',
             'user_id' => $user->id,
+            'service_provider_id' => null,
         ]);
 
         $webhookService = $this->createMock(WebhookService::class);
@@ -76,6 +82,7 @@ class ExpiryNotificationServiceTest extends TestCase
             'expiry_date' => Carbon::today()->addMonths(3)->toDateString(),
             'status' => 'active',
             'user_id' => $user->id,
+            'service_provider_id' => null,
         ]);
 
         $webhookService = $this->createMock(WebhookService::class);
@@ -93,6 +100,7 @@ class ExpiryNotificationServiceTest extends TestCase
             'expiry_date' => Carbon::today()->addDays(5)->toDateString(),
             'status' => 'active',
             'user_id' => $user->id,
+            'service_provider_id' => null,
         ]);
 
         $webhookService = $this->createMock(WebhookService::class);
@@ -119,6 +127,29 @@ class ExpiryNotificationServiceTest extends TestCase
             'expiry_date' => Carbon::today()->subDay()->toDateString(),
             'status' => 'active',
             'user_id' => $user->id,
+            'service_provider_id' => null,
+        ]);
+
+        $webhookService = $this->createMock(WebhookService::class);
+        $webhookService->method('fire');
+
+        $service = new ExpiryNotificationService($webhookService);
+        $sent = $service->check();
+
+        $this->assertEquals(1, $sent);
+    }
+
+    public function test_notifies_items_expiring_today(): void
+    {
+        Notification::fake();
+
+        $user = User::factory()->create();
+        Domain::factory()->create([
+            'name' => 'today.com',
+            'expiry_date' => Carbon::today()->toDateString(),
+            'status' => 'active',
+            'user_id' => $user->id,
+            'service_provider_id' => null,
         ]);
 
         $webhookService = $this->createMock(WebhookService::class);
@@ -134,7 +165,7 @@ class ExpiryNotificationServiceTest extends TestCase
     {
         Notification::fake();
         $user = User::factory()->create();
-        Hosting::factory()->create(['expiry_date' => Carbon::today()->addDay()->toDateString(), 'status' => 'active', 'user_id' => $user->id]);
+        Hosting::factory()->create(['expiry_date' => Carbon::today()->addDay()->toDateString(), 'status' => 'active', 'user_id' => $user->id, 'service_provider_id' => null]);
 
         $webhookService = $this->createMock(WebhookService::class);
         $webhookService->method('fire');
@@ -146,7 +177,7 @@ class ExpiryNotificationServiceTest extends TestCase
     {
         Notification::fake();
         $user = User::factory()->create();
-        Vps::factory()->create(['expiry_date' => Carbon::today()->addDays(10)->toDateString(), 'status' => 'active', 'user_id' => $user->id]);
+        Vps::factory()->create(['expiry_date' => Carbon::today()->addDays(10)->toDateString(), 'status' => 'active', 'user_id' => $user->id, 'service_provider_id' => null]);
 
         $webhookService = $this->createMock(WebhookService::class);
         $webhookService->method('fire');
@@ -158,7 +189,7 @@ class ExpiryNotificationServiceTest extends TestCase
     {
         Notification::fake();
         $user = User::factory()->create();
-        Hosting::factory()->create(['expiry_date' => Carbon::today()->addDays(20)->toDateString(), 'status' => 'active', 'user_id' => $user->id]);
+        Hosting::factory()->create(['expiry_date' => Carbon::today()->addDays(20)->toDateString(), 'status' => 'active', 'user_id' => $user->id, 'service_provider_id' => null]);
 
         $webhookService = $this->createMock(WebhookService::class);
         $webhookService->method('fire');
@@ -170,16 +201,13 @@ class ExpiryNotificationServiceTest extends TestCase
     {
         Notification::fake();
         $user = User::factory()->create();
-        \App\Models\ExpiryTracker::factory()->create(['expiry_date' => Carbon::today()->addDays(5)->toDateString(), 'status' => 'active', 'user_id' => $user->id]);
-        \App\Models\ServiceProvider::factory()->create(['expiry_date' => Carbon::today()->addDays(5)->toDateString(), 'status' => 'active', 'user_id' => $user->id]);
-        \App\Models\DomainEmail::factory()->create(['expiry_date' => Carbon::today()->addDays(5)->toDateString(), 'status' => 'active', 'user_id' => $user->id]);
-        \App\Models\OtherService::factory()->create(['expiry_date' => Carbon::today()->addDays(5)->toDateString(), 'status' => 'active', 'user_id' => $user->id]);
+        ServiceProvider::factory()->create(['expiry_date' => Carbon::today()->addDays(5)->toDateString(), 'status' => 'active', 'user_id' => $user->id]);
+        DomainEmail::factory()->create(['expiry_date' => Carbon::today()->addDays(5)->toDateString(), 'status' => 'active', 'user_id' => $user->id, 'service_provider_id' => null]);
+        OtherService::factory()->create(['expiry_date' => Carbon::today()->addDays(5)->toDateString(), 'status' => 'active', 'user_id' => $user->id, 'service_provider_id' => null]);
 
         $webhookService = $this->createMock(WebhookService::class);
         $webhookService->method('fire');
         $service = new ExpiryNotificationService($webhookService);
-        $this->assertEquals(4, $service->check());
+        $this->assertEquals(3, $service->check());
     }
-
-
 }

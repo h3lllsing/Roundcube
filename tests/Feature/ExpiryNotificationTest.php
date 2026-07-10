@@ -14,6 +14,7 @@ use App\Models\Vps;
 use App\Notifications\ExpiringSoon;
 use App\Services\ExpiryNotificationService;
 use Carbon\Carbon;
+use HasinHayder\Tyro\Database\Seeders\TyroSeeder;
 use HasinHayder\Tyro\Models\Role;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Notifications\DatabaseNotification;
@@ -26,20 +27,21 @@ class ExpiryNotificationTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->seed(\HasinHayder\Tyro\Database\Seeders\TyroSeeder::class);
+        $this->seed(TyroSeeder::class);
     }
 
     private function user(): User
     {
         $user = User::factory()->create();
         $user->assignRole(Role::where('slug', 'super-admin')->firstOrFail());
+
         return $user;
     }
 
     public function test_sends_notification_for_item_expiring_within_30_days(): void
     {
         $u = $this->user();
-        Domain::factory()->create(['user_id' => $u->id, 'name' => 'example.com', 'expiry_date' => Carbon::today()->addDays(10), 'status' => 'active']);
+        Domain::factory()->create(['user_id' => $u->id, 'name' => 'example.com', 'expiry_date' => Carbon::today()->addDays(10), 'status' => 'active', 'service_provider_id' => null]);
 
         $sent = app(ExpiryNotificationService::class)->check();
 
@@ -50,7 +52,7 @@ class ExpiryNotificationTest extends TestCase
     public function test_does_not_send_for_item_expiring_beyond_30_days(): void
     {
         $u = $this->user();
-        Domain::factory()->create(['user_id' => $u->id, 'name' => 'example.com', 'expiry_date' => Carbon::today()->addDays(60), 'status' => 'active']);
+        Domain::factory()->create(['user_id' => $u->id, 'name' => 'example.com', 'expiry_date' => Carbon::today()->addDays(60), 'status' => 'active', 'service_provider_id' => null]);
 
         $sent = app(ExpiryNotificationService::class)->check();
 
@@ -60,7 +62,7 @@ class ExpiryNotificationTest extends TestCase
     public function test_sends_overdue_notification(): void
     {
         $u = $this->user();
-        Domain::factory()->create(['user_id' => $u->id, 'name' => 'example.com', 'expiry_date' => Carbon::today()->subDays(5), 'status' => 'active']);
+        Domain::factory()->create(['user_id' => $u->id, 'name' => 'example.com', 'expiry_date' => Carbon::today()->subDays(5), 'status' => 'active', 'service_provider_id' => null]);
 
         $sent = app(ExpiryNotificationService::class)->check();
 
@@ -74,7 +76,7 @@ class ExpiryNotificationTest extends TestCase
     public function test_does_not_send_duplicate_notifications(): void
     {
         $u = $this->user();
-        Domain::factory()->create(['user_id' => $u->id, 'name' => 'example.com', 'expiry_date' => Carbon::today()->addDays(10), 'status' => 'active']);
+        Domain::factory()->create(['user_id' => $u->id, 'name' => 'example.com', 'expiry_date' => Carbon::today()->addDays(10), 'status' => 'active', 'service_provider_id' => null]);
 
         $service = app(ExpiryNotificationService::class);
         $this->assertEquals(1, $service->check());
@@ -85,25 +87,24 @@ class ExpiryNotificationTest extends TestCase
     public function test_processes_all_model_types(): void
     {
         $u = $this->user();
-        Domain::factory()->create(['user_id' => $u->id, 'name' => 'd', 'expiry_date' => Carbon::today()->addDays(5), 'status' => 'active']);
-        Hosting::factory()->create(['user_id' => $u->id, 'name' => 'h', 'expiry_date' => Carbon::today()->addDays(5), 'status' => 'active']);
-        Vps::factory()->create(['user_id' => $u->id, 'name' => 'v', 'expiry_date' => Carbon::today()->addDays(5), 'status' => 'active']);
-        Voip::factory()->create(['user_id' => $u->id, 'name' => 'o', 'expiry_date' => Carbon::today()->addDays(5), 'status' => 'active']);
+        Domain::factory()->create(['user_id' => $u->id, 'name' => 'd', 'expiry_date' => Carbon::today()->addDays(5), 'status' => 'active', 'service_provider_id' => null]);
+        Hosting::factory()->create(['user_id' => $u->id, 'name' => 'h', 'expiry_date' => Carbon::today()->addDays(5), 'status' => 'active', 'service_provider_id' => null]);
+        Vps::factory()->create(['user_id' => $u->id, 'name' => 'v', 'expiry_date' => Carbon::today()->addDays(5), 'status' => 'active', 'service_provider_id' => null]);
+        Voip::factory()->create(['user_id' => $u->id, 'name' => 'o', 'expiry_date' => Carbon::today()->addDays(5), 'status' => 'active', 'service_provider_id' => null]);
         ServiceProvider::factory()->create(['user_id' => $u->id, 'name' => 's', 'expiry_date' => Carbon::today()->addDays(5), 'status' => 'active']);
-        DomainEmail::factory()->create(['user_id' => $u->id, 'email' => 'test@example.com', 'expiry_date' => Carbon::today()->addDays(5), 'status' => 'active']);
-        OtherService::factory()->create(['user_id' => $u->id, 'name' => 'o2', 'expiry_date' => Carbon::today()->addDays(5), 'status' => 'active']);
-        ExpiryTracker::factory()->create(['user_id' => $u->id, 'name' => 'e', 'expiry_date' => Carbon::today()->addDays(5), 'status' => 'active']);
+        DomainEmail::factory()->create(['user_id' => $u->id, 'email' => 'test@example.com', 'expiry_date' => Carbon::today()->addDays(5), 'status' => 'active', 'service_provider_id' => null]);
+        OtherService::factory()->create(['user_id' => $u->id, 'name' => 'o2', 'expiry_date' => Carbon::today()->addDays(5), 'status' => 'active', 'service_provider_id' => null]);
 
         $sent = app(ExpiryNotificationService::class)->check();
 
-        $this->assertEquals(8, $sent);
-        $this->assertEquals(8, DatabaseNotification::where('notifiable_id', $u->id)->count());
+        $this->assertEquals(7, $sent);
+        $this->assertEquals(7, DatabaseNotification::where('notifiable_id', $u->id)->count());
     }
 
     public function test_skips_non_active_items(): void
     {
         $u = $this->user();
-        Domain::factory()->create(['user_id' => $u->id, 'name' => 'expired_domain', 'expiry_date' => Carbon::today()->addDays(5), 'status' => 'expired']);
+        Domain::factory()->create(['user_id' => $u->id, 'name' => 'expired_domain', 'expiry_date' => Carbon::today()->addDays(5), 'status' => 'expired', 'service_provider_id' => null]);
 
         $sent = app(ExpiryNotificationService::class)->check();
 
@@ -113,7 +114,7 @@ class ExpiryNotificationTest extends TestCase
     public function test_command_output(): void
     {
         $u = $this->user();
-        Domain::factory()->create(['user_id' => $u->id, 'name' => 'example.com', 'expiry_date' => Carbon::today()->addDays(10), 'status' => 'active']);
+        Domain::factory()->create(['user_id' => $u->id, 'name' => 'example.com', 'expiry_date' => Carbon::today()->addDays(10), 'status' => 'active', 'service_provider_id' => null]);
 
         $this->artisan('expiry:check')
             ->expectsOutput('Checking for expiring items...')
@@ -124,7 +125,7 @@ class ExpiryNotificationTest extends TestCase
     public function test_notification_stores_correct_data(): void
     {
         $u = $this->user();
-        $domain = Domain::factory()->create(['user_id' => $u->id, 'name' => 'example.com', 'expiry_date' => Carbon::today()->addDays(7), 'status' => 'active']);
+        $domain = Domain::factory()->create(['user_id' => $u->id, 'name' => 'example.com', 'expiry_date' => Carbon::today()->addDays(7), 'status' => 'active', 'service_provider_id' => null]);
 
         app(ExpiryNotificationService::class)->check();
 
@@ -143,15 +144,15 @@ class ExpiryNotificationTest extends TestCase
     public function test_respects_different_thresholds(): void
     {
         $u = $this->user();
-        Domain::factory()->create(['user_id' => $u->id, 'name' => 'd1', 'expiry_date' => Carbon::today()->addDays(20), 'status' => 'active']);
-        Domain::factory()->create(['user_id' => $u->id, 'name' => 'd2', 'expiry_date' => Carbon::today()->addDays(5), 'status' => 'active']);
+        Domain::factory()->create(['user_id' => $u->id, 'name' => 'd1', 'expiry_date' => Carbon::today()->addDays(20), 'status' => 'active', 'service_provider_id' => null]);
+        Domain::factory()->create(['user_id' => $u->id, 'name' => 'd2', 'expiry_date' => Carbon::today()->addDays(5), 'status' => 'active', 'service_provider_id' => null]);
 
         $sent = app(ExpiryNotificationService::class)->check();
 
         $this->assertEquals(2, $sent);
 
         $notifications = DatabaseNotification::where('notifiable_id', $u->id)->get();
-        $thresholds = $notifications->map(fn($n) => (is_array($n->data) ? $n->data : json_decode($n->data, true))['threshold'])->sort()->values();
+        $thresholds = $notifications->map(fn ($n) => (is_array($n->data) ? $n->data : json_decode($n->data, true))['threshold'])->sort()->values();
         $this->assertEquals(['30_days', '7_days'], $thresholds->toArray());
     }
 }

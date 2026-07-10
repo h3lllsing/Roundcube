@@ -15,7 +15,7 @@ class UpdateVaultRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'user_id' => 'nullable|exists:users,id',
+            'updated_at' => 'required|date',
             'service_name' => 'sometimes|required|string|max:255',
             'service_url' => 'nullable|string|max:255',
             'username' => 'nullable|string|max:255',

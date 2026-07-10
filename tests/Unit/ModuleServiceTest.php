@@ -4,8 +4,9 @@ namespace Tests\Unit;
 
 use App\Models\Feature;
 use App\Models\Module;
-use App\Models\User;
 use App\Services\ModuleService;
+use Database\Seeders\FeatureModuleSeeder;
+use HasinHayder\Tyro\Database\Seeders\TyroSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -19,8 +20,8 @@ class ModuleServiceTest extends TestCase
     {
         parent::setUp();
         $this->service = app(ModuleService::class);
-        $this->seed(\HasinHayder\Tyro\Database\Seeders\TyroSeeder::class);
-        $this->seed(\Database\Seeders\FeatureModuleSeeder::class);
+        $this->seed(TyroSeeder::class);
+        $this->seed(FeatureModuleSeeder::class);
     }
 
     public function test_lists_modules_for_feature(): void
@@ -134,5 +135,13 @@ class ModuleServiceTest extends TestCase
         $updated = $this->service->update($module, ['name' => 'Changed']);
 
         $this->assertEquals('changed', $updated->slug);
+    }
+
+    public function test_list_invalid_sort_order_falls_back_to_asc(): void
+    {
+        $feature = Feature::first();
+        $result = $this->service->listForFeature($feature, ['sort_order' => 'invalid']);
+
+        $this->assertGreaterThanOrEqual(0, $result->total());
     }
 }

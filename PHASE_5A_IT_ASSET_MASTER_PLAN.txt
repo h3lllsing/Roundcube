@@ -1,0 +1,1320 @@
+================================================================================
+PHASE 5A — ENTERPRISE IT ASSET MANAGEMENT MASTER PLAN
+================================================================================
+Date:       2026-06-26
+Status:     PLANNING (Phase 5A)
+Ref:        ENTERPRISE_ARCHITECTURE_AUDIT_v1.1.txt
+Author:     Architecture Planning
+
+================================================================================
+TABLE OF CONTENTS
+================================================================================
+
+  1.  Overview & Goals
+  2.  Database Schema Design
+      2.1  Table List & Descriptions
+      2.2  asset_categories Table
+      2.3  asset_types Table
+      2.4  vendors Table
+      2.5  assets Table (Master Asset Registry)
+      2.6  asset_specifications Table (EAV for Category-Specific Fields)
+      2.7  software_licenses Table
+      2.8  sim_cards Table
+      2.9  asset_assignments Table
+      2.10 asset_history Table
+      2.11 maintenance_records Table
+      2.12 warranty_records Table
+      2.13 purchase_records Table
+      2.14 license_allocations Table
+  3.  Entity-Relationship Diagram (Textual)
+  4.  Asset Category & Type Taxonomy
+  5.  Relationships Summary
+  6.  Assignment Workflow
+  7.  Employee & Department Assignment
+  8.  Asset History
+  9.  Status Lifecycle
+  10. Warranty Tracking
+  11. Purchase Information
+  12. Vendor Management
+  13. Maintenance History
+  14. QR Code / Barcode Support
+  15. Import / Export
+  16. Dashboard Widgets
+  17. Reports
+  18. Search
+  19. Shared-Hosting Compatibility
+  20. RBAC Integration
+  21. Activity Logging
+  22. Notification Integration
+  23. Future Scalability
+  24. Implementation Phases (5B–5D)
+
+================================================================================
+1. OVERVIEW & GOALS
+================================================================================
+
+Enterprise IT Asset Management (ITAM) tracks the full lifecycle of all IT
+hardware, software, and accessories within the organization. This module
+extends the existing service-management architecture (Domains, Hosting, VPS,
+VoIP, Other Services) into physical and digital asset inventory.
+
+Primary Goals:
+  - Complete asset registry with unique asset tags and serial numbers
+  - Track who has what, where, and since when
+  - Warranty, maintenance, and purchase lifecycle
+  - Category-specific metadata without schema explosion
+  - Full RBAC integration (existing Module/Feature/Permission system)
+  - Activity logging for every state change and assignment
+  - QR/barcode generation for physical inventory scanning
+  - CSV import/export for bulk operations
+  - Dashboard widgets for cost, status, and expiring warranties
+  - Relationship between assets (e.g., which laptop is connected to which
+    monitor, which server is in which rack)
+  - Separation of software licensing from hardware tracking
+  - SIM card tracking with carrier-specific fields
+
+Assumptions:
+  - No external asset management package (custom-built like all other modules)
+  - Shared-hosting compatible (MySQL/MariaDB, no Redis for critical paths)
+  - Follows existing patterns: LogsActivity, SoftDeletes, HasFactory,
+    Blameable, HasAttachments, Module/Feature RBAC
+  - Web controllers for Blade UI, API controllers for JSON, Service layer
+    for business logic
+
+================================================================================
+2. DATABASE SCHEMA DESIGN
+================================================================================
+
+2.1 Table List & Descriptions
+──────────────────────────────────────────────────────────────────────────────
+
+  ┌─────────────────────────┬──────────────────────────────────────────────────┐
+  │ Table                   │ Purpose                                          │
+  ├─────────────────────────┼──────────────────────────────────────────────────┤
+  │ asset_categories        │ Top-level categories: Laptop, Server, Printer... │
+  │ asset_types             │ Models/brands per category (e.g., Dell 5540)     │
+  │ vendors                 │ Suppliers: vendor name, contact, website, etc.   │
+  │ assets                  │ Master asset registry (all hardware + accessories)│
+  │ asset_specifications    │ EAV key-value for category-specific attributes   │
+  │ software_licenses       │ Software license tracking (separate lifecycle)   │
+  │ sim_cards               │ SIM card tracking (ICCID, MSISDN, carrier...)    │
+  │ asset_assignments       │ Check-in/check-out history to employees/depts    │
+  │ asset_history           │ Immutable event log for each asset               │
+  │ maintenance_records     │ Repairs, servicing, RMA records                  │
+  │ warranty_records        │ Warranty coverage windows and provider info      │
+  │ purchase_records        │ Purchase orders, costs, requisitions             │
+  │ license_allocations     │ Which license seat is assigned to which asset    │
+  │ asset_relationships     │ Linking assets (monitor→laptop, switch→rack)     │
+  │ asset_locations         │ Named locations (buildings, rooms, racks)        │
+  │ asset_departments       │ Department list (if not in existing Role system) │
+  └─────────────────────────┴──────────────────────────────────────────────────┘
+
+  Estimated total: 16 new tables.
+
+2.2 asset_categories Table
+──────────────────────────────────────────────────────────────────────────────
+
+  Purpose:
+    Hierarchical classification of all trackable asset types. Seeded from the
+    16 categories the user listed, but admin-manageable for future additions.
+
+  Columns:
+    id                  bigIncrements    PK
+    parent_id           bigInteger, FK → asset_categories.id, nullable
+    name                string(191)      Display name (e.g., "Laptop")
+    slug                string(191)      Unique slug (e.g., "laptop")
+    icon                string(50)       Icon class or emoji reference
+    metadata_schema     json, nullable   JSON Schema defining which EAV keys
+                                         this category requires (see §2.6)
+    description         text, nullable
+    is_active           boolean          default true
+    sort_order          integer          default 0
+    created_at          timestamp
+    updated_at          timestamp
+    deleted_at          softDeletes
+
+  Indexes: UNIQUE(slug), INDEX(parent_id), INDEX(is_active, sort_order)
+
+  Seed Data (16 rows):
+    1.  Laptop
+    2.  Desktop
+    3.  Server
+    4.  Monitor
+    5.  Printer
+    6.  Scanner
+    7.  Router
+    8.  Switch
+    9.  Firewall
+    10. WiFi Access Point
+    11. IP Phone
+    12. CCTV
+    13. Accessories
+    14. Software License  (may be a "virtual" category, see §2.7)
+    15. SIM Card          (may be a "virtual" category, see §2.8)
+    16. USB Device
+
+  Note: Software Licenses and SIM Cards are separated into their own tables
+  but still reference asset_categories for unified category queries.
+
+2.3 asset_types Table
+──────────────────────────────────────────────────────────────────────────────
+
+  Purpose:
+    Manufacturer model numbers/brands grouped by category. Enables searching
+    "all Dell Latitude 5540 laptops" and standardized specification templates.
+
+  Columns:
+    id                  bigIncrements    PK
+    category_id         bigInteger, FK → asset_categories.id, NOT NULL
+    manufacturer        string(191)      e.g., "Dell", "HP", "Cisco"
+    model               string(191)      e.g., "Latitude 5540"
+    model_number        string(100)      Official model #, nullable
+    specification_template  json, nullable  Default EAV values for this model
+    is_active           boolean          default true
+    notes               text, nullable
+    created_at          timestamp
+    updated_at          timestamp
+    deleted_at          softDeletes
+
+  Indexes: UNIQUE(category_id, manufacturer, model),
+           INDEX(category_id), INDEX(manufacturer)
+
+2.4 vendors Table
+──────────────────────────────────────────────────────────────────────────────
+
+  Purpose:
+    Suppliers and manufacturers used across purchase records and warranty
+    claims. Reusable across all asset categories.
+
+  Columns:
+    id                  bigIncrements    PK
+    name                string(191)
+    contact_name        string(191), nullable
+    email               string(191), nullable
+    phone               string(50), nullable
+    website             string(191), nullable
+    address             text, nullable
+    is_active           boolean          default true
+    notes               text, nullable
+    created_by          bigInteger, FK → users.id, nullable
+    updated_by          bigInteger, FK → users.id, nullable
+    created_at          timestamp
+    updated_at          timestamp
+    deleted_at          softDeletes
+
+  Indexes: UNIQUE(name), INDEX(is_active)
+
+2.5 assets Table (Master Asset Registry)
+──────────────────────────────────────────────────────────────────────────────
+
+  Purpose:
+    The central table — every physical and virtual asset gets one row here.
+    All 16 categories store their common fields in this table. Category-
+    specific fields go into asset_specifications (EAV) instead of nullable
+    columns.
+
+  Rationale for EAV approach:
+    A single-table approach with 80+ nullable columns would be unwieldy and
+    harder to maintain. EAV trades join complexity for schema flexibility.
+    For read-heavy dashboards and reports, materialized/denormalized summary
+    columns can be added later (see §23 — Future Scalability).
+
+  Columns:
+    id                  bigIncrements    PK
+    asset_tag           string(100)      Unique internal tag (e.g., "AST-0001")
+    type_id             bigInteger, FK → asset_types.id, NOT NULL
+    category_id         bigInteger, FK → asset_categories.id, NOT NULL
+                                         (denormalized for query performance)
+    status              string(50)       default 'available'
+    location_id         bigInteger, FK → asset_locations.id, nullable
+    department_id       bigInteger, FK → asset_departments.id, nullable
+    assigned_to         bigInteger, FK → users.id, nullable
+                                         (current assignee, denormalized
+                                          from asset_assignments)
+    serial_number       string(191)      Manufacturer serial, nullable
+    manufacturer        string(191)      Denormalized from asset_types, nullable
+    model               string(191)      Denormalized from asset_types, nullable
+    purchase_date       date, nullable
+    purchase_cost       decimal(12,2), nullable
+    warranty_expiry     date, nullable   Denormalized from warranty_records
+    vendor_id           bigInteger, FK → vendors.id, nullable
+    notes               text, nullable
+    image               string(255)      Photo path, nullable (for receipts)
+    qr_code             string(255)      Generated QR code path, nullable
+    barcode             string(100)      Existing barcode from manufacturer
+    user_id             bigInteger, FK → users.id, NOT NULL  (creator/owner)
+    module_id           bigInteger, FK → modules.id, nullable (RBAC)
+    created_at          timestamp
+    updated_at          timestamp
+    deleted_at          softDeletes
+
+  Indexes:
+    UNIQUE(asset_tag)
+    INDEX(category_id)
+    INDEX(type_id)
+    INDEX(status)
+    INDEX(assigned_to)
+    INDEX(serial_number)
+    INDEX(vendor_id)
+    INDEX(location_id)
+    INDEX(department_id)
+    INDEX(warranty_expiry)
+    INDEX(created_at)
+
+  Casts:
+    purchase_cost  => 'decimal:2'
+    purchase_date  => 'date'
+    warranty_expiry => 'date'
+
+  Model Traits:
+    HasFactory, SoftDeletes, LogsActivity, Blameable, HasAttachments
+
+2.6 asset_specifications Table (EAV)
+──────────────────────────────────────────────────────────────────────────────
+
+  Purpose:
+    Stores category-specific attributes in a key-value structure. Each
+    category has its own defined schema (stored in asset_categories.
+    metadata_schema). This avoids per-category columns while allowing
+    validation and searchability.
+
+  Example schema per category:
+
+    Laptop:
+      { "processor": "string", "ram_gb": "integer", "storage_gb": "integer",
+        "storage_type": "string", "screen_size": "string", "mac_address": "string",
+        "battery_cycle": "integer", "os": "string" }
+
+    Server:
+      { "processor": "string", "ram_gb": "integer", "storage_gb": "integer",
+        "storage_type": "string", "ip_address": "string", "rack_position": "string",
+        "os": "string", "virtualization": "string" }
+
+    Monitor:
+      { "screen_size": "string", "resolution": "string", "panel_type": "string",
+        "connection_type": "string" }
+
+    Printer:
+      { "print_type": "string", "color": "boolean", "duplex": "boolean",
+        "network": "boolean", "monthly_duty": "integer" }
+
+    Router:
+      { "ports": "integer", "wan_type": "string", "wifi_standard": "string",
+        "throughput": "string", "ip_address": "string" }
+
+    Switch:
+      { "ports": "integer", "speed": "string", "managed": "boolean",
+        "poe": "boolean", "ip_address": "string" }
+
+    Firewall:
+      { "throughput": "string", "interfaces": "integer", "ip_address": "string",
+        "os_version": "string" }
+
+    WiFi AP:
+      { "standard": "string", "bands": "string", "coverage": "string",
+        "poe": "boolean", "ip_address": "string" }
+
+    IP Phone:
+      { "lines": "integer", "display": "boolean", "poe": "boolean",
+        "mac_address": "string" }
+
+    CCTV:
+      { "resolution": "string", "type": "string", "storage": "string",
+        "night_vision": "boolean", "ip_address": "string" }
+
+    Accessories:
+      { "type": "string", "compatibility": "string" }
+
+    USB Device:
+      { "capacity": "string", "type": "string", "speed": "string" }
+
+  Table Columns:
+    id                  bigIncrements    PK
+    asset_id            bigInteger, FK → assets.id, NOT NULL
+    key                 string(100)      e.g., "processor", "ram_gb"
+    value               text             Stored as text, cast at application
+    created_at          timestamp
+    updated_at          timestamp
+
+  Indexes:
+    UNIQUE(asset_id, key)
+    INDEX(asset_id)
+    INDEX(key)
+
+  Consideration:
+    For the initial implementation, a JSON column `specifications` on the
+    assets table is simpler and avoids the join. The EAV table format is
+    documented here as the "correct" normalized form. The implementation
+    should use JSON on assets for Phase 5B, and migrate to EAV only if
+    JSON search performance becomes a bottleneck.
+
+  RECOMMENDED FOR PHASE 5B:
+    Add a `specifications` JSON column to the `assets` table (not a
+    separate EAV table). This is simpler, shared-hosting friendly, and
+    MySQL 8.0+ supports JSON indexing via generated columns if needed.
+
+2.7 software_licenses Table
+──────────────────────────────────────────────────────────────────────────────
+
+  Purpose:
+    Software licenses have fundamentally different attributes and lifecycle
+    from hardware. Key differences: license key management, seat count,
+    version tracking, renewal dates (vs warranty), and allocation tracking.
+
+  Columns:
+    id                  bigIncrements    PK
+    name                string(191)      Software product name (e.g., "Microsoft
+                                         365 Business Premium")
+    category_id         bigInteger, FK → asset_categories.id
+                                         (category = "Software License")
+    vendor_id           bigInteger, FK → vendors.id, nullable
+    license_key         text, nullable   Encrypted
+    license_type        string(50)       perpetual, subscription, volume, oem,
+                                         academic, trial
+    total_seats         integer          Total purchased seats
+    used_seats          integer          Computed from license_allocations
+    version             string(50), nullable
+    publisher           string(191), nullable
+    purchase_date       date, nullable
+    expiry_date         date, nullable   Subscription renewal date
+    purchase_cost       decimal(12,2), nullable
+    renewal_cost        decimal(12,2), nullable
+    status              string(50)       active, expiring, expired, cancelled
+    notes               text, nullable
+    user_id             bigInteger, FK → users.id, NOT NULL
+    module_id           bigInteger, FK → modules.id, nullable
+    created_at          timestamp
+    updated_at          timestamp
+    deleted_at          softDeletes
+
+  Indexes: UNIQUE(name, version) — nullable, vendor_id, status, expiry_date
+
+  Casts:
+    license_key => 'encrypted'
+    purchase_cost / renewal_cost => 'decimal:2'
+    expiry_date / purchase_date => 'date'
+
+2.8 sim_cards Table
+──────────────────────────────────────────────────────────────────────────────
+
+  Purpose:
+    SIM cards have unique telecom-specific fields (ICCID, IMSI, MSISDN) and
+    carrier management. Separating from the main assets table avoids
+    polluting it with telecom-only columns.
+
+  Columns:
+    id                  bigIncrements    PK
+    category_id         bigInteger, FK → asset_categories.id
+                                         (category = "SIM Card")
+    iccid               string(50)       Integrated Circuit Card ID (unique)
+    imsi                string(50)       International Mobile Subscriber Id
+    msisdn              string(50)       Phone number
+    pin                 string(20)       Encrypted
+    puk                 string(20)       Encrypted
+    carrier             string(100)      e.g., "Verizon", "T-Mobile"
+    plan_type           string(50)       prepaid, postpaid, iot, data-only
+    status              string(50)       active, suspended, deactivated, lost
+    activation_date     date, nullable
+    expiry_date         date, nullable
+    monthly_cost        decimal(10,2), nullable
+    data_limit          string(50), nullable  e.g., "10GB", "Unlimited"
+    notes               text, nullable
+    user_id             bigInteger, FK → users.id, NOT NULL
+    module_id           bigInteger, FK → modules.id, nullable
+    created_at          timestamp
+    updated_at          timestamp
+    deleted_at          softDeletes
+
+  Indexes: UNIQUE(iccid), INDEX(imsi), INDEX(msisdn), INDEX(carrier),
+           INDEX(status)
+
+  Note: SIM cards can optionally be linked to an asset (e.g., a router or
+  IP Phone) via a polymorphic `sim_cardable` relationship, or via the
+  asset_relationships table.
+
+2.9 asset_assignments Table
+──────────────────────────────────────────────────────────────────────────────
+
+  Purpose:
+    Immutable check-in/check-out log tracking who had which asset and when.
+    The current assignment is denormalized in assets.assigned_to.
+
+  Columns:
+    id                  bigIncrements    PK
+    asset_id            bigInteger, FK → assets.id, NOT NULL
+    assignee_type       string(50)       'user' or 'department'
+    assignee_id         bigInteger       FK to users.id or departments.id
+    assigned_by         bigInteger, FK → users.id, NOT NULL
+    assigned_at         timestamp         default now()
+    returned_at         timestamp, nullable
+    expected_return_at  timestamp, nullable
+    note                text, nullable
+    created_at          timestamp
+    updated_at          timestamp
+
+  Indexes:
+    INDEX(asset_id)
+    INDEX(assignee_type, assignee_id)
+    INDEX(assigned_by)
+    INDEX(returned_at)  — for active vs historical
+
+  Note: History queries use asset_assignments for "who has it now" (where
+  returned_at IS NULL). Historical queries use asset_assignments for
+  "who had it before."
+
+2.10 asset_history Table
+──────────────────────────────────────────────────────────────────────────────
+
+  Purpose:
+    Immutable event log separate from Spatie Activity Log. Tracks asset-
+    specific events that do not map cleanly to model attribute changes, such
+    as "Asset checked out to John", "Warranty claimed RMA-2026-001", or
+    "Firmware updated to v2.1.3".
+
+  This supplements (not replaces) Spatie activity logging. Spatie logs
+  model attribute changes; asset_history logs domain-specific events.
+
+  Columns:
+    id                  bigIncrements    PK
+    asset_id            bigInteger, FK → assets.id, NOT NULL
+    event               string(100)      e.g., 'assigned', 'unassigned',
+                                         'maintenance', 'warranty_claim',
+                                         'status_change', 'location_change',
+                                         'firmware_update', 'disposal'
+    description         text             Human-readable event description
+    old_value           string(191), nullable  Previous status/location/...
+    new_value           string(191), nullable  New status/location/...
+    user_id             bigInteger, FK → users.id, nullable  Who did it
+    metadata            json, nullable   Extra context
+    created_at          timestamp         (no updated_at — immutable)
+
+  Indexes: INDEX(asset_id), INDEX(event), INDEX(created_at)
+
+2.11 maintenance_records Table
+──────────────────────────────────────────────────────────────────────────────
+
+  Purpose:
+    Track repairs, preventive maintenance, RMA claims, and servicing.
+
+  Columns:
+    id                  bigIncrements    PK
+    asset_id            bigInteger, FK → assets.id, NOT NULL
+    type                string(50)       repair, preventive, rma, calibration,
+                                         firmware, diagnostic
+    description         text
+    vendor_id           bigInteger, FK → vendors.id, nullable  (repair vendor)
+    cost                decimal(12,2), nullable
+    date                date
+    completed_date      date, nullable
+    status              string(50)       pending, in_progress, completed,
+                                         cancelled
+    rma_number          string(100), nullable
+    notes               text, nullable
+    attachment_id       bigInteger, nullable  (receipt or report)
+    created_by          bigInteger, FK → users.id
+    created_at          timestamp
+    updated_at          timestamp
+    deleted_at          softDeletes
+
+  Indexes: INDEX(asset_id), INDEX(type), INDEX(status), INDEX(date)
+
+2.12 warranty_records Table
+──────────────────────────────────────────────────────────────────────────────
+
+  Purpose:
+    Track warranty coverage — manufacturer warranty, extended warranty,
+    insurance policies.
+
+  Columns:
+    id                  bigIncrements    PK
+    asset_id            bigInteger, FK → assets.id, NOT NULL
+    provider            string(191)      Warranty provider name
+    type                string(50)       manufacturer, extended, insurance,
+                                         parts-only, on-site
+    start_date          date
+    end_date            date
+    coverage_details    text, nullable   What's covered
+    claim_phone         string(50), nullable
+    claim_email         string(191), nullable
+    cost                decimal(12,2), nullable
+    status              string(50)       active, expiring, expired, claimed
+    notes               text, nullable
+    created_at          timestamp
+    updated_at          timestamp
+    deleted_at          softDeletes
+
+  Indexes: INDEX(asset_id), INDEX(end_date), INDEX(status)
+
+  Note: warranty_expiry on the assets table is denormalized from
+  warranty_records WHERE status = 'active', MAX(end_date).
+
+2.13 purchase_records Table
+──────────────────────────────────────────────────────────────────────────────
+
+  Purpose:
+    Track purchase orders, costs, and requisition details. An asset may be
+    purchased individually or as part of a bulk PO.
+
+  Columns:
+    id                  bigIncrements    PK
+    po_number           string(100)      Purchase order number
+    vendor_id           bigInteger, FK → vendors.id, nullable
+    order_date          date
+    delivery_date       date, nullable
+    payment_terms       string(100), nullable  e.g., "Net 30"
+    shipping_cost       decimal(12,2), nullable
+    tax_amount          decimal(12,2), nullable
+    total_cost          decimal(14,2)
+    department_id       bigInteger, FK → asset_departments.id, nullable
+    notes               text, nullable
+    created_by          bigInteger, FK → users.id
+    created_at          timestamp
+    updated_at          timestamp
+    deleted_at          softDeletes
+
+  Indexes: UNIQUE(po_number), INDEX(vendor_id), INDEX(order_date)
+
+  To link assets to a PO, add `purchase_record_id` FK to the assets table or
+  use a pivot table `asset_purchase_record`.
+
+2.14 license_allocations Table
+──────────────────────────────────────────────────────────────────────────────
+
+  Purpose:
+    Track which license seat is assigned to which user or hardware asset.
+
+  Columns:
+    id                  bigIncrements    PK
+    license_id          bigInteger, FK → software_licenses.id, NOT NULL
+    assignable_type     string(50)       'user' or 'asset'
+    assignable_id       bigInteger       FK to users.id or assets.id
+    assigned_at         timestamp         default now()
+    revoked_at          timestamp, nullable
+    notes               text, nullable
+    created_at          timestamp
+    updated_at          timestamp
+
+  Indexes:
+    INDEX(license_id)
+    INDEX(assignable_type, assignable_id)
+    INDEX(revoked_at)  — active vs historical
+
+================================================================================
+3. ENTITY-RELATIONSHIP DIAGRAM (Textual)
+================================================================================
+
+  ┌──────────────┐       ┌───────────────┐
+  │ asset_categories│──┬──│  asset_types  │
+  └──────────────┘  │   └───────────────┘
+                    │           │  type_id
+                    │           ▼
+                    │     ┌──────────┐
+                    └─────│  assets  │──────────┬───────────────────┐
+                          └──────────┘          │                   │
+                               │                │                   │
+          ┌────────────────────┼────────────────┼───────────────────┼──────┐
+          │                    │                │                   │      │
+          ▼                    ▼                ▼                   ▼      ▼
+  ┌────────────────┐  ┌──────────────┐  ┌────────────┐  ┌──────────────┐  ┌──────────────┐
+  │asset_assignments│  │asset_history│  │warranty_   │  │maintenance_  │  │asset_        │
+  │                │  │              │  │records     │  │records       │  │specifications│
+  └────────────────┘  └──────────────┘  └────────────┘  └──────────────┘  └──────────────┘
+       │                   │                  │                  │
+       ▼                   ▼                  ▼                  ▼
+  ┌──────────┐     ┌─────────────────────────────────────────────────────────┐
+  │  users   │     │  vendors (FK from assets, maintenance, purchase)        │
+  │departments│    └─────────────────────────────────────────────────────────┘
+  └──────────┘
+                           ┌───────────────────┐     ┌───────────────────────┐
+                           │ software_licenses │─────│ license_allocations  │
+                           └───────────────────┘     └───────────────────────┘
+                                                              │
+                                                              ├── users.id
+                                                              └── assets.id
+                           ┌────────────┐
+                           │ sim_cards  │  (independent lifecycle)
+                           └────────────┘
+
+  NOTE: Some software license and SIM card fields may overlap with the assets
+  table if they are treated as first-class "assets." This plan separates them
+  for clarity; they can be merged or split during Phase 5B implementation.
+
+================================================================================
+4. ASSET CATEGORY & TYPE TAXONOMY
+================================================================================
+
+  The taxonomy is two-level:
+    Category (asset_categories) → Type (asset_types)
+
+  ┌──────────────────────────┬────────────────────────────────────────────────┐
+  │ Category                 │ Example Types (asset_types)                    │
+  ├──────────────────────────┼────────────────────────────────────────────────┤
+  │ Laptop                   │ Dell Latitude 5540, HP EliteBook 840,          │
+  │                          │ Lenovo ThinkPad X1, MacBook Pro 14"            │
+  │ Desktop                  │ Dell OptiPlex 7080, HP EliteDesk 800,          │
+  │                          │ Custom Build (specifications JSON)             │
+  │ Server                   │ Dell PowerEdge R750, HPE ProLiant DL380,       │
+  │                          │ Supermicro SYS-510, Raspberry Pi 4             │
+  │ Monitor                  │ Dell UltraSharp U2723, LG 27UK850,             │
+  │                          │ Samsung Odyssey G7                             │
+  │ Printer                  │ HP LaserJet Pro M404, Brother HL-L2370,        │
+  │                          │ Epson WorkForce Pro                            │
+  │ Scanner                  │ Fujitsu fi-7160, Epson Perfection V600         │
+  │ Router                   │ Cisco ISR 4321, MikroTik RB4011,               │
+  │                          │ Ubiquiti EdgeRouter 12                         │
+  │ Switch                   │ Cisco Catalyst 9300, Aruba 2930F,              │
+  │                          │ Netgear GS324 (unmanaged)                      │
+  │ Firewall                 │ FortiGate 60F, pfSense appliance,              │
+  │                          │ Sophos XGS 87                                  │
+  │ WiFi Access Point        │ Ubiquiti U6 Pro, Aruba AP-515,                 │
+  │                          │ Cisco Catalyst 9120                             │
+  │ IP Phone                 │ Cisco 8845, Yealink T54W, Poly VVX 450         │
+  │ CCTV                     │ Hikvision DS-2CD2386G2, Dahua IPC-HFW,         │
+  │                          │ Reolink RLC-810A                               │
+  │ Accessories              │ Docking Station, Keyboard, Mouse, Webcam,      │
+  │                          │ Headset, UPS, Power Adapter, Cable, Stand      │
+  │ Software License         │ (see software_licenses table)                  │
+  │ SIM Card                 │ (see sim_cards table)                          │
+  │ USB Device               │ USB Flash Drive, External HDD, SSD,           │
+  │                          │ USB Hub, Dongle, YubiKey                       │
+  └──────────────────────────┴────────────────────────────────────────────────┘
+
+================================================================================
+5. RELATIONSHIPS SUMMARY
+================================================================================
+
+  ┌──────────────────────────┬────────────────────────────────────────────────┐
+  │ Relationship             │ Description                                    │
+  ├──────────────────────────┼────────────────────────────────────────────────┤
+  │ Asset → User             │ Owner/creator (user_id FK)                     │
+  │ Asset → Module           │ RBAC module (module_id FK)                     │
+  │ Asset → Category         │ Denormalized category for fast queries         │
+  │ Asset → Type             │ Manufacturer model (type_id FK)                │
+  │ Asset → Location         │ Physical location (location_id FK)             │
+  │ Asset → Vendor           │ Primary vendor/supplier (vendor_id FK)         │
+  │ Asset → Assignee (User)  │ Currently assigned to (assigned_to FK)         │
+  │ Asset → Warranties       │ One-to-many warranty_records                   │
+  │ Asset → Maintenance      │ One-to-many maintenance_records                │
+  │ Asset → History          │ One-to-many asset_history                      │
+  │ Asset → Specs            │ One-to-many asset_specifications OR JSON col   │
+  │ Asset → Assignments      │ One-to-many asset_assignments (check-in/out)   │
+  │ Asset → Attachments      │ Polymorphic (HasAttachments trait)             │
+  │ Asset → Parent/Child     │ asset_relationships table (e.g., server→UPS)   │
+  │ License → Assignee       │ Polymorphic license_allocations (user/asset)   │
+  │ Category → Parent        │ Self-referential for sub-categories            │
+  │ Purchase → Vendor        │ Many-to-one                                   │
+  │ Purchase → Asset         │ Many-to-many via pivot                        │
+  └──────────────────────────┴────────────────────────────────────────────────┘
+
+================================================================================
+6. ASSIGNMENT WORKFLOW
+================================================================================
+
+  Overview:
+    Assets move through assignment states. Assignments are time-bounded and
+    fully audited.
+
+  ┌─────────────────────────────────────────────────────────────────────────┐
+  │                                                                         │
+  │   ┌──────────┐     ┌───────────┐     ┌────────────┐     ┌──────────┐  │
+  │   │ Available│────▶│  Assigned  │────▶│ In-Use     │────▶│ Returned │  │
+  │   │ (Unassgn)│     │ (Pending)  │     │ (Confirmed)│     │(Available│  │
+  │   └──────────┘     └───────────┘     └────────────┘     │ or Pool)  │  │
+  │        │                                                └──────────┘  │
+  │        │                                                  │           │
+  │        └──────────────────────────────────────────────────┘           │
+  │                                                                         │
+  └─────────────────────────────────────────────────────────────────────────┘
+
+  Steps:
+    1. Admin assigns asset from Available pool to a user or department
+       → asset_assignments row created with returned_at = NULL
+       → assets.status = 'assigned'
+    2. User acknowledges receipt (optional — configurable per policy)
+       → assets.status = 'in_use'
+    3. Asset is returned
+       → asset_assignments.returned_at = now()
+       → assets.status = 'available'
+       → assets.assigned_to = NULL
+
+  Self-Service (future — Phase 5D):
+    - Users can view available assets in their department
+    - Users can request checkout via a workflow
+    - Approval required based on category/role
+
+  Bulk Assignment:
+    - Deploy 50 laptops to new hires in one operation
+    - CSV import with assignment columns
+
+================================================================================
+7. EMPLOYEE & DEPARTMENT ASSIGNMENT
+================================================================================
+
+  Two assignment targets:
+
+  7.1 Employee (User) Assignment
+    - Assets.assigned_to = users.id
+    - asset_assignments.assignee_type = 'user'
+    - Supports: checkout, check-in, transfer to another user
+    - Transfer creates a check-in (old user) + check-out (new user) in one
+      operation
+
+  7.2 Department Assignment
+    - Assets.department_id = departments.id
+    - asset_assignments.assignee_type = 'department'
+    - Used for pool assets (shared printers, conference room monitors, etc.)
+    - Departments table (asset_departments) if department ≠ Role/Team:
+
+      asset_departments:
+        id          bigIncrements
+        name        string(191)
+        code        string(50), UNIQUE
+        description text, nullable
+        is_active   boolean
+        created_at / updated_at / deleted_at
+
+    - Alternatively, integrate with existing Role/Tyro groups if department
+      mapping exists
+
+  7.3 Combined Assignment
+    - An asset can be assigned to BOTH a department and a user at the same
+      time. Department is the cost center; user is the custodian.
+    - Implementation: asset_assignments can have both fields, or two rows
+      (one for department, one for user).
+
+================================================================================
+8. ASSET HISTORY
+================================================================================
+
+  Two-layer history system:
+
+  8.1 Spatie Activity Log (automatic)
+    - All model CRUD operations logged automatically via LogsActivity trait
+    - Logs: "Asset AST-0001 created", "Asset AST-0001 status changed from
+      available to assigned"
+    - Captured: fillable attribute changes, causer, timestamps
+
+  8.2 asset_history (manual, domain-specific)
+    - Captures events not derived from model changes:
+      - "Asset checked out to Jane Doe (Dept: Engineering)"
+      - "Warranty claim filed — RMA #RMA-2026-001"
+      - "Firmware updated from v2.0.1 to v2.1.3"
+      - "Disposed via e-waste vendor GreenTech"
+      - "IMEI changed during repair"
+    - Used for report timelines and audit trails
+    - Populated by controllers, services, and events when significant
+      domain events occur
+
+  UI Representation:
+    - Asset detail page has a "History" tab showing combined timeline:
+      - asset_history rows (domain events, styled with icons)
+      - Spatie activity_log rows (attribute changes, styled differently)
+    - Sort descending by created_at
+
+================================================================================
+9. STATUS LIFECYCLE
+================================================================================
+
+  Available status values (configurable via config or DB):
+
+  ┌─────────────────────┬──────────────────────────────────────────────────┐
+  │ Status              │ Meaning                                          │
+  ├─────────────────────┼──────────────────────────────────────────────────┤
+  │ available           │ In inventory, ready for assignment               │
+  │ reserved            │ Reserved for an incoming hire / project          │
+  │ assigned            │ Checked out to user/department (pending ack.)    │
+  │ in_use              │ Confirmed in possession of assignee              │
+  │ maintenance         │ Sent for repair / under maintenance              │
+  │ lost                │ Reported lost or stolen                          │
+  │ decommissioned      │ End of life, removed from service                │
+  │ disposed            │ Physically disposed (e-waste, sold, donated)     │
+  │ retired             │ In storage, no longer actively used              │
+  │ stolen              │ Police-reported theft                            │
+  └─────────────────────┴──────────────────────────────────────────────────┘
+
+  Status Transition Matrix (allowed transitions):
+
+   ┌────────────────┬─────────────────────────────────────────────────────────┐
+   │  From \ To       available  reserved  assigned  in_use  maint.  lost     │
+   ├────────────────┼─────────────────────────────────────────────────────────┤
+   │ available      │    —         ✓         ✓        —       —       —       │
+   │ reserved       │    ✓         —         ✓        —       —       —       │
+   │ assigned       │    —         —         —        ✓       ✓       ✓       │
+   │ in_use         │    —         —         ✓        —       ✓       ✓       │
+   │ maintenance    │    ✓         —         —        ✓       —       —       │
+   │ lost           │    —         —         —        —       —       —       │
+   │ decommissioned │    —         —         —        —       —       —       │
+   │ disposed       │    —         —         —        —       —       —       │
+   │ stolen         │    —         —         —        —       —       —       │
+   │ retired        │    ✓         —         —        —       —       —       │
+   └────────────────┴─────────────────────────────────────────────────────────┘
+
+  Terminal states: lost, decommissioned, disposed, stolen — cannot transition
+  out. Retired can go back to available (rediscovered in storage).
+
+  Implementation:
+    - A Status enum or config array
+    - Validation in Store/Update requests
+    - History logging on every transition (via model event or service)
+
+================================================================================
+10. WARRANTY TRACKING
+================================================================================
+
+  Features:
+
+    10.1 Multi-Warranty Support
+      - Each asset can have multiple warranty records (manufacturer + extended)
+      - Different types: manufacturer, extended, insurance, parts-only, on-site
+      - Overlapping coverage (e.g., month-13 is covered by extended)
+
+    10.2 Expiry Monitoring
+      - warranty_records.end_date drives expiry alerts
+      - assets.warranty_expiry is a denormalized computed field:
+        SELECT MAX(end_date) FROM warranty_records
+        WHERE asset_id = ? AND status = 'active'
+
+    10.3 Claim Management
+      - maintenance_records.rma_number captures warranty claims
+      - warranty_records.status set to 'claimed' when a claim is filed
+
+    10.4 Dashboard Widgets
+      - "Warranties expiring in 30/60/90 days" with count and total value
+      - "Assets out of warranty" for insurance/replacement planning
+
+    10.5 Notifications
+      - Notify inventory managers when warranty is 30, 14, 7 days from expiry
+      - Notify when warranty expires
+
+================================================================================
+11. PURCHASE INFORMATION
+=========================================w=====================================
+
+  Tracks the procurement side of each asset:
+
+    11.1 Purchase Order (PO)
+      - po_number, order_date, delivery_date
+      - One PO can contain multiple line items (assets)
+      - Pivot table: asset_purchase_record(purchase_record_id, asset_id, cost)
+
+    11.2 Cost Tracking
+      - purchase_cost on each asset (individual item cost)
+      - Bulk PO total_cost with shipping and tax
+      - Total IT asset value = SUM(assets.purchase_cost WHERE status NOT IN
+        (disposed, decommissioned))
+
+    11.3 Depreciation (Future — Phase 5D)
+      - Straight-line depreciation based on category useful life
+      - Current book value = purchase_cost × (1 - (elapsed_months /
+        useful_life_months))
+      - Useful life defaults: Laptop/Desktop=36m, Server=60m, Network=60m,
+        Printer=36m, Phone=36m
+
+================================================================================
+12. VENDOR MANAGEMENT
+──────────────────────────────────────────────────────────────────────────────
+
+  The vendors table is a shared address book used across all asset operations:
+
+    12.1 Vendor Record
+      - name, contact info, address, website
+      - Active/inactive toggle (deactivated vendors preserved for historical
+        records)
+
+    12.2 Vendor Relationships
+      - Purchase vendor (sold the asset)
+      - Maintenance vendor (repair/RMA provider)
+      - Warranty provider (could be manufacturer or third party)
+
+    12.3 Vendor Dashboard (Phase 5C+)
+      - Total spend per vendor
+      - Asset count per vendor
+      - Open RMAs per vendor
+      - Warranty claims per vendor
+
+================================================================================
+13. MAINTENANCE HISTORY
+──────────────────────────────────────────────────────────────────────────────
+
+    13.1 Record Types
+      - repair: Unplanned fix
+      - preventive: Scheduled maintenance (e.g., printer cleaning)
+      - rma: Return merchandise authorization
+      - calibration: Precision equipment calibration
+      - firmware: Firmware/BIOS update
+      - diagnostic: Troubleshooting session
+
+    13.2 Cost Tracking
+      - Parts cost, labor cost (separate or combined in maintenance.cost)
+      - Total maintenance cost per asset over its lifetime
+      - Cost vs. replacement value analysis (Phase 5D)
+
+    13.3 Scheduling (Phase 5C+)
+      - Preventive maintenance calendar
+      - Recurring maintenance templates per asset type
+      - Notification when maintenance is due
+
+================================================================================
+14. QR CODE / BARCODE SUPPORT
+──────────────────────────────────────────────────────────────────────────────
+
+    14.1 QR Code Generation
+      - On asset creation, auto-generate a QR code containing:
+        - Asset tag (e.g., "AST-0001")
+        - Asset ID (URL to asset detail page)
+        - JSON payload for mobile app scanning
+      - Library: `simplesoftwareio/simple-qrcode` or `bacon/bacon-qr-code`
+      - Store path in assets.qr_code (public disk URL)
+      - Display on asset detail page and print-friendly view
+
+    14.2 Barcode Support
+      - assets.barcode field for manufacturer barcode (UPC/EAN/SN)
+      - Search by barcode scans from mobile device
+
+    14.3 Print Labels
+      - Print-friendly template: assets/print-label.blade.php
+      - Shows: asset_tag, serial, model, assigned_to, QR code
+      - Printable on Avery 5160 / adhesive label sheets
+
+    14.4 Mobile Scanning (Phase 5C+)
+      - Inventory scanning via mobile camera
+      - Scan QR → open asset detail page
+      - Cycle counting: scan all assets in a location, flag missing ones
+
+================================================================================
+15. IMPORT / EXPORT
+──────────────────────────────────────────────────────────────────────────────
+
+    15.1 Export (CSV)
+      - Follows existing ExportController pattern
+      - Per-category export (all laptops, all printers, etc.)
+      - Headers include: asset_tag, category, manufacturer, model,
+        serial_number, status, assigned_to, location, purchase_date,
+        purchase_cost, warranty_expiry, EAV/JSON specifications flattened
+      - Export filtered by: category, status, department, location, date range
+
+    15.2 Import (CSV)
+      - Follows existing ImportController pattern
+      - Only super-admin / asset-manager role
+      - Columns: asset_tag (generated if blank), category (matched by name),
+        type (looked up or created), serial, status, etc.
+      - Specifications columns: columns matching EAV keys are automatically
+        mapped to JSON specifications field
+      - Validation report: uploaded CSV rows validated with error/warning log
+      - Dry-run mode (validate without importing)
+
+    15.3 Import Templates
+      - Pre-generated CSV template per category (downloadable)
+      - Template includes: required columns + category-specific spec columns
+
+================================================================================
+16. DASHBOARD WIDGETS
+──────────────────────────────────────────────────────────────────────────────
+
+  Extended into the existing DashboardController.computeDashboardData():
+
+    16.1 Overview Widgets
+      - Total assets (active count)
+      - Assets by status (pie: available/assigned/in-use/maintenance/decom)
+      - Assets by category (bar chart top-5 categories)
+      - Total asset value (sum of purchase_cost, active only)
+
+    16.2 At-a-Glance Warnings
+      - Assets expiring warranty (count: ≤30d, ≤60d, ≤90d)
+      - Assets in maintenance (count with link to list)
+      - Software licenses expiring (count, next 30 days)
+      - Unassigned assets (available count)
+
+    16.3 Cost Widgets
+      - Monthly maintenance cost (sum of last 30 days)
+      - Annual asset spend (current year purchase total)
+      - Cost by department (budget breakdown)
+
+    16.4 Quick Actions
+      - "Assign Asset" button → asset assignment page
+      - "Add Asset" button → asset create form
+      - "Scan QR Code" (mobile)
+
+    16.5 Cache Strategy
+      - Follow existing Cache::remember() pattern (300s TTL)
+      - Cache key: 'asset_dashboard_' . auth()->id()
+      - Invalidate on create/update/delete
+
+================================================================================
+17. REPORTS
+──────────────────────────────────────────────────────────────────────────────
+
+  Reports live under a new /reports/assets section (following the existing
+  /reports structure, gated by hasrole('super-admin')).
+
+    17.1 Inventory Report
+      - All assets with current status, assignment, location, value
+      - Filterable by category, status, department, date range
+      - CSV download (export)
+
+    17.2 Assignment Report
+      - What each employee has (by user or department)
+      - Overdue returns (expected_return_at > now)
+      - Assignment history for a specific asset
+
+    17.3 Warranty Report
+      - Expiring warranty summary
+      - Assets out of warranty
+      - Warranty claim history
+
+    17.4 Maintenance Report
+      - Assets with most maintenance cost / frequency
+      - Maintenance by type (repair vs preventive)
+      - Vendor reliability (RMAs per vendor)
+
+    17.5 Cost Report
+      - Total asset value by category
+      - Total asset value by department
+      - Purchase vs maintenance cost comparison
+      - Depreciation schedule (Phase 5D)
+
+    17.6 Lifecycle Report
+      - Average replacement age by category
+      - Assets by age brackets (<1yr, 1-3yr, 3-5yr, 5+yr)
+      - Disposal rate (assets decommissioned this year/month)
+
+    17.7 Software License Report
+      - License utilization (used seats / total seats)
+      - Expiring licenses
+      - Cost per seat
+
+================================================================================
+18. SEARCH
+──────────────────────────────────────────────────────────────────────────────
+
+    18.1 Global Search Integration
+      - Extend existing SearchController's $searches array
+      - Entries: 'asset' => ['model' => Asset::class, 'label' => 'Assets',
+        'column' => 'asset_tag', 'route' => 'assets.show']
+      - Also search by: serial_number, manufacturer, model, barcode
+
+    18.2 Index Page Filtering
+      - Search: asset_tag, serial_number, manufacturer, model, notes
+      - Filter by: category (dropdown), status (multi-select), department,
+        location, vendor, date range (purchase/warranty), cost range
+
+    18.3 Advanced Search (Phase 5C+)
+      - Search within EAV JSON specifications
+      - Search software license name, key fragments
+      - Search SIM ICCID/IMSI/MSISDN
+      - Saved searches
+
+    18.4 API Search
+      - Follow existing pattern: /api/assets?search=...&status=...&category=...
+      - Paginated JSON response with all filters
+
+================================================================================
+19. SHARED-HOSTING COMPATIBILITY
+──────────────────────────────────────────────────────────────────────────────
+
+  All design decisions maintain shared-hosting compatibility:
+
+    Database:
+      - MySQL/MariaDB only (no PostgreSQL-specific features)
+      - No PostGIS (locations are text fields, not spatial)
+      - No stored procedures or triggers (application-level logic only)
+      - JSON columns OK (MySQL 8.0+ / MariaDB 10.6+)
+      - Indexed properly for queries without full table scans
+      - Estimated 16 new tables — well within shared hosting limits
+
+    Caching:
+      - File cache only (no Redis dependency)
+      - Cache used only for dashboard aggregates (300s TTL)
+      - All operations work without cache
+
+    Files:
+      - QR codes stored on Storage::disk('public') (local filesystem)
+      - Attachments also on local filesystem
+      - No S3/Azure dependency
+
+    Queue:
+      - Notifications via sync queue (no Redis/Horizon needed)
+      - Import/export processing inline (not queued)
+
+    PHP:
+      - All standard PHP — no extensions beyond what Laravel requires
+      - QR generation via simple-qrcode (GD-based, no Imagick needed)
+
+================================================================================
+20. RBAC INTEGRATION
+──────────────────────────────────────────────────────────────────────────────
+
+    New Module Structure:
+      Feature: "Asset Management"
+        Module: "Assets" (slug: assets)
+
+    Permission Columns:
+      can_create, can_read, can_update, can_delete, can_approve, can_export
+      Additional for asset-specific operations:
+        can_assign     — can assign assets to users/departments
+        can_import     — can bulk import assets (already part of schema)
+
+    RbacScope:
+      - super-admin: sees all assets
+      - admin: sees assets belonging to their accessible modules
+        (where module_id matches user's accessible module IDs for 'read')
+      - regular user: sees only assets they own (user_id) OR are assigned
+        to them (assigned_to)
+
+    Role Recommendations:
+      - "Asset Manager" role with all asset permissions
+      - "Asset Viewer" role with can_read only
+      - "Help Desk" role with can_read, can_update (for updating status)
+
+    UserModulePermission:
+      - Existing override system works as-is for per-user permission exceptions
+
+================================================================================
+21. ACTIVITY LOGGING
+──────────────────────────────────────────────────────────────────────────────
+
+    Automatic (Spatie Activity Log):
+      - All fillable changes logged via LogsActivity trait on all models
+      - Description pattern: "Asset {asset_tag} {event}" (created/updated/
+        deleted/restored)
+
+    Manual (asset_history):
+      - Domain-specific events logged explicitly:
+        - Assignment/check-in/check-out
+        - Status transitions
+        - Warranty claims
+        - Maintenance records created/completed
+        - Location changes
+        - Firmware/version updates
+
+    Audit Trail:
+      - Every state change has an actor (user_id or causer)
+      - Immutable records (asset_history has no updated_at or softDelete)
+      - activity_log retains 365 days (config/activitylog.php)
+
+================================================================================
+22. NOTIFICATION INTEGRATION
+──────────────────────────────────────────────────────────────────────────────
+
+    New Notification Classes:
+
+      1. AssetAssigned
+        - Channels: database
+        - Data: asset_tag, model, assigned_by, category, assignment_date
+        - Trigger: when asset.assigned_to is set
+
+      2. WarrantyExpiring
+        - Channels: database, mail (optional)
+        - Data: asset_tag, model, warranty_expiry, days_remaining, category
+        - Trigger: daily scheduler check (similar to Phase 4B pattern)
+        - Thresholds: 30d, 14d, 7d
+
+      3. MaintenanceDue
+        - Channels: database
+        - Data: asset_tag, maintenance_type, scheduled_date
+        - Trigger: when maintenance record created with date in future
+
+      Note: Follows existing notification pattern — Queueable, via(['database']),
+      toArray() with type key, RBAC-filtered in User model accessor.
+
+================================================================================
+23. FUTURE SCALABILITY
+──────────────────────────────────────────────────────────────────────────────
+
+    The architecture leaves room for:
+
+    23.1 Multi-Tenancy
+      - asset table already has user_id and module_id — can extend with
+        company_id / team_id for multi-tenant deployments
+      - asset history, assignments, and maintenance tables all have user_id
+
+    23.2 Depreciation Engine
+      - AssetLife model for category-level depreciation rules
+      - Monthly depreciation calculation command (cron)
+      - Book value reporting
+
+    23.3 Procurement Workflow
+      - Requisition → Approval → Purchase Order → Receiving workflow
+      - Integration with vendor management
+
+    23.4 Contract Management
+      - Link asset leases/maintenance contracts to the contract tables
+      - Contract auto-renewal notifications
+
+    23.5 Consumable Tracking
+      - Toner, paper, spare parts inventory
+      - Minimum stock alerts
+
+    23.6 Mobile App
+      - API-first design (all endpoints available via API controllers)
+      - QR scanning for inventory audits
+      - Offline capability (local-first with sync)
+
+    23.7 CMDB Integration
+      - Configuration Items (CI) relationship mapping
+      - Service impact analysis (which services depend on which assets)
+      - Location hierarchy (Building → Floor → Room → Rack → Asset)
+
+    23.8 Performance at Scale (10,000+ assets)
+      - JSON column → EAV table migration if JSON search becomes bottleneck
+      - Materialized summary tables for dashboard aggregates
+      - Lazy loading of EAV data (separate query, not always joined)
+      - All queries already paginated with max page size enforcement
+
+================================================================================
+24. IMPLEMENTATION PHASES (5B–5D)
+──────────────────────────────────────────────────────────────────────────────
+
+  Phase 5B — Core Asset Registry (MVP)
+  ─────────────────────────────────────
+    Effort: ~3-4 weeks
+    Tables: asset_categories, asset_types, vendors, assets (with JSON specs),
+            asset_locations, asset_departments, asset_history
+    Features:
+      - CRUD for assets, categories, types, vendors, locations, departments
+      - Status management with lifecycle transitions
+      - Current assignment tracking (assigned_to on assets table)
+      - Activity logging (Spatie)
+      - Global search integration
+      - CSV export (basic)
+      - RBAC integration (Module/Feature/Permission seed)
+      - Sidebar menu item with RBAC conditional
+      - 8 model factories + tests
+
+  Phase 5C — Lifecycle & History
+  ─────────────────────────────────────
+    Effort: ~2-3 weeks
+    Tables: asset_assignments, maintenance_records, warranty_records,
+            purchase_records, license_allocations
+    Features:
+      - Check-in/check-out workflow with full history
+      - Warranty tracking with multi-warranty support
+      - Maintenance records and RMA tracking
+      - Purchase order management
+      - Software license allocation to users/assets
+      - Assignment history timeline on asset detail page
+      - CSV import with validation and dry-run
+      - QR code generation on asset creation
+      - Print-ready label template
+      - Notification classes (AssetAssigned, WarrantyExpiring, MaintenanceDue)
+      - Dashboard widgets (warranty expiring, maintenance, cost)
+      - Extended test suite
+
+  Phase 5D — Advanced Features
+  ─────────────────────────────────────
+    Effort: ~2-3 weeks
+    Tables: sim_cards (if not merged into assets), asset_relationships
+    Features:
+      - SIM card management
+      - Asset relationships (parent/child, connected assets)
+      - Self-service assignment requests (approval workflow)
+      - Depreciation engine
+      - Advanced reports (cost, lifecycle, utilization)
+      - Mobile-friendly views for QR scanning
+      - Scheduled commands for warranty/maintenance notifications
+      - Performance optimization for 10,000+ assets
+      - User acceptance testing and documentation
+
+================================================================================
+END OF PHASE 5A — IT ASSET MANAGEMENT MASTER PLAN
+================================================================================

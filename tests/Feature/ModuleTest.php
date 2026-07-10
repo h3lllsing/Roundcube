@@ -5,6 +5,8 @@ namespace Tests\Feature;
 use App\Models\Feature;
 use App\Models\Module;
 use App\Models\User;
+use Database\Seeders\FeatureModuleSeeder;
+use HasinHayder\Tyro\Database\Seeders\TyroSeeder;
 use HasinHayder\Tyro\Models\Role;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
@@ -17,8 +19,8 @@ class ModuleTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->seed(\HasinHayder\Tyro\Database\Seeders\TyroSeeder::class);
-        $this->seed(\Database\Seeders\FeatureModuleSeeder::class);
+        $this->seed(TyroSeeder::class);
+        $this->seed(FeatureModuleSeeder::class);
     }
 
     public function test_create_module_as_super_admin()
@@ -62,6 +64,8 @@ class ModuleTest extends TestCase
 
         $response->assertStatus(200)
             ->assertJsonStructure(['data' => ['id', 'name']]);
+
+        $this->assertCount(0, $module->tasks);
     }
 
     public function test_delete_module_as_super_admin()
@@ -205,7 +209,7 @@ class ModuleTest extends TestCase
 
         $response->assertStatus(200)
             ->assertJson(['message' => 'Role permissions removed']);
-        $this->assertDatabaseMissing('module_role_permissions', [
+        $this->assertSoftDeleted('module_role_permissions', [
             'module_id' => $module->id, 'role_id' => $targetRole->id,
         ]);
     }
@@ -259,7 +263,7 @@ class ModuleTest extends TestCase
         $token = $user->createToken('test')->plainTextToken;
         $feature = Feature::first();
 
-        $module = new \App\Models\Module();
+        $module = new Module;
         $module->feature_id = $feature->id;
         $module->name = 'Trash Module';
         $module->slug = 'trash-module';

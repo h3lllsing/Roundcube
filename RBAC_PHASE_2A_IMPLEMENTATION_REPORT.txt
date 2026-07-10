@@ -1,0 +1,256 @@
+================================================================================
+RBAC PHASE 2A — USER MODULE PERMISSION OVERRIDES — IMPLEMENTATION REPORT
+================================================================================
+Date: 2026-06-25
+Project: unknwn (Laravel RBAC)
+Scope: Per-user module permission overrides (additive, non-breaking)
+================================================================================
+
+1.  MIGRATION CREATED
+    -------------------------------------------------------------------------
+    File: database/migrations/2026_06_25_000005_create_user_module_permissions_table.php
+
+    Table: user_module_permissions
+
+    Columns:
+      id              bigint(20) unsigned  PK, auto_increment
+      user_id         bigint(20) unsigned  FK → users, CASCADE ON DELETE
+      module_id       bigint(20) unsigned  FK → modules, CASCADE ON DELETE
+      can_create      tinyint(1)           NULLABLE (default NULL = inherit)
+      can_read        tinyint(1)           NULLABLE
+      can_update      tinyint(1)           NULLABLE
+      can_delete      tinyint(1)           NULLABLE
+      can_approve     tinyint(1)           NULLABLE
+      can_export      tinyint(1)           NULLABLE
+      can_reveal      tinyint(1)           NULLABLE  ← NEW (password reveal)
+      can_import      tinyint(1)           NULLABLE  ← NEW (data import)
+      created_at      timestamp
+      updated_at      timestamp
+
+      UNIQUE (user_id, module_id)
+
+    Key design:
+      - NULL  → inherit from role permission (fall through to module_role_permissions)
+      - true  → explicit allow (overrides role, even if role denies)
+      - false → explicit deny (overrides role, even if role grants)
+
+2.  MODEL CREATED
+    -------------------------------------------------------------------------
+    File: app/Models/UserModulePermission.php  (57 lines)
+
+    - $fillable includes all 8 permission columns + user_id + module_id
+    - $casts: all 8 permission columns as 'boolean' (null stays null)
+    - Relationships: belongsTo(User), belongsTo(Module)
+    - Uses HasFactory (no LogsActivity — consistent with simple pivot model)
+
+3.  FACTORY CREATED
+    -------------------------------------------------------------------------
+    File: database/factories/UserModulePermissionFactory.php  (36 lines)
+
+    - Default state: all permission columns null (inherit)
+    - Helper states: allow('can_read'), deny('can_read')
+
+4.  TRAIT METHODS CHANGED
+    -------------------------------------------------------------------------
+    File: app/Traits/HasModulePermissions.php
+
+    All four core permission methods were updated with merge logic:
+
+    (a) canOnModule(Module $module, string $action): bool
+        Before: Query module_role_permissions by role_ids only
+        After:  Check user_module_permissions first;
+                if column is NOT NULL → return its value (true=allow, false=deny);
+                if NULL or no row → fall through to role-based module_role_permissions
+
+    (b) getModulePermissions(Module $module): ?array
+        Before: Return merged role permissions for the 6 original columns
+        After:  Return role permissions, then overlay user overrides for any
+                column where user override is non-null
+
+    (c) getAllModulePermissions(): array
+        Before: Group module_role_permissions by module_id, merge across roles
+        After:  Same merge, then apply user overrides on top; includes modules
+                that only have user overrides (no role permission row)
+
+    (d) getAccessibleModuleIds(string $action): array
+        Before: Module IDs where ANY role has can_{action}=true
+        After:  Start with role-based IDs;
+                ADD module IDs where user override grants (true);
+                REMOVE module IDs where user override denies (false);
+                Return unique sorted array
+
+    (e) NEW: getUserModuleOverride(Module $module): ?array
+        Returns the raw user override row as an array of 8 nullable booleans,
+        or null if no override row exists.
+
+    (f) NEW: getEffectiveModulePermissions(Module $module): array
+        Returns detailed per-permission breakdown:
+          [
+            'can_read' => [
+              'role'          => true|false|null,   // from module_role_permissions
+              'user_override' => true|false|null,   // from user_module_permissions
+              'effective'     => true|false,        // final resolved value
+              'source'        => 'Role' | 'User Override' | 'None',
+            ],
+            ...
+          ]
+
+    (g) canAccessVault():  Unchanged (still uses role-based can_read only)
+    (h) isVaultOwner():    Unchanged
+
+5.  USER CONTROLLER UPDATED
+    -------------------------------------------------------------------------
+    File: app/Http/Controllers/Web/UserController.php
+
+    Changes:
+
+    (a) New private helper: getModulesWithFeatures()
+        Returns all modules with feature relation, ordered by name.
+
+    (b) New private helper: saveUserModulePermissions(User $user, ?array $permissions)
+        - If permissions array is null → no-op
+        - For each (moduleId → [permission => value]):
+          - '1' / 1 / true  → set true
+          - '0' / 0 / false → set false
+          - '' / null       → set null (inherit)
+        - If ANY column has a non-null value → updateOrCreate the row
+        - If ALL columns are null/inherit → DELETE the override row
+
+    (c) New private helper: preventSuperAdminAssignment(Request $request)
+        Aborts with 403 if request contains super-admin role ID.
+
+    (d) create() action:
+        Now also passes $modules and $userOverrides (empty) to the view.
+
+    (e) store() action:
+        Now validates 'permissions' as nullable array.
+        Calls preventSuperAdminAssignment().
+        Calls saveUserModulePermissions() inside the transaction.
+
+    (f) show() action:
+        Completely rewritten:
+        - Uses getEffectiveModulePermissions() for detailed source tracking
+        - Passes $modulePermissions with 'source' info for each permission
+        - Shows effective value + "override" label when user override active
+
+    (g) edit() action:
+        Now also passes $modules and $userOverrides (existing overrides keyed
+        by module_id) to the view.
+
+    (h) update() action:
+        Now validates 'permissions' as nullable array.
+        Calls preventSuperAdminAssignment().
+        Includes self-demotion protection:
+          "Cannot remove your own Super Admin role."
+        Calls saveUserModulePermissions() inside the transaction.
+
+    (i) destroy() action:
+        Added last-super-admin protection:
+          "Cannot delete the last Super Admin user."
+          Checks if target user has super-admin role, counts total super-admins.
+          Only blocks if count ≤ 1.
+
+6.  USER CREATE/EDIT UI CHANGED
+    -------------------------------------------------------------------------
+    Files:
+      resources/views/users/create.blade.php
+      resources/views/users/edit.blade.php
+      resources/views/users/show.blade.php
+
+    Create/Edit views now include a "Special Per-User Permissions" section
+    below the roles section.  It renders a table:
+
+      Module | Feature | C | R | U | D | A | E | Reveal | Import
+
+    Each cell is a 3-state <select> dropdown:
+      — (Inherit)  → stored as NULL → role permission applies
+      ✓ (Allow)    → stored as true → explicit grant
+      ✗ (Deny)     → stored as false → explicit deny
+
+    Show view now renders "Effective Module Permissions" with the same 8
+    columns plus a source indicator.  Permissions overridden by user-level
+    settings show an "override" badge.
+
+7.  NO ROUTES CHANGED
+    -------------------------------------------------------------------------
+    Confirmed.  Existing routes (users.store, users.update) handle the
+    additional form data via optional 'permissions' field.  No new routes.
+
+8.  NO API CONTROLLER CHANGES
+    -------------------------------------------------------------------------
+    Confirmed.  Only Web UserController was modified.
+
+9.  NO WRITE GUARDS ADDED IN RESOURCE CONTROLLERS
+    -------------------------------------------------------------------------
+    Confirmed.  No changes to DomainController, HostingController, VpsController,
+    etc.  can_create/can_update/can_delete not enforced at controller level.
+
+10. NO PASSWORD REVEAL ENFORCEMENT ADDED
+    -------------------------------------------------------------------------
+    Confirmed.  can_reveal column exists in the table and trait, but no
+    controller checks implemented yet.
+
+11. NO IMPORT ENFORCEMENT ADDED
+    -------------------------------------------------------------------------
+    Confirmed.  can_import column exists in the table and trait, but no
+    controller checks implemented yet.
+
+12. ROLE-BASED BEHAVIOR UNCHANGED WHEN NO OVERRIDE EXISTS
+    -------------------------------------------------------------------------
+    Confirmed.  When user has no user_module_permissions row (all columns null),
+    all four trait methods (canOnModule, getModulePermissions,
+    getAllModulePermissions, getAccessibleModuleIds) return exactly the same
+    results as before — they query module_role_permissions by user's role IDs.
+    RbacScope::apply() is unchanged and unaffected.
+
+13. TESTS ADDED
+    -------------------------------------------------------------------------
+    File: tests/Feature/UserModulePermissionTest.php  (18 tests, 64 assertions)
+
+    #  Test name                                            What it verifies
+    ── ─────────────────────────────────────────────────── ─────────────────────────
+    1  user_override_true_grants_permission                  Override true grants even if role denies
+    2  user_override_false_denies_permission                 Override false denies even if role grants
+    3  null_override_inherits_role_permission                Null column inherits role value
+    4  no_override_keeps_existing_role_behavior              No changes when no row exists
+    5  getAccessibleModuleIds_respects_user_overrides        Add/remove module IDs from overrides
+    6  super_admin_can_create_overrides_through_user_create  Create user with overrides via POST
+    7  super_admin_can_update_overrides_through_user_edit    Update overrides via PUT
+    8  super_admin_can_delete_overrides_through_user_edit    Delete override (all inherit) via PUT
+    9  non_super_admin_cannot_manage_overrides               Admin/user cannot access user management
+   10  force_deleting_user_deletes_overrides                 CASCADE on force delete
+   11  getModulePermissions_merges_user_overrides            Role + override merge in getModulePermissions
+   12  getAllModulePermissions_includes_overrides            Overrides appear in getAllModulePermissions
+   13  getEffectiveModulePermissions_shows_source            Source tracking (Role/User Override/None)
+   14  super_admin_cannot_assign_super_admin_role            403 when assigning super-admin role
+   15  cannot_delete_last_super_admin                        403 on deleting the only super-admin
+   16  cannot_self_demote_super_admin                        403 on removing own super-admin role
+   17  can_delete_super_admin_if_another_exists              Successful delete when >1 super-admin
+   18  rbac_phase1_behavior_preserved_without_overrides      Phase 1 scenarios still work
+
+14. TEST RESULTS
+    -------------------------------------------------------------------------
+    > php artisan test --filter=UserModulePermission tests/Feature/UserModulePermissionTest.php
+
+      Tests:    18 passed (64 assertions)
+      Duration: 5.90s
+
+    > php artisan test --filter=RbacPhase1 tests/Feature/RbacPhase1Test.php
+
+      Tests:    12 passed (41 assertions)
+      Duration: 4.99s
+
+    > php artisan test tests/Feature/UsersTest.php tests/Feature/WebCrudTest.php
+      Tests:    151 passed (409 assertions)
+
+    > php artisan test tests/Unit/
+      Tests:    411 passed (732 assertions)
+
+    > php artisan test tests/Feature/WebNewResourcesTest.php --filter=user
+      Tests:    12 passed (30 assertions)
+
+    All existing tests pass.  No regressions.
+
+================================================================================
+END OF REPORT
+================================================================================

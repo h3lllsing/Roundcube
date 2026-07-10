@@ -7,6 +7,9 @@ use App\Models\Task;
 use App\Models\User;
 use App\Notifications\TaskAssigned;
 use App\Services\TaskService;
+use Database\Seeders\FeatureModuleSeeder;
+use HasinHayder\Tyro\Database\Seeders\TyroSeeder;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Notification;
@@ -22,8 +25,8 @@ class TaskServiceTest extends TestCase
     {
         parent::setUp();
         $this->service = app(TaskService::class);
-        $this->seed(\HasinHayder\Tyro\Database\Seeders\TyroSeeder::class);
-        $this->seed(\Database\Seeders\FeatureModuleSeeder::class);
+        $this->seed(TyroSeeder::class);
+        $this->seed(FeatureModuleSeeder::class);
     }
 
     public function test_creates_task(): void
@@ -156,7 +159,7 @@ class TaskServiceTest extends TestCase
 
     public function test_find_throws_when_not_found(): void
     {
-        $this->expectException(\Illuminate\Database\Eloquent\ModelNotFoundException::class);
+        $this->expectException(ModelNotFoundException::class);
         $this->service->find(99999);
     }
 
@@ -277,5 +280,16 @@ class TaskServiceTest extends TestCase
         $result = $this->service->list(['per_page' => 200]);
 
         $this->assertEquals(100, $result->perPage());
+    }
+
+    public function test_list_invalid_sort_order_falls_back_to_desc(): void
+    {
+        $module = Module::first();
+        $user = User::factory()->create();
+        Task::create(['title' => 'Test', 'module_id' => $module->id, 'status' => 'pending', 'priority' => 'medium', 'created_by' => $user->id, 'updated_by' => $user->id]);
+
+        $result = $this->service->list(['sort_order' => 'invalid']);
+
+        $this->assertCount(1, $result->items());
     }
 }

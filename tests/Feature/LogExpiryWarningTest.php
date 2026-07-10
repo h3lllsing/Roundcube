@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Events\ExpiryWarningTriggered;
 use App\Models\Domain;
 use App\Models\User;
+use HasinHayder\Tyro\Database\Seeders\TyroSeeder;
 use HasinHayder\Tyro\Models\Role;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Activitylog\Models\Activity;
@@ -17,7 +18,7 @@ class LogExpiryWarningTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->seed(\HasinHayder\Tyro\Database\Seeders\TyroSeeder::class);
+        $this->seed(TyroSeeder::class);
     }
 
     public function test_logs_activity_when_expiry_warning_triggered(): void
@@ -32,7 +33,7 @@ class LogExpiryWarningTest extends TestCase
         $this->assertNotNull($activity);
         $this->assertEquals('expiry_warning_sent', $activity->description);
         $this->assertEquals($user->id, $activity->causer_id);
-        $this->assertEquals(Domain::class, $activity->subject_type);
+        $this->assertEquals('domain', $activity->subject_type);
         $this->assertEquals($domain->id, $activity->subject_id);
     }
 

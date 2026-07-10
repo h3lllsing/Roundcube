@@ -2,84 +2,137 @@
 
 namespace App\Http\Controllers\Web;
 
-use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreDomainRequest;
 use App\Http\Requests\UpdateDomainRequest;
 use App\Models\Domain;
+use App\Models\Hosting;
 use App\Models\Module;
-use App\Models\User;
+use App\Models\ServiceProvider;
+use App\Services\RenewalSyncService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
-class DomainController extends Controller
+class DomainController extends BaseResourceController
 {
-    public function index(Request $request): View
+    protected function modelClass(): string
     {
-        $query = Domain::with('module');
-
-        if ($request->filled('status')) {
-            $query->where('status', $request->status);
-        }
-        if ($request->filled('search')) {
-            $query->where('name', 'like', '%' . $request->search . '%');
-        }
-
-        $domains = $query->latest()->paginate(20);
-
-        return view('domains.index', compact('domains'));
+        return Domain::class;
     }
 
-    public function create(): View
+    protected function moduleSlug(): string
     {
-        $modules = Module::orderBy('name')->pluck('name', 'id');
-        $users = User::orderBy('name')->pluck('name', 'id');
-        return view('domains.create', compact('modules', 'users'));
+        return 'domains';
+    }
+
+    protected function viewPrefix(): string
+    {
+        return 'domains';
+    }
+
+    protected function indexSelect(): array
+    {
+        return ['id', 'module_id', 'name', 'expiry_date', 'cost', 'status', 'cloudflare_status', 'hosting_id', 'service_provider_id'];
+    }
+
+    protected function indexVariable(): string
+    {
+        return 'domains';
+    }
+
+    protected function recordVariable(): string
+    {
+        return 'domain';
+    }
+
+    protected function indexWith(): array
+    {
+        return ['module', 'hosting', 'serviceProvider'];
+    }
+
+    protected function showWith(): array
+    {
+        return ['module', 'hosting', 'serviceProvider', 'user', 'domainEmails'];
+    }
+
+    protected function showExtraData($model): array
+    {
+        return [
+            'renewals' => \App\Models\ExpiryTracker::where('trackable_type', Domain::class)
+                ->where('trackable_id', $model->id)
+                ->get(),
+        ];
+    }
+
+    protected function prepareStoreData(array $validated, Request $request): array
+    {
+        $validated['dns_servers'] = $request->filled('dns_servers') ? array_map('trim', explode(',', $request->dns_servers)) : [];
+
+        return $validated;
+    }
+
+    protected function prepareUpdateData(array $validated, Request $request, $model): array
+    {
+        if ($request->has('dns_servers')) {
+            $validated['dns_servers'] = $request->filled('dns_servers') ? array_map('trim', explode(',', $request->dns_servers)) : [];
+        }
+
+        return $validated;
+    }
+
+    protected function createExtraData(): array
+    {
+        $user = Auth::user();
+
+        return [
+            'hostings' => $user->hasRole('super-admin')
+                ? Hosting::orderBy('name')->pluck('name', 'id')
+                : Hosting::where('user_id', Auth::id())->orderBy('name')->pluck('name', 'id'),
+            'serviceProviders' => ServiceProvider::orderBy('name')->pluck('name', 'id'),
+        ];
     }
 
     public function store(StoreDomainRequest $request): RedirectResponse
     {
         $validated = $request->validated();
-        $validated['user_id'] = $validated['user_id'] ?? Auth::id();
-        $validated['dns_servers'] = $request->filled('dns_servers') ? array_map('trim', explode(',', $request->dns_servers)) : [];
-
-        Domain::create($validated);
+        $user = Auth::user();
+        $module = $this->resolveModule();
+        if (! $user->hasRole('super-admin')) {
+            abort_unless($module && $user->canOnModule($module, 'create'), 403);
+        }
+        if ($module) {
+            $validated['module_id'] = $module->id;
+        }
+        $validated['user_id'] = Auth::id();
+        $validated = $this->prepareStoreData($validated, $request);
+        $domain = DB::transaction(function () use ($validated) {
+            $domain = Domain::create($validated);
+            app(RenewalSyncService::class)->sync($domain);
+            return $domain;
+        });
 
         return redirect()->route('domains.index')->with('success', 'Domain created successfully.');
     }
 
-    public function show(int $id): View
-    {
-        $domain = Domain::with('module')->findOrFail($id);
-        return view('domains.show', compact('domain'));
-    }
-
-    public function edit(int $id): View
-    {
-        $domain = Domain::findOrFail($id);
-        $modules = Module::orderBy('name')->pluck('name', 'id');
-        $users = User::orderBy('name')->pluck('name', 'id');
-        return view('domains.edit', compact('domain', 'modules', 'users'));
-    }
-
     public function update(UpdateDomainRequest $request, int $id): RedirectResponse
     {
+        $this->userOwnedFilter();
         $domain = Domain::findOrFail($id);
-
+        $user = Auth::user();
+        abort_unless($user->hasRole('super-admin') || ($domain->module && $user->canOnModule($domain->module, 'update')), 403);
+        $this->checkOptimisticLock($domain, $request);
         $validated = $request->validated();
-        $validated['dns_servers'] = $request->filled('dns_servers') ? array_map('trim', explode(',', $request->dns_servers)) : [];
-
-        $domain->update($validated);
+        unset($validated['module_id']);
+        $validated = $this->prepareUpdateData($validated, $request, $domain);
+        DB::transaction(function () use ($domain, $validated) {
+            $domain->update($validated);
+            if ($domain->wasChanged($this->renewalFields())) {
+                app(RenewalSyncService::class)->sync($domain);
+            }
+        });
 
         return redirect()->route('domains.index')->with('success', 'Domain updated successfully.');
-    }
-
-    public function destroy(int $id): RedirectResponse
-    {
-        $domain = Domain::findOrFail($id);
-        $domain->delete();
-
-        return redirect()->route('domains.index')->with('success', 'Domain deleted successfully.');
     }
 }

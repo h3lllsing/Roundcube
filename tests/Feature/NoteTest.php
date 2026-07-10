@@ -2,8 +2,13 @@
 
 namespace Tests\Feature;
 
+use App\Models\Feature;
+use App\Models\Module;
 use App\Models\Note;
 use App\Models\User;
+use Database\Seeders\FeatureModuleSeeder;
+use HasinHayder\Tyro\Database\Seeders\TyroSeeder;
+use HasinHayder\Tyro\Models\Role;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -14,8 +19,8 @@ class NoteTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->seed(\HasinHayder\Tyro\Database\Seeders\TyroSeeder::class);
-        $this->seed(\Database\Seeders\FeatureModuleSeeder::class);
+        $this->seed(TyroSeeder::class);
+        $this->seed(FeatureModuleSeeder::class);
     }
 
     public function test_create_global_note_validation_empty_content()
@@ -115,9 +120,9 @@ class NoteTest extends TestCase
     public function test_create_note_on_feature()
     {
         $user = User::factory()->create();
-        $user->assignRole(\HasinHayder\Tyro\Models\Role::where('slug', 'super-admin')->firstOrFail());
+        $user->assignRole(Role::where('slug', 'super-admin')->firstOrFail());
         $token = $user->createToken('test')->plainTextToken;
-        $feature = \App\Models\Feature::first();
+        $feature = Feature::first();
 
         $response = $this->withHeader('Authorization', "Bearer $token")
             ->postJson("/api/features/{$feature->id}/notes", ['content' => 'Feature note']);
@@ -129,9 +134,9 @@ class NoteTest extends TestCase
     public function test_create_note_on_module()
     {
         $user = User::factory()->create();
-        $user->assignRole(\HasinHayder\Tyro\Models\Role::where('slug', 'super-admin')->firstOrFail());
+        $user->assignRole(Role::where('slug', 'super-admin')->firstOrFail());
         $token = $user->createToken('test')->plainTextToken;
-        $module = \App\Models\Module::first();
+        $module = Module::first();
 
         $response = $this->withHeader('Authorization', "Bearer $token")
             ->postJson("/api/modules/{$module->id}/notes", ['content' => 'Module note']);
@@ -143,9 +148,9 @@ class NoteTest extends TestCase
     public function test_list_feature_notes()
     {
         $user = User::factory()->create();
-        $user->assignRole(\HasinHayder\Tyro\Models\Role::where('slug', 'super-admin')->firstOrFail());
+        $user->assignRole(Role::where('slug', 'super-admin')->firstOrFail());
         $token = $user->createToken('test')->plainTextToken;
-        $feature = \App\Models\Feature::first();
+        $feature = Feature::first();
 
         $response = $this->withHeader('Authorization', "Bearer $token")
             ->getJson("/api/features/{$feature->id}/notes");
@@ -156,9 +161,9 @@ class NoteTest extends TestCase
     public function test_list_module_notes()
     {
         $user = User::factory()->create();
-        $user->assignRole(\HasinHayder\Tyro\Models\Role::where('slug', 'super-admin')->firstOrFail());
+        $user->assignRole(Role::where('slug', 'super-admin')->firstOrFail());
         $token = $user->createToken('test')->plainTextToken;
-        $module = \App\Models\Module::first();
+        $module = Module::first();
 
         $response = $this->withHeader('Authorization', "Bearer $token")
             ->getJson("/api/modules/{$module->id}/notes");
@@ -180,9 +185,9 @@ class NoteTest extends TestCase
     public function test_module_notes_returns_paginated_response()
     {
         $user = User::factory()->create();
-        $user->assignRole(\HasinHayder\Tyro\Models\Role::where('slug', 'super-admin')->firstOrFail());
+        $user->assignRole(Role::where('slug', 'super-admin')->firstOrFail());
         $token = $user->createToken('test')->plainTextToken;
-        $module = \App\Models\Module::first();
+        $module = Module::first();
 
         $this->withHeader('Authorization', "Bearer $token")
             ->postJson("/api/modules/{$module->id}/notes", ['content' => 'Paginated note 1']);
@@ -194,5 +199,141 @@ class NoteTest extends TestCase
 
         $response->assertStatus(200);
         $this->assertCount(2, $response->json('data'));
+    }
+
+    public function test_non_admin_cannot_create_note_on_feature()
+    {
+        $user = User::factory()->create();
+        $token = $user->createToken('test')->plainTextToken;
+        $feature = Feature::first();
+
+        $response = $this->withHeader('Authorization', "Bearer $token")
+            ->postJson("/api/features/{$feature->id}/notes", ['content' => 'Should fail']);
+
+        $response->assertStatus(403);
+    }
+
+    public function test_non_admin_cannot_create_note_on_module()
+    {
+        $user = User::factory()->create();
+        $token = $user->createToken('test')->plainTextToken;
+        $module = Module::first();
+
+        $response = $this->withHeader('Authorization', "Bearer $token")
+            ->postJson("/api/modules/{$module->id}/notes", ['content' => 'Should fail']);
+
+        $response->assertStatus(403);
+    }
+
+    public function test_non_admin_cannot_list_feature_notes()
+    {
+        $user = User::factory()->create();
+        $token = $user->createToken('test')->plainTextToken;
+        $feature = Feature::first();
+
+        $response = $this->withHeader('Authorization', "Bearer $token")
+            ->getJson("/api/features/{$feature->id}/notes");
+
+        $response->assertStatus(403);
+    }
+
+    public function test_non_admin_cannot_list_module_notes()
+    {
+        $user = User::factory()->create();
+        $token = $user->createToken('test')->plainTextToken;
+        $module = Module::first();
+
+        $response = $this->withHeader('Authorization', "Bearer $token")
+            ->getJson("/api/modules/{$module->id}/notes");
+
+        $response->assertStatus(403);
+    }
+
+    public function test_non_owner_cannot_delete_module_note()
+    {
+        $owner = User::factory()->create();
+        $other = User::factory()->create();
+        $token = $other->createToken('test')->plainTextToken;
+        $module = Module::first();
+
+        $note = new Note;
+        $note->content = 'Module note protected';
+        $note->user_id = $owner->id;
+        $note->notable_type = 'App\Models\Module';
+        $note->notable_id = $module->id;
+        $note->save();
+
+        $response = $this->withHeader('Authorization', "Bearer $token")
+            ->deleteJson("/api/notes/{$note->id}");
+
+        $response->assertStatus(403);
+    }
+
+    public function test_non_owner_cannot_show_module_note(): void
+    {
+        $owner = User::factory()->create();
+        $other = User::factory()->create();
+        $token = $other->createToken('test')->plainTextToken;
+        $module = Module::first();
+
+        $note = new Note;
+        $note->content = 'Module note show protected';
+        $note->user_id = $owner->id;
+        $note->notable_type = 'App\Models\Module';
+        $note->notable_id = $module->id;
+        $note->save();
+
+        $response = $this->withHeader('Authorization', "Bearer $token")
+            ->getJson("/api/notes/{$note->id}");
+
+        $response->assertStatus(403);
+    }
+
+    public function test_non_owner_cannot_update_module_note(): void
+    {
+        $owner = User::factory()->create();
+        $other = User::factory()->create();
+        $token = $other->createToken('test')->plainTextToken;
+        $module = Module::first();
+
+        $note = new Note;
+        $note->content = 'Module note update protected';
+        $note->user_id = $owner->id;
+        $note->notable_type = 'App\Models\Module';
+        $note->notable_id = $module->id;
+        $note->save();
+
+        $response = $this->withHeader('Authorization', "Bearer $token")
+            ->putJson("/api/notes/{$note->id}", ['content' => 'hacked']);
+
+        $response->assertStatus(403);
+    }
+
+    public function test_non_owner_cannot_show_global_note(): void
+    {
+        $owner = User::factory()->create();
+        $other = User::factory()->create();
+        $token = $other->createToken('test')->plainTextToken;
+
+        $note = Note::create(['content' => 'Global note protected', 'user_id' => $owner->id]);
+
+        $response = $this->withHeader('Authorization', "Bearer $token")
+            ->getJson("/api/notes/{$note->id}");
+
+        $response->assertStatus(403);
+    }
+
+    public function test_non_owner_cannot_update_global_note(): void
+    {
+        $owner = User::factory()->create();
+        $other = User::factory()->create();
+        $token = $other->createToken('test')->plainTextToken;
+
+        $note = Note::create(['content' => 'Global note update', 'user_id' => $owner->id]);
+
+        $response = $this->withHeader('Authorization', "Bearer $token")
+            ->putJson("/api/notes/{$note->id}", ['content' => 'hacked']);
+
+        $response->assertStatus(403);
     }
 }

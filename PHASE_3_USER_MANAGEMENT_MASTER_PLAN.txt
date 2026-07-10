@@ -1,0 +1,504 @@
+PHASE 3 — USER MANAGEMENT EXPERIENCE MASTER PLAN
+=================================================
+Date: 2026-06-25
+
+Current RBAC v1.0 is COMPLETE (Phases 1, 2B-1/2/3, 2C-1/2/3/4/5/6).
+167 tests, 386 assertions — all passing.
+
+This document plans Phase 3: next-generation User Management workflow enabling
+a Super Admin to onboard a new employee in under 2 minutes using existing RBAC.
+
+=====================================================
+FEATURE 1: ROLE TEMPLATES
+=====================================================
+
+A) Business Purpose
+   Pre-configured permission blueprints (e.g., "Support Agent", "DevOps Engineer",
+   "Finance Reader") that can be applied to roles in one click. Eliminates manually
+   checking 8 permissions across 25+ modules per role.
+
+B) Required DB Changes
+   New table: role_templates
+     - id (bigIncrements)
+     - name (string)
+     - description (text, nullable)
+     - is_protected (boolean, default false) — true for built-in templates
+     - created_at, updated_at (timestamps)
+
+   New table: role_template_permissions
+     - id (bigIncrements)
+     - role_template_id (FK -> role_templates, cascade)
+     - module_id (FK -> modules, cascade)
+     - can_create, can_read, can_update, can_delete, can_approve,
+       can_export, can_reveal, can_import (boolean, default false)
+     - unique: [role_template_id, module_id]
+     - created_at, updated_at (timestamps)
+
+C) UI Changes
+   - New section in sidebar: "Role Templates" under RBAC group
+   - CRUD pages for templates (index, create/edit, show):
+     - Index: list with search, "Create Template" button
+     - Create/Edit: name, description, permission matrix (same layout as
+       user create/edit module permissions table)
+     - Show: template details, "Apply to Role" action button
+   - Role create/edit page: "Apply Template" dropdown/button that pre-fills
+     the ModuleRolePermission table with template values
+   - "Seed from existing role" option: copy an existing role's permissions
+     to create a new template
+
+D) Reuse of Existing RBAC
+   - Template stores the same 8 permission booleans per module.
+   - "Apply Template" writes to existing ModuleRolePermission table.
+   - Permission matrix UI reuses the same Allow/Deny/Inherit pattern.
+
+E) Risks
+   - Template drift: modules added after template creation won't be included
+     in the template. Mitigation: "Sync to modules" button that adds new
+     modules with default-denied permissions.
+   - Overwriting existing role permissions: apply should prompt confirmation
+     showing diff before overwriting.
+
+=====================================================
+FEATURE 2: CLONE EXISTING USER
+=====================================================
+
+A) Business Purpose
+   Rapidly create a user with identical roles and permissions as an existing
+   employee (e.g., same-team hire). Skip the manual re-selection of roles
+   and module overrides.
+
+B) Required DB Changes
+   None. Reuses existing users, user_roles, user_module_permissions tables.
+
+C) UI Changes
+   - Users index: "Clone" icon button on each row (link icon)
+   - User show page: "Clone User" action button in header
+   - Clone form:
+     - Pre-filled: name (empty), email (empty), roles (checked), module
+       permissions (pre-filled from source user)
+     - Forced: password field (required, min 8 chars, never cloned)
+     - Warning banner: "Cloning from: <source_user_name>"
+     - Labels showing which fields are cloned (roles, permissions) vs
+       required (name, email, password)
+   - Success message referencing source user ("User cloned from John Doe")
+
+D) Reuse of Existing RBAC
+   - Role assignments: copied from source user to new user (user_roles table)
+   - Module overrides: copied from source user to new user
+     (user_module_permissions table)
+   - Passes through existing store() validation and permission logic
+
+E) Risks
+   - Cloning a super-admin: roles should copy but super-admin assignment
+     should require explicit confirmation ("Clone super-admin role?").
+   - Password NEVER cloned — new user must set their own.
+   - Sensitive overrides (can_reveal, can_export) are intentionally cloned
+     as they are part of the permission setup.
+
+=====================================================
+FEATURE 3: NEW USER WIZARD
+=====================================================
+
+A) Business Purpose
+   Guide Super Admin through onboarding in under 2 minutes. Break the
+   current single-page form into a logical step-by-step flow with
+   progress indicator, inline validation, and review step.
+
+B) Required DB Changes
+   None. Uses existing users, user_roles, user_module_permissions tables.
+   Wizard state can be stored in session until final submission.
+
+C) UI Changes
+   - Replace /users/create with a wizard replacing the current single form.
+   - Step indicator bar at top: 4 steps with current/complete/pending states.
+
+   Step 1 — Basic Info:
+     - Name, Email, Password, Confirm Password
+     - Optional: Suspended At (date picker)
+     - "Next" button validates fields inline
+
+   Step 2 — Roles:
+     - Role checkboxes (same as current create form)
+     - "Next" validates at least one role selected (optional warning)
+
+   Step 3 — Module Permissions (Quick Overview):
+     - Permission matrix (same as current create form)
+     - Collapsible by Feature group
+     - "Select All Read" quick-action button
+     - Toggle to show only modules with non-inherit values
+     - "Next" continues
+
+   Step 4 — Review & Confirm:
+     - Summary card: user info, assigned roles (badges), module permission
+       count (X of Y modules have overrides)
+     - "Edit" links back to each step
+     - "Create User" submit button
+     - On success: redirect to user show page with success toast
+
+   Session handling:
+     - Wizard state persisted in session (keyed by random token).
+     - Navigating away shows "Your progress will be lost" confirmation.
+     - Session expires after 30 minutes of inactivity.
+
+D) Reuse of Existing RBAC
+   - store() method unchanged — wizard collects same data, submits to same
+     endpoint (or a new wizard-specific endpoint that calls the same logic).
+   - Permission matrix UI uses same Allow/Deny/Inherit pattern.
+
+E) Risks
+   - Browser back/forward navigation must be handled gracefully.
+   - Session storage adds complexity vs simple form submit.
+   - Testing 4-step flow is more complex than single-page form.
+   - Suggested approach: implement as SPA-like component with JS steps
+     that submits all data at once, avoiding session state entirely.
+
+=====================================================
+FEATURE 4: DEPARTMENT TEMPLATES
+=====================================================
+
+A) Business Purpose
+   Organize users into departments (Engineering, HR, Finance, etc.) and
+   apply department-wide default permissions. New hires in a department
+   automatically inherit the department's baseline permissions.
+
+B) Required DB Changes
+   New table: departments
+     - id (bigIncrements)
+     - name (string)
+     - slug (string, unique)
+     - description (text, nullable)
+     - created_at, updated_at (timestamps)
+
+   Modify users table:
+     - ADD department_id (FK -> departments, nullable, SET NULL on delete)
+
+   New table: department_module_permissions
+     - id (bigIncrements)
+     - department_id (FK -> departments, cascade)
+     - module_id (FK -> modules, cascade)
+     - can_create, can_read, can_update, can_delete, can_approve,
+       can_export, can_reveal, can_import (boolean, default false)
+     - unique: [department_id, module_id]
+     - created_at, updated_at (timestamps)
+
+C) UI Changes
+   - New sidebar item: "Departments" under RBAC group
+   - Department CRUD (index, create/edit, show):
+     - Index: list with member count, module count
+     - Create/Edit: name, slug, description, permission matrix
+     - Show: department info, members list, "Add Member" action
+   - User create/edit: Department dropdown field
+   - Users index: Department column, filter by department
+   - Role create/edit: Option to "Apply department permissions as base"
+   - Department permission matrix uses same UI pattern as roles
+
+D) Reuse of Existing RBAC
+   - Department permissions are independent from role permissions.
+   - A user's effective permissions remain: role permissions + user overrides.
+   - Department permissions serve as a SECONDARY layer — they do NOT replace
+     existing RBAC. They provide a convenient batch initializer: "Create
+     ModuleRolePermission entries for all modules matching this department
+     template."
+   - Alternative approach: department = auto-assign role to new users.
+     Simpler, no new permission tables needed.
+
+E) Risks
+   - Permission layering: if department, role, AND user override all apply,
+     the merge logic becomes complex. RECOMMENDATION: Department sets
+     initial RoleModulePermissions on user creation only (not dynamic).
+   - A user can belong to only one department — may not match real
+     organizations where people have cross-department functions.
+   - Recommended simplification: Department = role group. Instead of a new
+     permission layer, let departments auto-assign a set of roles. This
+     reuses existing RBAC with zero new permission logic.
+
+=====================================================
+FEATURE 5: PERMISSION AUDIT HISTORY
+=====================================================
+
+A) Business Purpose
+   Provide a complete history of who changed what permission, when, and
+   what the old/new values were. Essential for compliance (SOC2, ISO 27001)
+   and troubleshooting "who gave this user access to X."
+
+B) Required DB Changes
+   None. Uses existing Spatie Activitylog table.
+
+   However, the following models need the `LogsActivity` trait added:
+     - ModuleRolePermission (already has it — verify)
+     - UserModulePermission (verify)
+     - Role (via Tyro package — may be in vendor)
+
+   If the Tyro package Role model doesn't support it, create an
+   `role_permission_audits` table to log role->module permission changes:
+     - id (bigIncrements)
+     - causer_id (FK -> users)
+     - subject_type (string: 'role' | 'user')
+     - subject_id (bigInteger)
+     - module_id (FK -> modules, nullable)
+     - event (string: 'created', 'updated', 'deleted')
+     - old_values (JSON, nullable)
+     - new_values (JSON, nullable)
+     - created_at (timestamp)
+
+C) UI Changes
+   - User show page: "Permission History" section or tab showing timeline
+     of changes to this user's roles and module overrides.
+   - Role show page: "Permission Audit" tab showing changes to the role's
+     module permissions, sorted by most recent.
+   - Global permission audit page: Searchable filterable log of ALL
+     permission changes across all users and roles, with filters:
+       - Date range
+       - Causer (who made the change)
+       - Target (user or role)
+       - Module
+       - Event type (added, removed, modified)
+   - Visual diff: show old → new values per permission column.
+
+D) Reuse of Existing RBAC
+   - Uses Spatie Activitylog (already installed and configured).
+   - The `properties` JSON column stores old/new values.
+   - UserController@update already has transaction scope where logging
+     can be injected for user role/permission changes.
+
+E) Risks
+   - Log volume: each permission change creates 8+ log entries (one per
+     permission column). Mitigation: batch log as single entry with
+     full diff in properties JSON.
+   - Retention: define auto-prune policy (e.g., keep 12 months).
+   - Performance: ensure activity_log table has indexes on
+     subject_type + subject_id + event.
+
+=====================================================
+FEATURE 6: PERMISSION COMPARE
+=====================================================
+
+A) Business Purpose
+   Side-by-side permission comparison between two users, or between a user
+   and a role. Useful for: auditing why two users in the same role have
+   different access, verifying a new hire matches an existing employee's
+   permissions, or checking what a role grants vs. what a user actually has.
+
+B) Required DB Changes
+   None. Entirely in-memory comparison of getEffectiveModulePermissions()
+   output.
+
+C) UI Changes
+   - Users index: checkbox column + "Compare Selected (2)" button (enabled
+     only when exactly 2 users selected).
+   - User show page: "Compare with..." dropdown (lists other users).
+   - Role show page: "Compare with user..." action.
+   - Compare view:
+     - Header: "User A" vs "User B" with avatars/names/roles badges
+     - Summary comparison cards: roles (same/different), accessible modules
+       count, override count
+     - Color-coded permission matrix side-by-side:
+       - Green cell = permission allowed for both
+       - Red cell = denied for both
+       - Amber cell = different (one allowed, one denied)
+       - Gray cell = both inherit/none
+     - "Show differences only" toggle
+     - Legend explaining color coding
+     - Export comparison as PDF/CSV
+
+D) Reuse of Existing RBAC
+   - Uses existing getEffectiveModulePermissions() for both subjects.
+   - Comparison is purely presentational — no new permission data.
+
+E) Risks
+   - Performance: loading full permission data for 2 users = 2× N queries
+     (N = module count). Acceptable for a super-admin tool.
+   - UI complexity: displaying 25+ modules × 8 permissions × 2 users needs
+     careful layout (horizontal scroll or stacked layout).
+   - Recommend starting with user-vs-user only. Role-vs-user can be added
+     later with the same component.
+
+=====================================================
+FEATURE 7: BULK USER IMPORT
+=====================================================
+
+A) Business Purpose
+   Onboard multiple employees at once via CSV/Excel. Import must support:
+   name, email, role assignment, and optionally module permission overrides.
+   Ideal for migration from legacy systems or bulk department hires.
+
+B) Required DB Changes
+   None. The existing ImportController already supports 'users' type.
+   CSV columns: name, email, password, roles (comma-separated slugs).
+
+   Optional enhancement: add support for role_slug columns and
+   permission columns (can_read_domains, can_create_hostings, etc.)
+   — this requires a mapping configuration but no schema change.
+
+C) UI Changes
+   - Enhanced import page for 'users' type:
+     - Step 1: Upload CSV (with template download)
+     - Step 2: Column mapping (auto-detect header name → field)
+     - Step 3: Preview (first 5 rows with validation results)
+     - Step 4: Confirm & Import
+   - CSV template download: pre-formatted with all supported columns
+   - Import results: success count, error rows with messages
+   - Dry-run mode: validate without persisting
+   - Duplicate handling options: skip, update, fail
+
+D) Reuse of Existing RBAC
+   - Role assignment via role slugs in CSV → user_roles table
+   - No module permission columns in basic import (too complex for CSV).
+     Permission assignment should be done via Role Templates or
+     Department Templates after import.
+   - Password: auto-generated (random) if not provided, displayed in
+     results for distribution.
+
+E) Risks
+   - CSV encoding issues (UTF-8 BOM, Excel regional settings).
+   - Large imports may hit memory/time limits (batch in chunks of 50).
+   - Password security: never log or store plaintext passwords; show once
+     in the import results with "download passwords" option (encrypted).
+   - Recommended implementation order: after Role Templates (Feature 1),
+     since bulk import without role assignment is useless.
+
+=====================================================
+FEATURE 8: USER LIFECYCLE MANAGEMENT
+=====================================================
+
+A) Business Purpose
+   Automate the employee lifecycle: scheduled suspension for contractors,
+   auto-unsuspend for seasonal workers, retention notifications for inactive
+   accounts, and automated cleanup of departed employees.
+
+B) Required DB Changes
+   New table: lifecycle_policies
+     - id (bigIncrements)
+     - name (string)
+     - trigger_event (string): 'created', 'inactive_days', 'date_reached',
+       'role_changed', 'department_changed'
+     - trigger_value (string, nullable): e.g., '90' for inactive_days
+     - action (string): 'suspend', 'unsuspend', 'notify', 'delete',
+       'remove_role', 'add_role'
+     - action_value (string, nullable): e.g., role_id for add_role/remove_role
+     - is_active (boolean, default true)
+     - created_at, updated_at (timestamps)
+
+   New table: lifecycle_events
+     - id (bigIncrements)
+     - user_id (FK -> users, cascade)
+     - lifecycle_policy_id (FK -> lifecycle_policies, nullable)
+     - event_type (string): 'scheduled_suspend', 'auto_suspended',
+       'inactivity_warning', 'deprovisioned'
+     - scheduled_at (timestamp, nullable)
+     - executed_at (timestamp, nullable)
+     - payload (JSON, nullable) — stores context
+     - created_at, updated_at (timestamps)
+
+   Modify users table:
+     - ADD last_activity_at (timestamp, nullable) — tracked via middleware
+       or login activity
+     - ADD lifecycle_status (string, default 'active') — values: active,
+       suspended, deprovisioned, pending_delete
+
+C) UI Changes
+   - Lifecycle Policies CRUD page under Settings/Administration
+     - List of policies with enable/disable toggle
+     - Create/edit: name, trigger, action, value
+   - User show page: Lifecycle section with:
+     - Current lifecycle status badge
+     - Upcoming scheduled events
+     - Manual lifecycle actions button
+     - Event history timeline
+   - Scheduled actions report page:
+     - Calendar or list view of upcoming automated actions
+     - Override/cancel individual scheduled actions
+   - Dashboard widget: "Upcoming Lifecycle Events" (e.g., "3 users will
+     be suspended in the next 7 days")
+
+D) Reuse of Existing RBAC
+   - All actions (suspend, unsuspend, delete) reuse existing controller
+     methods and permissions.
+   - A scheduled Artisan command checks lifecycle_policies and executes
+     actions via the existing UserController methods.
+   - Notification events can use existing notification infrastructure.
+
+E) Risks
+   - Automated suspension of last super-admin must be BLOCKED (same
+     guard as UserController@destroy).
+   - Scheduled actions need a reliable queue/worker.
+   - Inactivity tracking requires new middleware or hook into login audits.
+   - Compliance: deleted users may need to be retained (soft delete
+     already in place).
+   - Start simple: only "auto-suspend after X days inactive" and
+     "send inactivity warning after Y days". Add complexity iteratively.
+
+=====================================================
+RECOMMENDED IMPLEMENTATION ORDER
+=====================================================
+
+Phase 3 is substantial. Each feature is independent enough to ship
+incrementally. Recommended order:
+
+PHASE 3-A (Foundation — High Value, Low Risk)
+----------------------------------------------
+1. Role Templates (Feature 1)
+   - Highest ROI: enables "under 2 minutes" onboarding by pre-configuring
+     role permissions.
+   - Foundation for bulk import (Feature 7) and department templates (Feature 4).
+
+2. Clone Existing User (Feature 2)
+   - Second-highest ROI: cloning with name/email/password change is the
+     fastest way to onboard a similar-position employee.
+   - Zero DB changes, simple UI addition.
+
+PHASE 3-B (Onboarding Acceleration)
+-------------------------------------
+3. New User Wizard (Feature 3)
+   - Builds on Role Templates and Clone.
+   - Reduces onboarding from ~3-5 minutes to under 2 minutes.
+   - Can be implemented as JS step overlay on existing form (no new route).
+
+4. Bulk User Import (Feature 7)
+   - Depends on Role Templates (users need roles to be useful).
+   - Enhances existing ImportController with preview + role mapping.
+
+PHASE 3-C (Enterprise Scale)
+------------------------------
+5. Department Templates (Feature 4)
+   - Adds organizational structure.
+   - Simple implementation (department = role auto-assignment) avoids
+     new permission layer complexity.
+
+6. Permission Audit History (Feature 5)
+   - Compliance-driven. Leverages existing Spatie Activitylog.
+   - Low risk, straightforward logging + view additions.
+
+PHASE 3-D (Advanced Tooling)
+-----------------------------
+7. Permission Compare (Feature 6)
+   - Nice-to-have diagnostic tool for super-admins.
+   - Zero DB changes, purely UI work.
+
+8. User Lifecycle Management (Feature 8)
+   - Highest risk (automation, scheduling, edge cases).
+   - Requires careful testing and safeguards.
+   - Start with inactivity-based auto-suspend only.
+
+=====================================================
+SUMMARY
+=====================================================
+
+Feature               | DB Changes | Risk | Effort | Phase
+----------------------|-----------|------|--------|------
+1. Role Templates     | 2 tables  | Low  | Medium | 3-A
+2. Clone User         | None      | Low  | Small  | 3-A
+3. New User Wizard    | None      | Med  | Medium | 3-B
+4. Department Tpl     | 2-3 tables| Med  | Large  | 3-C
+5. Permission Audit   | None*     | Low  | Medium | 3-C
+6. Permission Compare | None      | Low  | Medium | 3-D
+7. Bulk Import        | None      | Med  | Medium | 3-B
+8. Lifecycle Mgmt     | 2-3 tables| High | Large  | 3-D
+
+* None = uses existing Spatie Activitylog table.
+
+All 8 features reuse existing RBAC. No changes to:
+- Permission merge logic (canOnModule, getEffectiveModulePermissions)
+- ModuleRolePermission / UserModulePermission tables
+- Server-side guards (Phases 2B-2/2B-3)
+- Any existing route or controller signature

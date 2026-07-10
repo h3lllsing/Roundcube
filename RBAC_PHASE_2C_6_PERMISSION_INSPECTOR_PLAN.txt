@@ -1,0 +1,223 @@
+RBAC Phase 2C-6: Enterprise Permission Inspector — Plan Only
+============================================================
+Date: 2026-06-25
+
+This document describes the planned improvements to the User Show page
+(`routes.users.show`) to transform it into an Enterprise Permission Inspector
+for Super Admins. No code has been modified.
+
+1. CURRENT STATE ANALYSIS
+=========================
+File: resources/views/users/show.blade.php
+Controller: UserController@show (app/Http/Controllers/Web/UserController.php)
+Trait: HasModulePermissions (app/Traits/HasModulePermissions.php)
+
+Current behavior:
+- Super-admin only access (abort_unless hasRole('super-admin'), 403).
+- Queries only modules that have role permissions for the inspected user:
+    Module::with('feature')->whereHas('rolePermissions', ...)->get()
+  This means modules without any role-based permission are excluded from the
+  table entirely.
+- getEffectiveModulePermissions() returns per-module data with 8 permissions
+  (can_create/read/update/delete/approve/export/reveal/import), each containing:
+    role          => bool|null  (from ModuleRolePermission)
+    user_override => bool|null  (from UserModulePermission)
+    effective     => bool       (final resolved value)
+    source        => string     ('Role', 'User Override', or 'None')
+- The table renders checkmarks (green) or dashes (gray), plus an "override"
+  label when user_override is not null.
+- No summary cards, no filters, no search, no visual source badges.
+
+Current My Permissions page (resources/views/auth/my-permissions.blade.php):
+- For the logged-in user only (via AuthController@myPermissions).
+- Shows only 6 permissions (no Reveal or Import).
+- Uses ✓/✗. No source breakdown, no override info.
+- Super-admin sees a static green banner; non-super-admin sees their
+  getAllModulePermissions() data.
+
+2. LIMITATIONS TO ADDRESS
+=========================
+a) Not all modules are shown — modules without role permissions are invisible.
+b) No summary cards — super-admin must scan the full table.
+c) No filters/search — finding a specific module requires manual scanning.
+d) Source info is hidden in title attributes and an "override" text label.
+e) No count of overrides, denied, or allowed permissions.
+f) My Permissions has a simpler UI and fewer columns than users.show.
+
+3. PLANNED CHANGES
+==================
+
+3a. Controller: UserController@show
+- Change the module query to load ALL modules (not just those with role
+  permissions):
+    Module::with('feature')->orderBy('name')->get()
+- Pass ALL module permissions from getEffectiveModulePermissions() — this
+  already handles the None case (source='None', effective=false).
+- Compute summary statistics for the view:
+    $summary = [
+        'roles_count'            => $user->roles->count(),
+        'accessible_modules'     => count(array_filter($modulePermissionsData,
+                                     fn($m) => $m['permissions']['can_read']['effective'])),
+        'denied_modules'         => count(array_filter($modulePermissionsData,
+                                     fn($m) => !$m['permissions']['can_read']['effective'])),
+        'override_count'         => count of permissions where user_override !== null,
+        'effective_allowed'      => count of all permissions where effective === true,
+        'effective_denied'       => count of all permissions where effective === false,
+    ];
+- For super-admin inspected user, set a flag so the view can show a
+  "Super Admin — unrestricted access" banner (same as My Permissions).
+- Pass the summary and full module permissions to the view.
+
+3b. View: resources/views/users/show.blade.php
+Replace the current effective permissions section with:
+
+1. SUMMARY CARDS (6 cards, horizontal row at top of permissions section):
+   - Roles: badge count (e.g., "3 Roles")
+   - Accessible: green card showing count of modules with can_read=true
+   - Denied: red card showing count of modules with can_read=false
+   - Overrides: purple card showing count of non-null user overrides
+   - Allowed: green card showing count of all effective=true permissions
+   - Denied: red card showing count of all effective=false permissions
+
+2. SUPER ADMIN BANNER (if inspected user is super-admin):
+   Green info banner: "This user is a Super Admin — unrestricted access."
+
+3. FILTERS (above the table, inline flex row):
+   - Buttons: All | Overrides Only | Allowed Only | Denied Only | Reveal Allowed | Export Allowed
+   - JavaScript toggle: adds/removes a CSS class on table rows based on filter.
+   - Default: "All" selected.
+
+4. SEARCH (above the table, text input):
+   - Input field with placeholder "Search by module or feature name..."
+   - JavaScript filtering: hides table rows whose module/feature name does not
+     match the search term.
+
+5. PERMISSION TABLE (improved):
+   Columns:
+   - Module (left-aligned)
+   - Feature (left-aligned, gray)
+   - 8 permission columns (centered), each showing:
+     - Green checkmark if effective=true
+     - Red X if effective=false
+     - Source badge beneath the checkmark/X:
+       - "Role" badge (blue) when source='Role'
+       - "Override Allow" badge (purple) when source='User Override' and effective=true
+       - "Override Deny" badge (purple) when source='User Override' and effective=false
+       - "None" badge (gray) when source='None'
+       - "Super Admin" badge (green when isSuperAdmin)
+
+   Visual badges (CSS classes):
+   - .badge-role:       bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300
+   - .badge-override:   bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300
+   - .badge-none:       bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400
+   - .badge-super-admin: bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300
+   - .text-allowed:     text-green-600 dark:text-green-400
+   - .text-denied:      text-red-500 dark:text-red-400
+
+6. ACCESS CONTROL
+   - Keep current super-admin guard in UserController@show.
+   - Non-super-admin users access only their own My Permissions page
+     (AuthController@myPermissions, unchanged).
+   - No changes to the My Permissions page.
+
+3c. No Changes To:
+   - Server-side guards (Phase 2B-2/2B-3)
+   - RBAC logic (getEffectiveModulePermissions, canOnModule, etc.)
+   - Routes
+   - Migrations
+   - API controllers
+   - Sidebar
+   - Index/show pages for modules
+   - My Permissions page (existing user-facing page remains unchanged)
+   - Password exposure
+
+4. CLIENT-SIDE FILTERING APPROACH
+==================================
+All filtering is JavaScript-only, no URL parameters or server round-trips:
+
+Filter logic (JS in the view):
+- On filter button click, set active filter type.
+- On search input, set search term.
+- For each table row:
+  - If search term is set and neither module nor feature name contains it → hide.
+  - If filter is "Overrides Only" and row has no user_override → hide.
+  - If filter is "Allowed Only" and effective is not true → hide.
+  - If filter is "Denied Only" and effective is not false → hide.
+  - If filter is "Reveal Allowed" and can_reveal effective !== true → hide.
+  - If filter is "Export Allowed" and can_export effective !== true → hide.
+
+Implementation note: Because each row has 8 permission cells, the filters
+"Allowed Only", "Denied Only", "Reveal Allowed", "Export Allowed" should
+show the row if ANY permission cell matches the criterion (since a single
+module can have mixed permissions). Simpler approach: apply filter at the
+permission level (hide individual cells). Most intuitive: hide the row if
+the specific permission for that column is not met. For simplicity, use
+row-level filter with "Reveal Allowed" and "Export Allowed" checking the
+specific permission column on each row.
+
+5. TEST PLAN (RbacPhase2C6Test.php)
+=====================================
+Tests required:
+
+1. test_super_admin_can_view_permission_inspector
+   - Login as super-admin, visit users.show for another user.
+   - Assert page loads (200), assert see "Effective Module Permissions".
+
+2. test_non_super_admin_cannot_inspect_other_users
+   - Login as admin/normal user, visit users.show for another user.
+   - Assert 403.
+
+3. test_summary_cards_displayed
+   - Login as super-admin, visit users.show for a role-assigned user.
+   - Assert summary card labels are visible (e.g., "Roles", "Accessible",
+     "Denied", "Overrides", "Allowed", "Denied").
+
+4. test_summary_counts_are_correct
+   - Create a user with specific roles and overrides.
+   - Assert summary counts match expected values.
+
+5. test_role_source_badge_appears
+   - For a user with only role-based permissions, assert "Role" badge
+     appears (check for the blue badge text).
+
+6. test_override_source_badge_appears
+   - Set a user override (can_create=true) on a module, assert the
+     "Override Allow" source badge appears.
+
+7. test_denied_permissions_displayed
+   - Verify modules with effective=false show red X (not green checkmark).
+
+8. test_all_modules_listed_even_without_role_permissions
+   - Create a module without any role permission for the user.
+   - Assert the module appears in the table with "None" source badges.
+
+9. test_search_filters_by_module_name
+   - Use JS-triggering approach or server-rendered hidden data to verify
+     that the search input exists and has the correct placeholder.
+
+10. test_filter_buttons_exist
+    - Assert that filter buttons "All", "Overrides Only", "Allowed Only",
+      "Denied Only", "Reveal Allowed", "Export Allowed" are rendered.
+
+6. FILES TOUCHED
+================
+- app/Http/Controllers/Web/UserController.php  (modified — show method)
+- resources/views/users/show.blade.php           (modified — full restructure)
+- tests/Feature/RbacPhase2C6Test.php             (new)
+
+7. FILES NOT TOUCHED
+=====================
+- app/Http/Controllers/Web/AuthController.php
+- app/Traits/HasModulePermissions.php
+- resources/views/auth/my-permissions.blade.php
+- resources/views/layouts/admin.blade.php
+- Any migration, route, API controller, or model file
+- Any server-side RBAC guard logic
+
+8. IMPLEMENTATION ORDER
+=======================
+1. Update UserController@show to query all modules and compute summary.
+2. Update users/show.blade.php with summary cards, filters, search, badges.
+3. Create RbacPhase2C6Test.php with the 10 tests above.
+4. Run all RBACPhase* tests to confirm nothing is broken.
+5. Create RBAC_PHASE_2C_6_IMPLEMENTATION_REPORT.txt.

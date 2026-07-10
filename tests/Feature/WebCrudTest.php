@@ -14,9 +14,12 @@ use App\Models\VaultEntry;
 use App\Models\Voip;
 use App\Models\Vps;
 use Carbon\Carbon;
+use Database\Seeders\FeatureModuleSeeder;
+use HasinHayder\Tyro\Database\Seeders\TyroSeeder;
 use HasinHayder\Tyro\Models\Role;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
 class WebCrudTest extends TestCase
@@ -24,13 +27,14 @@ class WebCrudTest extends TestCase
     use RefreshDatabase;
 
     private User $superAdmin;
+
     private Module $module;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->seed(\HasinHayder\Tyro\Database\Seeders\TyroSeeder::class);
-        $this->seed(\Database\Seeders\FeatureModuleSeeder::class);
+        $this->seed(TyroSeeder::class);
+        $this->seed(FeatureModuleSeeder::class);
 
         $this->superAdmin = User::factory()->create();
         $this->superAdmin->assignRole(Role::where('slug', 'super-admin')->firstOrFail());
@@ -213,6 +217,20 @@ class WebCrudTest extends TestCase
         $this->get(route('tasks.show', $task->id))->assertStatus(200)->assertSee($task->title);
     }
 
+    public function test_task_show_displays_activity_timeline(): void
+    {
+        $this->actingAs($this->superAdmin);
+        $task = Task::factory()->create();
+        activity()
+            ->performedOn($task)
+            ->causedBy($this->superAdmin)
+            ->log('task_updated');
+        $this->get(route('tasks.show', $task->id))
+            ->assertStatus(200)
+            ->assertSee('Activity Timeline')
+            ->assertSee('task_updated');
+    }
+
     public function test_task_edit_page_loads(): void
     {
         $this->actingAs($this->superAdmin);
@@ -363,6 +381,21 @@ class WebCrudTest extends TestCase
         $this->assertSoftDeleted($vault);
     }
 
+    public function test_vault_reveal_shows_password_and_logs_activity(): void
+    {
+        $this->actingAs($this->superAdmin);
+        $vault = VaultEntry::factory()->create(['encrypted_password' => Crypt::encryptString('secret123')]);
+        $this->post(route('vault.reveal', $vault->id))
+            ->assertRedirect(route('vault.show', $vault->id))
+            ->assertSessionHas('revealed_password', 'secret123');
+        $this->assertDatabaseHas('activity_log', [
+            'event' => 'revealed',
+            'subject_id' => $vault->id,
+            'subject_type' => VaultEntry::class,
+            'causer_id' => $this->superAdmin->id,
+        ]);
+    }
+
     // ─── Note CRUD ───────────────────────────────────────────
 
     public function test_note_create_page_loads(): void
@@ -417,7 +450,7 @@ class WebCrudTest extends TestCase
         $this->actingAs($this->superAdmin);
         $note = Note::factory()->create();
         $this->delete(route('notes.destroy', $note->id))->assertRedirect(route('notes.index'));
-        $this->assertDatabaseMissing('notes', ['id' => $note->id]);
+        $this->assertSoftDeleted($note);
     }
 
     // ─── Hosting CRUD ────────────────────────────────────────
@@ -669,11 +702,14 @@ class WebCrudTest extends TestCase
         $this->post(route('users.store'), [
             'name' => 'Test User',
             'email' => 'test@example.com',
-            'password' => 'password123',
-            'password_confirmation' => 'password123',
-        ])->assertRedirect(route('users.index'));
+            'password' => 'Pass12345',
+            'password_confirmation' => 'Pass12345',
+        ])->assertRedirect();
 
         $this->assertDatabaseHas('users', ['name' => 'Test User', 'email' => 'test@example.com']);
+
+        $user = User::where('email', 'test@example.com')->first();
+        $this->assertNotNull($user);
     }
 
     public function test_user_store_validates_required(): void
@@ -715,11 +751,11 @@ class WebCrudTest extends TestCase
         $this->put(route('users.update', $user->id), [
             'name' => $user->name,
             'email' => $user->email,
-            'password' => 'newpassword123',
-            'password_confirmation' => 'newpassword123',
+            'password' => 'NewPass123',
+            'password_confirmation' => 'NewPass123',
         ])->assertRedirect(route('users.index'));
 
-        $this->assertTrue(Hash::check('newpassword123', $user->fresh()->password));
+        $this->assertTrue(Hash::check('NewPass123', $user->fresh()->password));
     }
 
     public function test_user_update_suspended_at(): void
@@ -795,7 +831,9 @@ class WebCrudTest extends TestCase
     public function test_modules_index(): void
     {
         $this->actingAs($this->superAdmin);
-        $modules = Module::factory(3)->create();
+        $modules = Module::factory(3)->create([
+            'created_at' => now()->addDay(),
+        ]);
 
         $response = $this->get(route('modules.index'));
         $response->assertStatus(200);

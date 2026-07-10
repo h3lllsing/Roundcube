@@ -3,7 +3,10 @@
 namespace Tests\Feature;
 
 use App\Models\Domain;
+use App\Models\Module;
+use App\Models\ModuleRolePermission;
 use App\Models\User;
+use HasinHayder\Tyro\Database\Seeders\TyroSeeder;
 use HasinHayder\Tyro\Models\Role;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -15,20 +18,22 @@ class DomainTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->seed(\HasinHayder\Tyro\Database\Seeders\TyroSeeder::class);
+        $this->seed(TyroSeeder::class);
     }
 
     private function superAdmin(): User
     {
         $user = User::factory()->create();
         $user->assignRole(Role::where('slug', 'super-admin')->firstOrFail());
+
         return $user;
     }
 
     public function test_create_domain(): void
     {
+        $provider = \App\Models\ServiceProvider::factory()->create();
         $this->actingAs($this->superAdmin())
-            ->postJson('/api/domains', ['name' => 'example.com', 'registrar' => 'GoDaddy', 'expiry_date' => '2027-06-01', 'cost' => 12.99])
+            ->postJson('/api/domains', ['name' => 'example.com', 'service_provider_id' => $provider->id, 'expiry_date' => '2027-06-01', 'cost' => 12.99])
             ->assertStatus(201)
             ->assertJsonPath('data.name', 'example.com');
     }
@@ -78,9 +83,42 @@ class DomainTest extends TestCase
     public function test_search(): void
     {
         $user = $this->superAdmin();
-        Domain::factory()->create(['user_id' => $user->id, 'name' => 'google.com', 'registrar' => 'Namecheap']);
-        Domain::factory()->create(['user_id' => $user->id, 'name' => 'aws.com', 'registrar' => 'Route53']);
+        Domain::factory()->create(['user_id' => $user->id, 'name' => 'google.com', 'service_provider_id' => \App\Models\ServiceProvider::factory()]);
+        Domain::factory()->create(['user_id' => $user->id, 'name' => 'aws.com', 'service_provider_id' => \App\Models\ServiceProvider::factory()]);
         $this->actingAs($user)->getJson('/api/domains?search=google')->assertOk()->assertJsonCount(1, 'data');
+    }
+
+    public function test_list_shows_own_domains_for_regular_user(): void
+    {
+        $owner = User::factory()->create();
+        $module = Module::factory()->create();
+        $otherModule = Module::factory()->create();
+        $userRole = Role::where('slug', 'user')->firstOrFail();
+        ModuleRolePermission::create(['module_id' => $module->id, 'role_id' => $userRole->id, 'can_read' => true]);
+        $owner->assignRole($userRole);
+        Domain::factory()->create(['user_id' => $owner->id, 'name' => 'mine.com', 'module_id' => $module->id]);
+        $admin = $this->superAdmin();
+        Domain::factory()->create(['user_id' => $admin->id, 'name' => 'theirs.com', 'module_id' => $otherModule->id]);
+
+        $token = $owner->createToken('test')->plainTextToken;
+        $response = $this->withHeader('Authorization', "Bearer $token")
+            ->getJson('/api/domains');
+
+        $response->assertOk();
+        $response->assertJsonCount(1, 'data');
+        $this->assertEquals('mine.com', $response->json('data.0.name'));
+    }
+
+    public function test_list_with_trashed(): void
+    {
+        $user = $this->superAdmin();
+        $domain = Domain::factory()->create(['user_id' => $user->id]);
+        $domain->delete();
+
+        $this->actingAs($user)
+            ->getJson('/api/domains?with_trashed=true')
+            ->assertOk()
+            ->assertJsonCount(1, 'data');
     }
 
     public function test_requires_authentication(): void
@@ -107,5 +145,35 @@ class DomainTest extends TestCase
         $this->withHeader('Authorization', "Bearer $token")
             ->deleteJson("/api/domains/{$domain->id}")
             ->assertStatus(403);
+    }
+
+    public function test_create_with_cloudflare_status(): void
+    {
+        $provider = \App\Models\ServiceProvider::factory()->create();
+        $this->actingAs($this->superAdmin())
+            ->postJson('/api/domains', [
+                'name' => 'example.com', 'service_provider_id' => $provider->id,
+                'expiry_date' => '2027-06-01', 'cost' => 12.99,
+                'cloudflare_status' => 'enabled',
+            ])->assertStatus(201)->assertJsonPath('data.cloudflare_status', 'enabled');
+    }
+
+    public function test_invalid_cloudflare_status_fails(): void
+    {
+        $provider = \App\Models\ServiceProvider::factory()->create();
+        $this->actingAs($this->superAdmin())
+            ->postJson('/api/domains', [
+                'name' => 'example.com', 'service_provider_id' => $provider->id,
+                'expiry_date' => '2027-06-01', 'cost' => 12.99,
+                'cloudflare_status' => 'invalid_status',
+            ])->assertStatus(422)->assertJsonValidationErrors('cloudflare_status');
+    }
+
+    public function test_search_by_cloudflare_status(): void
+    {
+        $user = $this->superAdmin();
+        Domain::factory()->create(['user_id' => $user->id, 'name' => 'site1.com', 'cloudflare_status' => 'enabled']);
+        Domain::factory()->create(['user_id' => $user->id, 'name' => 'site2.com', 'cloudflare_status' => 'disabled']);
+        $this->actingAs($user)->getJson('/api/domains?search=enabled')->assertOk()->assertJsonCount(1, 'data');
     }
 }

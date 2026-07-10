@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Database\Factories\AttachmentFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -12,8 +13,8 @@ use Spatie\Activitylog\Traits\LogsActivity;
 
 class Attachment extends Model
 {
-    /** @use HasFactory<\Database\Factories\AttachmentFactory> */
-    use HasFactory, SoftDeletes, LogsActivity;
+    /** @use HasFactory<AttachmentFactory> */
+    use HasFactory, LogsActivity, SoftDeletes;
 
     protected $fillable = [
         'user_id',
@@ -25,13 +26,20 @@ class Attachment extends Model
         'size',
     ];
 
+    protected function casts(): array
+    {
+        return [
+            'size' => 'integer',
+        ];
+    }
+
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
             ->logFillable()
             ->logOnlyDirty()
             ->dontSubmitEmptyLogs()
-            ->setDescriptionForEvent(fn(string $eventName) => "Attachment #{$this->id} {$eventName}");
+            ->setDescriptionForEvent(fn (string $eventName) => "Attachment #{$this->id} {$eventName}");
     }
 
     /** @return BelongsTo<User, $this> */
@@ -40,7 +48,7 @@ class Attachment extends Model
         return $this->belongsTo(User::class);
     }
 
-    /** @return MorphTo<\Illuminate\Database\Eloquent\Model, $this> */
+    /** @return MorphTo<Model, $this> */
     public function notable(): MorphTo
     {
         return $this->morphTo();

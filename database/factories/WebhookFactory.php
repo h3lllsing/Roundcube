@@ -2,8 +2,8 @@
 
 namespace Database\Factories;
 
-use App\Models\Webhook;
 use App\Models\User;
+use App\Models\Webhook;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 class WebhookFactory extends Factory

@@ -3,30 +3,43 @@
 namespace App\Services;
 
 use App\Models\DomainEmail;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 class DomainEmailService
 {
     /**
-     * @param array<string, mixed> $filters
-     * @return \Illuminate\Pagination\LengthAwarePaginator<int, DomainEmail>
+     * @param  array<string, mixed>  $filters
+     * @return LengthAwarePaginator<int, DomainEmail>
      */
-    public function list(array $filters = []): \Illuminate\Pagination\LengthAwarePaginator
+    public function list(array $filters = []): LengthAwarePaginator
     {
         $query = DomainEmail::with('domain', 'module.feature', 'user');
-        if (!empty($filters['with_trashed'])) $query->withTrashed();
-        if (isset($filters['module_id'])) $query->where('module_id', $filters['module_id']);
-        if (isset($filters['domain_id'])) $query->where('domain_id', $filters['domain_id']);
-        if (isset($filters['status'])) $query->where('status', $filters['status']);
-        if (isset($filters['user_id'])) $query->where('user_id', $filters['user_id']);
+        if (! empty($filters['with_trashed'])) {
+            $query->withTrashed();
+        }
+        if (isset($filters['module_id'])) {
+            $query->where('module_id', $filters['module_id']);
+        }
+        if (isset($filters['domain_id'])) {
+            $query->where('domain_id', $filters['domain_id']);
+        }
+        if (isset($filters['status'])) {
+            $query->where('status', $filters['status']);
+        }
+        if (isset($filters['user_id'])) {
+            $query->where('user_id', $filters['user_id']);
+        }
         if (isset($filters['search'])) {
             $query->where(function ($q) use ($filters) {
-                $q->where('email', 'like', '%' . $filters['search'] . '%')
-                  ->orWhere('provider', 'like', '%' . $filters['search'] . '%');
+                $q->where('email', 'like', '%'.$filters['search'].'%');
             });
         }
-        if (!empty($filters['accessible_module_ids'])) $query->whereIn('module_id', $filters['accessible_module_ids']);
-        $sortBy = in_array($filters['sort_by'] ?? 'expiry_date', ['email','provider','cost','status','created_at','expiry_date']) ? ($filters['sort_by'] ?? 'expiry_date') : 'expiry_date';
-        $sortOrder = in_array($filters['sort_order'] ?? 'asc', ['asc','desc']) ? ($filters['sort_order'] ?? 'asc') : 'asc';
+        if (! empty($filters['accessible_module_ids'])) {
+            $query->whereIn('module_id', $filters['accessible_module_ids']);
+        }
+        $sortBy = in_array($filters['sort_by'] ?? 'expiry_date', ['email', 'cost', 'status', 'created_at', 'expiry_date']) ? ($filters['sort_by'] ?? 'expiry_date') : 'expiry_date';
+        $sortOrder = in_array($filters['sort_order'] ?? 'asc', ['asc', 'desc']) ? ($filters['sort_order'] ?? 'asc') : 'asc';
+
         return $query->orderBy($sortBy, $sortOrder)->paginate(min($filters['per_page'] ?? 20, 100));
     }
 
@@ -41,8 +54,12 @@ class DomainEmailService
     {
         $entry->update($data);
         $entry->refresh()->load('domain', 'module.feature', 'user');
+
         return $entry;
     }
 
-    public function delete(DomainEmail $entry): void { $entry->delete(); }
+    public function delete(DomainEmail $entry): void
+    {
+        $entry->delete();
+    }
 }

@@ -18,11 +18,12 @@ class ServiceProviderFactory extends Factory
             'type' => fake()->randomElement(['internet', 'hosting', 'email', 'telecom', 'other']),
             'provider' => fake()->company(),
             'website' => fake()->url(),
+            'password' => fake()->password(),
             'cost' => fake()->randomFloat(2, 10, 500),
             'start_date' => fake()->dateTimeBetween('-2 years', 'now')->format('Y-m-d'),
             'expiry_date' => fake()->dateTimeBetween('-1 month', '+1 year')->format('Y-m-d'),
             'status' => fake()->randomElement(['active', 'expired', 'cancelled']),
-            'notes' => fake()->optional()->sentence(),
+            'description' => fake()->optional()->sentence(),
         ];
     }
 }

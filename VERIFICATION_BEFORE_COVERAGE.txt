@@ -1,0 +1,376 @@
+================================================================================
+ VERIFICATION REPORT — BEFORE COVERAGE IMPROVEMENT
+ Project: Unknown Laravel Portal
+ Date: 2026-06-24
+================================================================================
+
+1. SCOPE FREEZE VERIFICATION
+================================================================================
+
+Current scope boundary:
+- Infrastructure management portal: Domains, Hosting, VPS, VoIP, ServiceProviders,
+  DomainEmails, OtherServices, ExpiryTrackers
+- Productivity: Tasks, Notes, Vault (password manager)
+- Admin: Users, Roles, Privileges, Features, Modules, ModulePermissions
+- Security: Webhooks, LoginAudits, ActivityLogs, Attachments, API Tokens
+- Operations: Dashboard, Search, Calendar, Reports, Import, Export, Monitor
+- Auth: Login, Register, PasswordReset, Profile
+- Cron: expiry:check, monitor:check, tasks:check-overdue, sanctum:prune-expired
+
+DO NOT ADD — outside scope:
+- Do NOT add any new model, table, or database migration
+- Do NOT add any new controller (Web or API)
+- Do NOT add any new service class
+- Do NOT add any new console command
+- Do NOT add any new Filament/Admin panel resource
+- Do NOT add any new UI section or view
+- Do NOT add any new event, listener, notification
+- Do NOT add any new middleware or policy class
+- Do NOT add any new route
+- Do NOT add any new API endpoint
+- Do NOT add any new third-party package
+- Do NOT add any new business feature or workflow
+- Do NOT add any new notification channel (no Pusher, no SMS, no Slack)
+- Do NOT add any new authentication provider (no social login, no OAuth)
+- Do NOT add any new export format beyond CSV
+- Do NOT add any new import format beyond CSV
+
+What IS in scope:
+- Improve existing tests (unit + feature)
+- Fix security issues found in verification
+- Remove bugs/regressions in existing code
+- Polish existing code quality and maintainability
+- Improve reliability of existing functionality
+
+================================================================================
+2. CURRENT FEATURE INVENTORY
+================================================================================
+
+Models:        18  (Attachment, Domain, DomainEmail, ExpiryTracker, Feature,
+                    Hosting, LoginAudit, Module, ModuleRolePermission, Note,
+                    OtherService, ServiceProvider, Task, User, VaultEntry,
+                    Voip, Vps, Webhook)
+Services:      20  (100% have unit tests)
+Web Ctrl:      32  (100% have feature tests)
+API Ctrl:      32  (100% have feature tests)
+Requests:      34
+Events:         5
+Listeners:      4
+Notifications:  5
+Traits:         3
+Middleware:     1
+Policies:       0  (none exist — auth uses role middleware + inline checks)
+Console:        3  (CheckExpiries, CheckOverdueTasks, MonitorCheck)
+DTO/Data:      26  (OpenApiSchemas/* — thin schemas, no business logic)
+Resources:      3  (ActivityLogResource, FeatureResource, ModuleResource)
+Routes:        ~140 web + ~100 API
+Tests:         87  (37 Unit + 48 Feature + 1 TestCase + 1 Example)
+Views:        108  (blade files)
+Total tests: 1309  (2898 assertions)
+
+================================================================================
+3. COVERAGE REALITY CHECK
+================================================================================
+
+Current: Classes 84.05% (137/163), Methods 89.50% (622/695), Lines 95.60%
+
+HIGH-VALUE FILES WITH LOW COVERAGE (need more tests):
+
+  File                      | Methods | Lines | Business Logic Value
+  --------------------------|--------|-------|---------------------
+  User model                |   6%   |  42%  | CRITICAL — auth, roles, suspension
+  ServiceProvider model     |  36%   |  59%  | HIGH — inverse relationships
+  CheckOverdueTasks command |   0%   |   0%  | HIGH — cron task overdue detection
+  CheckExpiries command     |   0%   |   0%  | MEDIUM — expiry notification trigger
+  BulkActionService         |  50%   |  97%  | MEDIUM — bulk operations on data
+
+MEDIUM-VALUE FILES (lines well-covered by feature tests, no dedicated unit tests):
+
+  File                      | Methods | Lines | Notes
+  --------------------------|--------|-------|-------------------------------
+  Web ExportController      |   0%   |  94%  | Called by feature tests
+  API ExportController      |   0%   |  92%  | Called by feature tests
+  Web MonitorController     |   0%   |  95%  | Called by feature tests
+  API MonitorController     |   0%   |  95%  | Called by feature tests
+  Web DashboardController   |  50%   |  98%  | line-covered
+  API DashboardController   |  50%   |  97%  | line-covered
+  Web SearchController      |  50%   |  95%  | line-covered
+  API ImportController      |  50%   |  98%  | line-covered
+  API ActivityLogController |  50%   |  97%  | line-covered
+
+LOW-VALUE FILES (skip — thin/no business logic):
+
+  File                      | Methods | Lines | Reason to Skip
+  --------------------------|--------|-------|-------------------------------
+  All 26 OpenApiSchemas/*   |   0%   |   0%  | Pure DTOs, no logic, no branching
+  OpenApi.php               |   0%   |   0%  | L5-Swagger config facade
+  ActivityLogData.php       |   0%   |   0%  | Simple schema with type hints
+  ErrorResponse.php         |   0%   |   0%  | Static error structure
+  LoginResponse.php         |   0%   |   0%  | Static response structure
+  MessageResponse.php       |   0%   |   0%  | 3-line message class
+  TaskCounts.php            |   0%   |   0%  | Read-only count object
+  ValidationErrorResponse   |   0%   |   0%  | Static error structure
+  (all other *Data.php)     |   0%   |   0%  | No methods beyond constructor
+
+================================================================================
+4. SECURITY VERIFICATION
+================================================================================
+
+RISKS FOUND (ordered by severity):
+
+=== HIGH (fix needed) ===
+
+H1. API ImportController — NO super-admin authorization
+    File:   app/Http/Controllers/Api/ImportController.php
+    Risk:   Any authenticated user can POST /api/import/{type} to bulk-import
+            CSV data into any of 17 model types including users, features,
+            modules, webhooks, roles, and privileges. Route is only under
+            auth:sanctum, NOT role:super-admin.
+    Fix:    Add abort_unless(hasRole('super-admin'), 403) at the top of
+            the store() method.
+
+H2. VPS/Hosting/VoIP/ServiceProvider/DomainEmail/OtherService index queries
+    select 'password' column
+    Files:  Multiple Web controllers (VpsController, HostingController,
+            ServiceProviderController, DomainEmailController,
+            OtherServiceController, VoipController)
+    Risk:   Plain-text passwords loaded into memory and potentially exposed
+            in Blade views, browser cache, or server logs on index pages.
+            These are NOT encrypted (unlike vault entries which use encrypted
+            cast).
+    Note:   This was introduced by the recent L13 select-columns optimization.
+            The 'password' column was included in the select list for index
+            views that display a "copy password" button. Consider whether
+            the password is actually needed for the index page rendering or
+            if it can be fetched via an async endpoint.
+    Fix:    Remove 'password' from ->select() in index queries where the
+            view uses a separate async fetch for password display.
+
+=== MEDIUM (should fix) ===
+
+M1. API ExportController — missing module-level permission check
+    File:   app/Http/Controllers/Api/ExportController.php
+    Risk:   Web ExportController checks canOnModule($module, 'export')
+            for non-super-admin; API version does not.
+    Fix:    Add the same canOnModule() check to the API export method.
+
+M2. Non-Vault password reveals — no audit trail
+    Files:  VpsController::getPassword, HostingController::getPassword,
+            VoipController::getPassword/extensionPassword,
+            ServiceProviderController::getPassword,
+            DomainEmailController::getPassword,
+            OtherServiceController::getPassword
+    Risk:   These endpoints return plain-text passwords but produce NO
+            activity log entry. Vault reveals are properly audited.
+    Fix:    Add ->activity()->log() call to each password reveal method.
+
+M3. Suspend/unsuspend — not audit-logged
+    Files:  Web UserController::suspend/unsuspend (lines 173-191)
+            API UsersController::suspend/unsuspend (lines 217-233)
+    Risk:   Suspending/unsuspending a user is a high-impact operation
+            with no audit trail.
+    Fix:    Add activity log entry after suspend/unsuspend.
+
+=== LOW (nice to fix) ===
+
+L1. Web DashboardController — totalNotes leaks system-wide count
+    File:   app/Http/Controllers/Web/DashboardController.php (line 84)
+    Risk:   Any authenticated user sees total note count for all users.
+    Fix:    Remove or filter by user_id.
+
+L2. API DashboardController — total_notes leaks system-wide count
+    File:   app/Http/Controllers/Api/DashboardController.php (line 96)
+    Risk:   Same as L1.
+    Fix:    Remove or filter by user_id.
+
+L3. Web MonitorController — no rate limiting
+    File:   app/Http/Controllers/Web/MonitorController.php
+    Risk:   No throttle on monitor check endpoint.
+    Fix:    Add ->middleware('throttle:10,1') to monitor web route.
+
+L4. Web Feature/Module index — no permission filtering
+    Files:  Web FeatureController::index, ModuleController::index
+    Risk:   Any user can list all features/modules.
+    Note:   API versions do filter by permissions. Low severity since
+            features/modules are not sensitive.
+
+L5. Web Role/Privilege controllers — no inline auth (defense-in-depth)
+    Files:  Web RoleController, PrivilegeController
+    Fix:    Consider adding abort_unless(hasRole('super-admin'), 403) as
+            defense-in-depth. Currently only route-protected.
+
+ALREADY SECURE (confirmed — no changes needed):
+  - Web ExportController: proper auth, permissions, ownership filtering
+  - Web ImportController: route-protected by role:super-admin
+  - Web + API SearchController: proper user_id filtering
+  - Web + API DashboardController (services/activity/vault queries): ownership-filtered
+  - All FormRequests: use strict rules() + validated(), never $request->all()
+  - File downloads: Storage::download with safe path construction
+  - Vault password reveal: audit-logged, event-dispatched, throttled
+  - Console commands: no user-supplied arguments, hardcoded signatures
+  - Soft-delete exposure: with_trashed only for super-admin in API; scoped in Web
+  - Rate limiting: search (20/min), export (5/min), bulk (10/min), import (5/min)
+  - Login: throttled (5/min), audited
+  - CORS: hardened (explicit methods/headers, not wildcards)
+
+================================================================================
+5. TEST GAP VERIFICATION — PRIORITIZED
+================================================================================
+
+PRIORITY 1 — HIGH VALUE (write these first):
+
+  1a. User model unit tests
+      File to test: app/Models/User.php
+      What to test:
+        - hasRole() / hasPrivilege() methods
+        - canOnModule() permission check
+        - suspend() / unsuspend() logic
+        - isSuspended() scope
+        - role relationships (roles, privileges)
+        - forceFill behavior for suspended_at
+        - casts (suspended_at as datetime, password as hashed)
+        - hidden attributes (password)
+      Current coverage: 6% methods, 42% lines
+      Risk if untested: HIGH — User is the security boundary
+
+  1b. ServiceProvider model unit tests
+      File to test: app/Models/ServiceProvider.php
+      What to test:
+        - inverse relationships (expiryTrackers, otherServices, voip, domainEmails)
+        - casts (password as encrypted)
+        - fillable attributes
+        - hidden attributes
+      Current coverage: 36% methods, 59% lines
+      Risk if untested: MEDIUM — model relationships used in CRUD
+
+  1c. Console command tests — CheckOverdueTasks
+      File to test: app/Console/Commands/CheckOverdueTasks.php
+      What to test:
+        - Command signature
+        - Queries overdue tasks correctly
+        - Fires notifications for overdue tasks
+        - No side effects for non-overdue tasks
+      Current coverage: 0%
+      Note: MonitorCheck has a test; CheckOverdueTasks does not
+
+  1d. BulkActionService missing method tests
+      File to test: app/Services/BulkActionService.php
+      What to test:
+        - restore/forceDelete paths (currently at 50% methods)
+        - Edge cases: empty selection, invalid action, mixed ownership
+      Current coverage: 50% methods
+      Note: Test file exists (BulkActionServiceTest.php) but only covers
+            update and delete, not restore/forceDelete
+
+PRIORITY 2 — MEDIUM VALUE (write after P1):
+
+  2a. Security fix tests — API ImportController authorization
+      After adding super-admin check to ImportController::store(),
+      write test verifying:
+        - Non-admin gets 403
+        - Admin can import
+      Risk if untested: HIGH — but fix is trivial
+
+  2b. Password reveal audit trail tests
+      After adding activity logging to non-Vault password reveals,
+      test that each reveal creates an activity log entry.
+
+  2c. Suspend/unsuspend activity logging tests
+      After adding audit logging, test that suspend/unsuspend
+      creates activity log entries.
+
+  2d. Web + API DashboardController totalNotes fix tests
+      After fixing totalNotes to not leak system-wide counts,
+      test that non-admin sees only their own note count.
+
+  2e. ExportController API permission check test
+      After adding canOnModule() check to API ExportController,
+      test that user without export permission gets denied.
+
+PRIORITY 3 — LOW VALUE / OPTIONAL (write if time permits):
+
+  3a. Web NewResourcesTest.php — this file is 2261 lines. Consider
+      splitting into per-controller test files for maintainability.
+      Do NOT write new tests — just reorganize existing ones.
+
+  3b. WebCrudTest.php — 960 lines. Same reorganization opportunity.
+
+  3c. ExampleTest.php — rename to SmokeTest.php. It contains 6
+      meaningful smoke tests, not boilerplate examples.
+
+  3d. CheckExpiries command — Add a test similar to MonitorCheckCommandTest.
+
+PRIORITY 4 — SKIP (no value):
+
+  4a. All 26 OpenApiSchemas/*.php — skip entirely.
+      These are thin DTOs with no methods, no branching, no business logic.
+      Testing them would only add coverage noise without catching bugs.
+
+  4b. OpenApi.php — skip. L5-Swagger configuration facade.
+
+  4c. ExportController "0% methods" — skip dedicated unit tests.
+      Lines are 92-94% covered by feature tests (ExportTest, WebNewResourcesTest).
+      The methods are called indirectly — just not by a dedicated test method.
+      Adding dedicated unit tests would produce fake coverage with no real value.
+
+  4d. MonitorController "0% methods" — skip dedicated unit tests.
+      Lines are 95% covered by feature tests (MonitorTest, ApiNewResourcesTest).
+      Same reason as 4c.
+
+================================================================================
+6. REGRESSION SAFETY
+================================================================================
+
+All 1309 existing tests verified:
+  - Every route name referenced resolves in web.php or api.php
+  - Every class/model referenced resolves in the codebase
+  - No tests reference removed or renamed features
+  - No tests depend on fake/new functionality
+  - No tests would force new feature creation
+  - phpunit.xml includes all test files (no exclusions)
+  - 3 oversized test files (WebNewResourcesTest 2261 lines, WebCrudTest 960,
+    ApiNewResourcesTest 658) are active but could be split for maintenance
+  - ExampleTest.php is misnamed (it's a smoke test, not boilerplate)
+  - channels.php does not exist and is not needed (no broadcasting)
+
+Verdict: NO REGRESSION RISK. Current tests are safe to run alongside
+any new tests. No existing tests need modification.
+
+================================================================================
+7. RECOMMENDED EXECUTION ORDER
+================================================================================
+
+PHASE 1 — Fix security issues (do first, affects test behavior):
+  a. API ImportController — add super-admin check (H1)
+  b. Remove 'password' from VPS/index ->select() lists (H2)
+  c. Add activity logging to password reveal routes (M2)
+  d. Add activity logging to suspend/unsuspend (M3)
+  e. Add canOnModule() to API ExportController (M1)
+  f. Fix totalNotes leakage in Dashboard controllers (L1-L2)
+
+PHASE 2 — Write new tests (after security fixes):
+  a. User model unit tests (P1a)
+  b. ServiceProvider model unit tests (P1b)
+  c. CheckOverdueTasks command test (P1c)
+  d. BulkActionService restore/forceDelete tests (P1d)
+  e. Security fix verification tests (P2a-P2e)
+
+PHASE 3 — Polish:
+  a. Split WebNewResourcesTest.php (optional)
+  b. Rename ExampleTest.php → SmokeTest.php (optional)
+
+================================================================================
+8. EXACT NEXT PROMPT TO USE
+================================================================================
+
+When ready to execute Phase 1a, use this prompt:
+
+"Implement Phase 1a: Fix API ImportController — add abort_unless(hasRole('super-admin'), 403) check to the store() method in app/Http/Controllers/Api/ImportController.php. Do NOT add any new tests yet. Verify the fix compiles and existing tests pass."
+
+For Phase 2a, use:
+
+"Write unit tests for the User model (app/Models/User.php) covering: hasRole(), hasPrivilege(), canOnModule(), suspend()/unsuspend(), isSuspended() scope, forceFill for suspended_at, casts, and hidden attributes. Use existing model factories. Target 100% method coverage. Run after Phase 1 fixes are complete."
+
+================================================================================
+END OF VERIFICATION REPORT
+================================================================================

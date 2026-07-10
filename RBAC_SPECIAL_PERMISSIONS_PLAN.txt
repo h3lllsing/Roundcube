@@ -1,0 +1,424 @@
+================================================================================
+RBAC SPECIAL PERMISSIONS & ROLE ACCESS WORKFLOW — VERIFICATION & PLAN
+================================================================================
+Date: 2026-06-25
+Project: unknwn (Laravel RBAC)
+Scope: Phase 2+ design — verification only, no code changes
+================================================================================
+
+1. CURRENT SYSTEM ARCHITECTURE (Verified)
+   -------------------------------------------------------------------------
+   Two-layer RBAC:
+
+     LAYER 1 — Tyro (vendor/hasinHayder/tyro)
+       Tables: roles, user_roles (pivot), privileges, privilege_role (pivot)
+       Methods: $user->hasRole('super-admin'), $user->assignRole($role),
+                $user->hasPrivilege('users.manage')
+       One user CAN have multiple roles (BelongsToMany).
+       Users are assigned roles; roles have privileges (string-based).
+
+     LAYER 2 — Custom App Module Permissions
+       Table: module_role_permissions
+         Columns: module_id, role_id, can_create, can_read, can_update,
+                  can_delete, can_approve, can_export
+         Unique: (module_id, role_id)
+       Trait: app/Traits/HasModulePermissions.php
+         Methods: getAccessibleModuleIds($action), canOnModule($module, $action),
+                  getModulePermissions($module), getAllModulePermissions(),
+                  canAccessVault($vault), isVaultOwner($vault)
+       This is a role→module permission matrix.  Permissions are MERGED
+       across all roles a user has (OR logic — if ANY role grants it, it's true).
+
+   Scoping (Phase 1 complete):
+     Web controllers use RbacScope::apply() which calls
+     getAccessibleModuleIds('read') for admin users to add a global
+     whereIn('module_id', ...) scope.
+
+   Password protection:
+     VaultService encrypts passwords (Crypt::encryptString).
+     Non-vault passwords stored in plaintext columns.
+     All reveals audit-logged with event 'revealed'.
+     Vault reveals also dispatch notification + fire webhook.
+     Throttled at 10/min.
+
+2. CAN EXISTING ROLE + MODULE_ROLE_PERMISSIONS SUPPORT THE 5 ROLES?
+   -------------------------------------------------------------------------
+   YES — partially.  Here is the mapping:
+
+     (a) Super Admin
+         Already implemented.
+         Route middleware: role:super-admin.
+         Inline: abort_unless(hasRole('super-admin'), 403).
+         No module_role_permissions needed (bypasses all scoping).
+
+     (b) Admin
+         Already supported.
+         Role slug: admin.
+         Module permissions set via module_role_permissions.
+         RbacScope::apply() handles scoping at query level.
+         SECURITY GAP: Admin currently has full CRUD via create/store/update/destroy
+         methods because userOwnedFilter() only scopes read queries.  The
+         can_create/can_update/can_delete flags are NOT enforced at the
+         controller level (no abort_unless checks).
+
+     (c) IT Support (new)
+         Can be assigned the existing "user" role or a new custom role.
+         Module_role_permissions can be set per-module.
+         Default: can_read only, can_update optional per Super Admin.
+         Password reveal: no dedicated permission exists yet.
+         GAP: No user-level override mechanism.
+
+     (d) Read Only (new)
+         Can use existing "user" role or a new "read-only" role.
+         Module_role_permissions: can_read=true, everything else=false.
+         But restriction to specific modules (Software, Hosting, Domains,
+         Domain Emails) would need selective module_role_permissions.
+         GAP: No password_reveal permission column.
+
+     (e) Special Per-User Permissions (new)
+         NOT SUPPORTED by the current schema.
+         module_role_permissions is keyed on (module_id, role_id) only.
+         There is no user_id column.  Two users with the same role get
+         identical permissions.  No override mechanism exists.
+
+3. IS PER-USER SPECIAL PERMISSION POSSIBLE CURRENTLY?
+   -------------------------------------------------------------------------
+   NO.  There is no table, column, or mechanism to store user-specific
+   permission overrides.
+
+   The existing merger logic in HasModulePermissions trait:
+     - canOnModule():     queries module_role_permissions WHERE role_id IN user.roles
+     - getModulePermissions(): same — role-scoped only
+     - getAllModulePermissions(): same — role-scoped only
+
+   A user with two roles (e.g., admin + read-only) gets an OR-merge:
+   if either role grants can_update, the user can update.  This is the
+   only way to achieve differential permissions per user, but it requires
+   creating N roles (one per permission combination), which does not scale.
+
+4. OPTIONS ANALYSIS — SAFEST DESIGN FOR PER-USER PERMISSIONS
+   -------------------------------------------------------------------------
+   Sorted by safety, simplicity, and maintainability:
+
+   ═══════════════════════════════════════════════════════════════════════
+   OPTION A: user_module_permissions table (RECOMMENDED)
+   ═══════════════════════════════════════════════════════════════════════
+
+   New table: user_module_permissions
+     user_id       FK → users (cascade delete)
+     module_id     FK → modules (cascade delete)
+     can_create    bool, default NULL
+     can_read      bool, default NULL
+     can_update    bool, default NULL
+     can_delete    bool, default NULL
+     can_approve   bool, default NULL
+     can_export    bool, default NULL
+     can_reveal    bool, default NULL    ← NEW column for password reveal
+     can_import    bool, default NULL    ← NEW column for import
+     timestamps
+     UNIQUE (user_id, module_id)
+
+   Logic change in HasModulePermissions trait:
+     For each permission check, merge:
+       role_permission (module_role_permissions) OR
+       user_permission (user_module_permissions, if not null)
+     The user-level permission acts as an OVERRIDE:
+       - NULL  → fall through to role permission
+       - true  → grant regardless of role
+       - false → deny regardless of role
+
+   Example pseudo-code for canOnModule():
+     public function canOnModule(Module $module, string $action): bool
+     {
+         $column = 'can_'.$action;
+
+         // check user-level override first
+         $userPerm = UserModulePermission::where('user_id', $this->id)
+             ->where('module_id', $module->id)
+             ->first();
+         if ($userPerm && $userPerm->$column !== null) {
+             return $userPerm->$column;
+         }
+
+         // fall back to role-level
+         return ModuleRolePermission::whereIn('role_id', $this->getRoleIds())
+             ->where('module_id', $module->id)
+             ->where($column, true)
+             ->exists();
+     }
+
+   RISK: LOW — additive change, non-breaking.
+   BENEFIT: Clean, queryable, auditable, easy UI.
+
+   ═══════════════════════════════════════════════════════════════════════
+   OPTION B: JSON permissions column on users table
+   ═══════════════════════════════════════════════════════════════════════
+
+   Add column: users.special_permissions JSON, nullable.
+     e.g. {"module_overrides": {"1": {"can_update": true, "can_reveal": false}}}
+
+   RISK: MEDIUM — JSON querying is messy, harder to audit, no FK constraints.
+   BENEFIT: No new table.
+
+   ═══════════════════════════════════════════════════════════════════════
+   OPTION C: Use existing role system only
+   ═══════════════════════════════════════════════════════════════════════
+
+   Create many fine-grained roles (e.g., "it-support-hosting-edit",
+   "it-support-domain-readonly").  Users get multiple roles.
+
+   RISK: HIGH — role explosion, complex management UI, confusion.
+   No per-user override — only per-role combinations.
+   Not suitable for "one IT Support can edit, another cannot" scenario
+   unless each user gets a unique role.
+
+   ═══════════════════════════════════════════════════════════════════════
+
+   RECOMMENDATION: Option A.  Add user_module_permissions table and merge
+   logic in HasModulePermissions trait.  This is the least risky, most
+   maintainable, and most auditable approach.
+
+5. HOW TO KEEP SUPER ADMIN PROTECTED
+   -------------------------------------------------------------------------
+   Already in place:
+     ✅ Route middleware: role:super-admin on all /users/*, /module-permissions/*,
+        /features/*, /modules/*, /import/*, /activity-logs/*, /reports/*,
+        /login-audits/* routes.
+     ✅ Inline: abort_unless(hasRole('super-admin'), 403) in UserController
+        (every method), ModulePermissionController, FeatureController, etc.
+     ✅ Role dropdown in user create/edit views excludes 'super-admin' and '*'
+        (wildcard) slugs.
+     ✅ RbacScope::apply() bypasses all scoping for super-admin.
+
+   Still needed:
+     ☐ Prevent self-demotion: A super-admin should not be able to remove
+        their own super-admin role in user edit form.
+     ☐ Prevent last-super-admin deletion: At least one super-admin must
+        always exist (enforce in UserController::destroy and update).
+     ☐ Add audit logging for all user role/permission changes (currently
+        no activity log when roles are changed).
+
+6. HOW TO PREVENT ADMIN FROM EDITING SUPER ADMIN
+   -------------------------------------------------------------------------
+   Already done:
+     ✅ User management routes (users.*) are entirely under the
+        role:super-admin middleware group (web.php line 203).
+        An Admin user cannot even reach /users/*.
+     ✅ API UsersController has abort_unless(hasRole('super-admin'), 403).
+     ✅ IMPORTANT: The create/edit views exclude super-admin role from the
+        dropdown, so even a super-admin cannot accidentally assign the
+        super-admin role to someone through the UI.
+
+   No additional protection needed — the route-level guard is sufficient.
+
+   However, for defense-in-depth:
+     ☐ Add a check in UserController::update and store to reject
+        role assignments containing super-admin role:
+        if (in_array($superAdminRoleId, $request->roles ?? [])) abort(403);
+
+7. HOW TO ENFORCE EACH PERMISSION TYPE
+   -------------------------------------------------------------------------
+   Below is the current state and what needs to change for each permission:
+
+   ┌──────────────┬───────────────────────┬───────────────────────────────────┐
+   │ Permission   │ Current enforcement   │ Phase 2+ needed                  │
+   ├──────────────┼───────────────────────┼───────────────────────────────────┤
+   │ can_read     │ RbacScope (global     │ Add to API controllers,           │
+   │              │ scope on index).      │ show/edit/destroy actions,        │
+   │              │ Not blocking create/  │ search, calendar.                 │
+   │              │ show/edit/destroy.    │                                   │
+   ├──────────────┼───────────────────────┼───────────────────────────────────┤
+   │ can_create   │ NOT enforced in       │ Add abort_unless to store/create  │
+   │              │ Web controllers.      │ methods in all 9 controllers.     │
+   │              │ API NoteController    │                                   │
+   │              │ checks can_ on module.│                                   │
+   ├──────────────┼───────────────────────┼───────────────────────────────────┤
+   │ can_update   │ NOT enforced in       │ Add abort_unless to update/edit   │
+   │              │ Web controllers.      │ methods in all 9 controllers.     │
+   │              │ userOwnedFilter()     │                                   │
+   │              │ scopes the query but  │                                   │
+   │              │ doesn't check perm.   │                                   │
+   ├──────────────┼───────────────────────┼───────────────────────────────────┤
+   │ can_delete   │ NOT enforced in       │ Add abort_unless to destroy       │
+   │              │ Web controllers.      │ methods in all 9 controllers.     │
+   │              │ Soft-delete is        │                                   │
+   │              │ scoped by             │                                   │
+   │              │ userOwnedFilter.      │                                   │
+   ├──────────────┼───────────────────────┼───────────────────────────────────┤
+   │ can_export   │ Web ExportController  │ Bug: non-super-admin export       │
+   │              │ checks canOnModule    │ scopes to user_id, not module_ids.│
+   │              │ ('export') then       │ Should be: module-scoped for      │
+   │              │ scopes to user_id.    │ admins, ownership for others.     │
+   ├──────────────┼───────────────────────┼───────────────────────────────────┤
+   │ can_approve  │ Column exists,        │ Currently unused in codebase.     │
+   │              │ never checked.        │ Define what "approve" means or    │
+   │              │                       │ remove column.                    │
+   ├──────────────┼───────────────────────┼───────────────────────────────────┤
+   │ can_reveal   │ Does not exist.       │ Add column to module_role_        │
+   │ (password    │ Password reveal only  │ permissions AND user_module_      │
+   │  reveal)     │ checks ownership or   │ permissions.  Check before        │
+   │              │ can_read (vault).     │ revealing.                        │
+   ├──────────────┼───────────────────────┼───────────────────────────────────┤
+   │ can_import   │ Does not exist.       │ Add column.  Currently import is  │
+   │              │ Currently super-admin │ super-admin-only.  For Phase 2,   │
+   │              │ only.                 │ allow admins with can_import      │
+   │              │                       │ on a module to import into it.    │
+   └──────────────┴───────────────────────┴───────────────────────────────────┘
+
+8. UI CHANGES NEEDED IN USER CREATE/EDIT
+   -------------------------------------------------------------------------
+   Current: User form has role checkboxes only (name, email, password,
+            suspended_at, roles[]).
+
+   Phase 2 additions:
+
+     (a) Per-module permission grid (for users with special permissions)
+         - Show a collapsible "Per-Module Permissions" section
+         - Module | Feature | can_read ☐ | can_create ☐ | can_update ☐
+                    | can_delete ☐ | can_export ☐ | can_reveal ☐ | can_import ☐
+         - Only shown when "Enable per-user permissions" toggle is on
+         - Pre-filled from role defaults, can be overridden
+
+     (b) Role assignment
+         - Role checkboxes remain
+         - Add warning: "Per-user permissions override role defaults"
+
+     (c) user_roles view
+         - New route: users.show or a dedicated permissions tab
+         - Show effective permissions (role OR user-level, merged)
+         - Show source indicator: "✓ (from role: Admin)" or "✓ (user override)"
+
+     (d) Module permissions management view
+         - The current module-permissions index (module_role_permissions)
+           already exists at /module-permissions
+         - Need a similar view for user_module_permissions at
+           /users/{id}/module-permissions
+
+9. TESTS NEEDED
+   -------------------------------------------------------------------------
+   Phase 2 tests:
+
+     (a) UserModulePermission model tests
+         - Can create with valid data
+         - Unique (user_id, module_id) enforced
+         - Nullable permission columns work correctly
+         - Cascade delete when user/module is deleted
+
+     (b) HasModulePermissions trait — merge logic
+         - User with role permission only → inherits role permission
+         - User with user_module_permissions set to true → overrides role
+         - User with user_module_permissions set to false → denies despite role
+         - User with null user_module_permissions → falls through to role
+         - User with no role and no user permission → returns false
+
+     (c) Controller enforcement
+         - Web store/create → abort_unless(hasRole('super-admin') OR can_create)
+         - Web update → abort_unless(can_update on the record's module)
+         - Web destroy → abort_unless(can_delete on the record's module)
+         - Web show → abort_unless(can_read on the record's module)
+         - Password reveal → abort_unless(can_reveal on the record's module)
+
+     (d) Super Admin protection
+         - Cannot self-demote (remove own super-admin role)
+         - Cannot delete last super-admin
+         - Non-super-admin cannot access user management
+
+     (e) Export fix
+         - Admin with can_export sees all module-scoped records, not just own
+         - Normal user with can_export sees only own records
+
+     (f) Import permission
+         - Admin with can_import can import into permitted module
+         - Admin without can_import cannot import
+
+10. PHASED ROLLOUT PLAN
+    -------------------------------------------------------------------------
+    ═══════════════════════════════════════════════════════════════════════
+    PHASE 2 — User Permission Overrides + Write Enforcement (HIGH PRIORITY)
+    ═══════════════════════════════════════════════════════════════════════
+
+    Goal: Enable per-user permission overrides and enforce write permissions.
+
+    Files to create:
+      - app/Models/UserModulePermission.php
+      - database/migrations/xxxx_add_user_module_permissions_table.php
+      - database/factories/UserModulePermissionFactory.php
+
+    Files to modify:
+      - app/Traits/HasModulePermissions.php
+          → Add merge logic in canOnModule(), getModulePermissions(),
+            getAllModulePermissions(), getAccessibleModuleIds()
+          → Add canReveal() method (uses can_reveal permission)
+          → Add canImport() method (uses can_import permission)
+      - app/Http/Controllers/Web/UserController.php
+          → Add per-user permission save in store()/update()
+          → Add self-demotion check
+          → Add last-super-admin check
+      - app/Http/Controllers/Web/*Controller.php (all 9)
+          → Add abort_unless checks for can_create in store()
+          → Add abort_unless checks for can_update in update()
+          → Add abort_unless checks for can_delete in destroy()
+      - app/Http/Controllers/Web/VpsController.php etc. (password reveals)
+          → Add can_reveal check before revealing
+      - app/Http/Controllers/Web/ExportController.php
+          → Fix bug: module-scoped export for admins, not just user_id
+      - app/Helpers/RbacScope.php
+          → Optionally add $user->canOnModule() checks for show/edit
+      - app/Http/Controllers/Web/DashboardController.php
+          → Add can_reveal/can_import to dashboard counting? (optional)
+      - resources/views/users/create.blade.php
+          → Add per-module permission checkboxes
+      - resources/views/users/edit.blade.php
+          → Add per-module permission checkboxes with current values
+      - resources/views/users/show.blade.php
+          → Show effective permissions with source indicator
+
+    Tests to create:
+      - tests/Feature/UserModulePermissionTest.php
+      - tests/Feature/PermissionEnforcementTest.php
+      - tests/Unit/HasModulePermissionsTraitTest.php (extend)
+
+    ═══════════════════════════════════════════════════════════════════════
+    PHASE 3 — Role Definitions, IT Support & Read-Only (MEDIUM PRIORITY)
+    ═══════════════════════════════════════════════════════════════════════
+
+    Goal: Seed standard roles with appropriate defaults, create management UI.
+
+    Tasks:
+      - Create/modify seeder: define 5 standard role templates
+      - Install script: ask which role template to assign
+      - Role management UI: create/edit role permissions (currently exists
+        at /module-permissions but could be enhanced)
+      - Role cloning: "Create role based on existing"
+      - Set default module_role_permissions for new roles based on role slug
+      - Allow Super Admin to create custom roles
+
+    ═══════════════════════════════════════════════════════════════════════
+    PHASE 4 — API Alignment + Full CRUD Enforcement (LOWER PRIORITY)
+    ═══════════════════════════════════════════════════════════════════════
+
+    Goal: Bring API controllers in line with Web controllers.
+
+    Tasks:
+      - Apply RbacScope or equivalent to all API index() methods
+      - Add permission checks (can_create/can_update/can_delete) to all
+        API store/update/destroy methods
+      - Apply can_reveal to API vault controller
+      - Apply can_import to API import controller (currently super-admin only)
+      - Add permission-based filtering to SearchController (both Web + API)
+      - Add permission-based filtering to CalendarController
+      - Add audit logging for role/permission changes on users
+      - Create middleware: can:read, can:create, can:update, can:delete
+        for cleaner controller code
+
+    ═══════════════════════════════════════════════════════════════════════
+
+    TOTAL RISK ASSESSMENT:
+      - Phase 2: LOW risk — additive (new table, merge logic).  Existing
+        behaviour unchanged for users without user_module_permissions rows.
+      - Phase 3: LOW risk — seeder changes only.
+      - Phase 4: MEDIUM risk — many controller changes, careful testing needed.
+
+================================================================================
+END OF PLAN
+================================================================================

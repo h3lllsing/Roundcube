@@ -4,15 +4,16 @@ namespace App\Services;
 
 use App\Models\Attachment;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Storage;
 
 class AttachmentService
 {
     /**
-     * @param array<string, mixed> $filters
-     * @return \Illuminate\Pagination\LengthAwarePaginator<int, Attachment>
+     * @param  array<string, mixed>  $filters
+     * @return LengthAwarePaginator<int, Attachment>
      */
-    public function listFor(mixed $notable = null, array $filters = []): \Illuminate\Pagination\LengthAwarePaginator
+    public function listFor(mixed $notable = null, array $filters = []): LengthAwarePaginator
     {
         if ($notable) {
             $query = $notable->attachments();
@@ -24,14 +25,18 @@ class AttachmentService
         }
 
         if (isset($filters['search'])) {
-            $query->where('original_name', 'like', '%' . $filters['search'] . '%');
+            $query->where('original_name', 'like', '%'.$filters['search'].'%');
         }
 
         $sortBy = $filters['sort_by'] ?? 'created_at';
         $sortOrder = $filters['sort_order'] ?? 'desc';
         $allowedSort = ['created_at', 'updated_at', 'original_name', 'size'];
-        if (!in_array($sortBy, $allowedSort)) $sortBy = 'created_at';
-        if (!in_array($sortOrder, ['asc', 'desc'])) $sortOrder = 'desc';
+        if (! in_array($sortBy, $allowedSort)) {
+            $sortBy = 'created_at';
+        }
+        if (! in_array($sortOrder, ['asc', 'desc'])) {
+            $sortOrder = 'desc';
+        }
 
         return $query->with('user')->orderBy($sortBy, $sortOrder)
             ->paginate(min($filters['per_page'] ?? 50, 100));
@@ -67,7 +72,13 @@ class AttachmentService
 
     public function delete(Attachment $attachment): void
     {
-        Storage::disk('public')->delete('attachments/' . $attachment->filename);
         $attachment->delete();
+    }
+
+    public function forceDelete(Attachment $attachment): void
+    {
+        $filename = $attachment->filename;
+        Storage::disk('public')->delete('attachments/'.$filename);
+        $attachment->forceDelete();
     }
 }

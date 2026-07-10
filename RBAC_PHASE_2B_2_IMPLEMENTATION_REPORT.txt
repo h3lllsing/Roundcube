@@ -1,0 +1,316 @@
+================================================================================
+RBAC PHASE 2B-2 IMPLEMENTATION REPORT
+================================================================================
+Date: 2026-06-25
+Project: unknwn (Laravel RBAC)
+================================================================================
+
+1. SUMMARY
+--------------------------------------------------------------------------------
+
+What was implemented:
+
+  - Server-side CRUD permission guards across all 9 Web resource controllers.
+  - can_create enforced on create() view and store() methods.
+  - can_update enforced on edit() view and update() methods.
+  - can_delete enforced on destroy() method.
+  - restore() and forceDelete() restricted to super-admin only.
+  - User permission overrides (UserModulePermission) are respected for all
+    three actions: override true grants, override false denies.
+  - 44 tests covering all enforcement patterns across all controller
+    categories: super-admin bypass, admin permission gates, user overrides,
+    normal user restrictions, restore/forceDelete guards, and per-category
+    controller coverage.
+
+Overall objective:
+
+  Deliver Phase 2B Stage 2-4: add can_create, can_update, can_delete
+  server-side guards to all 9 web resource controllers, with proper
+  super-admin bypass and user override support, without modifying password
+  reveal methods, import, export, API controllers, routes, migrations, or
+  UI.
+
+================================================================================
+2. CONTROLLERS MODIFIED
+--------------------------------------------------------------------------------
+
+  All 9 web resource controllers received the same guard pattern:
+
+  1. app/Http/Controllers/Web/DomainController.php
+  2. app/Http/Controllers/Web/ExpiryTrackerController.php
+  3. app/Http/Controllers/Web/ServiceProviderController.php
+  4. app/Http/Controllers/Web/OtherServiceController.php
+  5. app/Http/Controllers/Web/DomainEmailController.php
+  6. app/Http/Controllers/Web/HostingController.php
+  7. app/Http/Controllers/Web/VpsController.php
+  8. app/Http/Controllers/Web/VoipController.php
+  9. app/Http/Controllers/Web/VaultController.php
+
+  Total lines of code changed across controllers: ~260 lines added.
+
+================================================================================
+3. GUARD PATTERN
+--------------------------------------------------------------------------------
+
+  Each controller has a private moduleSlug() method returning its module slug:
+
+    private function moduleSlug(): string
+    {
+        return 'domains';  // varies per controller
+    }
+
+  create() — guard at top of method:
+
+    $user = Auth::user();
+    if (! $user->hasRole('super-admin')) {
+        $module = Module::where('slug', $this->moduleSlug())->first();
+        abort_unless($module && $user->canOnModule($module, 'create'), 403);
+    }
+
+  store() — after validation, before model creation:
+
+    $user = Auth::user();
+    if (! $user->hasRole('super-admin')) {
+        $moduleId = $validated['module_id'] ?? null;
+        $module = $moduleId ? Module::find($moduleId)
+            : Module::where('slug', $this->moduleSlug())->first();
+        abort_unless($module && $user->canOnModule($module, 'create'), 403);
+    }
+
+  edit() / update() — after userOwnedFilter + findOrFail:
+
+    $user = Auth::user();
+    abort_unless($user->hasRole('super-admin')
+        || ($record->module && $user->canOnModule($record->module, 'update')), 403);
+
+  destroy() — after userOwnedFilter + findOrFail:
+
+    $user = Auth::user();
+    abort_unless($user->hasRole('super-admin')
+        || ($record->module && $user->canOnModule($record->module, 'delete')), 403);
+
+  restore() / forceDelete() — guard at top:
+
+    abort_unless(Auth::user()->hasRole('super-admin'), 403);
+
+================================================================================
+4. PERMISSION RESOLUTION
+--------------------------------------------------------------------------------
+
+  All guards use the existing canOnModule() method from the
+  HasModulePermissions trait, which resolves the effective permission:
+
+    1. If a UserModulePermission override exists with a non-null value for
+       the action column, return that value.
+    2. Otherwise, return true if any of the user's roles have the column
+       set to true in module_role_permissions.
+
+  Super-admin bypass: all guards check hasRole('super-admin') first, which
+  short-circuits the permission check.
+
+  DomainEmailController: unlike other controllers that load modules for
+  the create() view, DomainEmailController's create() does not load
+  modules. The can_create guard works the same way by looking up the
+  'domain-emails' module via moduleSlug().
+
+================================================================================
+5. NOT MODIFIED
+--------------------------------------------------------------------------------
+
+  The following were explicitly NOT modified:
+
+  - Password reveal methods (getPassword, getExtensionPassword, reveal):
+    untouched across all 8 endpoints.
+  - ImportController: untouched, still super-admin only via route
+    middleware.
+  - ExportController: untouched (Phase 2B-1 already complete).
+  - API controllers: untouched.
+  - Routes: no route changes.
+  - Migrations: no new migrations (can_reveal column from Phase 2B-1,
+    all permission columns already exist).
+  - UI button visibility: not changed (server-side enforcement only).
+  - Views: none modified.
+  - Models/Traits: none modified (reuse existing canOnModule(),
+    hasRole(), getAccessibleModuleIds()).
+
+================================================================================
+6. TESTS
+--------------------------------------------------------------------------------
+
+  Test file:  tests/Feature/RbacPhase2B2Test.php (NEW, ~430 lines)
+
+  Test classes: 1 (RbacPhase2B2Test)
+  Uses: RefreshDatabase, TyroSeeder, FeatureModuleSeeder
+
+  Setup:
+    - Seeds TyroSeeder (roles) and FeatureModuleSeeder (modules with
+      super-admin permissions).
+    - Creates 3 users: superAdmin (super-admin), admin (admin), normalUser
+      (user).
+    - Admin role: can_create, can_update, can_delete, can_read, can_export,
+      can_reveal on 6 modules: domains, hostings, vps, voip, expiry-trackers,
+      vault. Read-only on other-services (can_read=true, other=false).
+    - User role: all permissions on domains module. Read-only on
+      other-services. Nothing on all other modules.
+
+  44 test methods, 51 assertions, grouped as follows:
+
+  Super-admin bypass (4 tests):
+    - store bypasses permission check
+    - update bypasses permission check
+    - destroy bypasses permission check
+    - restore and forceDelete allowed
+
+  Admin can_create (4 tests):
+    - with permission: store succeeds
+    - without permission: store returns 403
+    - with permission: create view loads (200)
+    - without permission: create view returns 403
+
+  Admin can_update (4 tests):
+    - with permission: edit view loads (200)
+    - without permission: edit view returns 403
+    - with permission: update succeeds
+    - without permission: update returns 403
+
+  Admin can_delete (2 tests):
+    - with permission: destroy succeeds (soft delete)
+    - without permission: destroy returns 403
+
+  User overrides (6 tests):
+    - override true grants create when role denies
+    - override false denies create when role grants
+    - override true grants update when role denies
+    - override false denies update when role grants
+    - override true grants delete when role denies
+    - override false denies delete when role grants
+
+  Normal user (6 tests):
+    - with can_create: store own record succeeds
+    - without can_create: store denied
+    - with can_update: update own record succeeds
+    - without can_update: update denied
+    - with can_delete: delete own record succeeds
+    - without can_delete: delete denied
+
+  Restore/forceDelete blocked (2 tests):
+    - non-super-admin restore returns 403
+    - non-super-admin forceDelete returns 403
+
+  ExpiryTracker category (low-risk, 3 tests):
+    - store, update, destroy with can_create/update/delete succeed
+
+  Hosting category (password module, 4 tests):
+    - store with can_create succeeds
+    - store without can_create returns 403
+    - update with can_update succeeds
+    - destroy with can_delete succeeds
+
+  VPS category (password module, 3 tests):
+    - store, update, destroy succeed with permissions
+
+  VoIP category (password module, 3 tests):
+    - store, update, destroy succeed with permissions
+
+  Vault category (3 tests):
+    - store, update, destroy succeed with permissions
+
+  Test result:
+
+    Tests:  44 passed
+    Assertions: 51
+    Duration: ~17s
+
+  Additionally, a pre-existing test failure in UserModulePermissionTest
+  was fixed (the get_effective_module_permissions_shows_source test
+  expected can_reveal source='None' but Phase 2B-1 now defaults it to
+  false, making source='Role').
+
+================================================================================
+7. COMPATIBILITY
+--------------------------------------------------------------------------------
+
+  ✔ Existing RBAC unchanged
+      Phase 1 RbacScope query scoping, Phase 2A UserModulePermission
+      merge logic, Phase 2B-1 can_reveal/export fix all unaffected.
+
+  ✔ Existing role permissions preserved
+      All existing permission columns and seeder values unchanged.
+
+  ✔ Existing user overrides preserved
+      UserModulePermission structure unchanged; all override logic
+      reused through canOnModule().
+
+  ✔ Existing controller behaviour preserved for super-admin
+      All guards check hasRole('super-admin') first — super-admin
+      bypasses every permission gate.
+
+  ✔ Password reveal endpoints untouched
+      No changes to getPassword() or reveal() methods.
+
+  ✔ Import / Export untouched
+      ImportController and ExportController unchanged.
+
+  ✔ API controllers untouched
+      No API controller files modified.
+
+  ✔ Routes unchanged
+      No route definitions modified.
+
+  ✔ Migrations unchanged
+      No new migrations.
+
+  ✔ Views unchanged
+      No Blade files modified.
+
+================================================================================
+8. SECURITY
+--------------------------------------------------------------------------------
+
+  - No privilege escalation introduced
+      Guards only restrict, never grant. Users without can_create/can_update/
+      can_delete are blocked with 403.
+
+  - User overrides are correctly handled
+      Override=true can grant permission even when role denies.
+      Override=false can deny permission even when role grants.
+      Both cases correctly block or allow all 3 CRUD actions.
+
+  - restore/forceDelete now require super-admin
+      Previously, userOwnedFilter() was the only check, which meant any
+      admin with can_read could potentially restore/force-delete records.
+      Now explicitly blocked for non-super-admin.
+
+  - Super-admin always bypasses
+      No permission restriction applies to super-admin users.
+
+  - No route changes
+      All routes and URL structures unchanged.
+
+  - No database changes
+      All required columns already exist from Phase 2A/2B-1 migrations.
+
+  - Backward compatible
+      Normal users with appropriate module permissions continue to
+      create/update/delete their own records as before. The new guards
+      only add restrictions for users who lack the required permission.
+
+================================================================================
+9. REMAINING WORK
+--------------------------------------------------------------------------------
+
+  RBAC Phase 2B-3:
+    Password reveal enforcement (can_reveal checks on all 8 reveal
+    endpoints) + VaultController reveal guard.
+
+  RBAC Phase 2B-4:
+    Full enforcement test suite for all write guards and reveal guards
+    (if not already covered in Phase 2B-2 and Phase 2B-3 tests).
+
+  UI button visibility (Phase 2C):
+    Conditional button hiding based on effective permissions
+    (create button, edit button, delete button, reveal button).
+
+================================================================================
+END OF REPORT
+================================================================================

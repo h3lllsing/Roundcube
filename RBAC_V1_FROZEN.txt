@@ -1,0 +1,345 @@
+RBAC VERSION 1.0 — FROZEN SPECIFICATION
+==========================================
+Status: Stable / Production Ready
+Freeze Date: 2026-06-25
+Total Tests: 167 (386 assertions) — all passing
+
+This document defines the RBAC v1.0 implementation as completed. No schema
+changes may be made without an architecture review (see Rule 12).
+
+==========================================
+1. COMPLETED PHASES
+==========================================
+
+Phase 1 — Data Scoping (3-Tier):
+  Super-admin: sees all records
+  Admin: sees records from modules where any role grants can_read
+  Normal: sees only own records (created_by = user_id)
+  9 module models apply 3-tier scoping (Domain, Hosting, Vps, Voip,
+    ServiceProvider, DomainEmail, OtherService, VaultEntry, ExpiryTracker)
+  Tasks: admin sees module tasks + assigned tasks; normal sees own + assigned
+  Notes/Webhooks/Attachments: ownership-scoped (no module_id)
+
+Phase 2B-1 — can_reveal Column & Export Scoping:
+  can_reveal column added to ModuleRolePermission / UserModulePermission
+  ExportController scoped by can_export (role + user override)
+  Seeder: defaults all 8 permissions to true for super-admin role
+
+Phase 2B-2 — Server-Side CRUD Guards:
+  All 9 web resource controllers check can_create/store, can_update, can_delete
+  User overrides respected (UserModulePermission)
+  Super-admin bypasses all checks
+  44 tests
+
+Phase 2B-3 — Server-Side Reveal Guards:
+  All 8 reveal endpoints check can_reveal
+  User overrides respected
+  Super-admin bypasses
+  17 tests
+
+Phase 2C-1 — Create/Export/Bulk-Action UI Visibility:
+  Index view Create/Export buttons hidden without permission
+  Bulk action bar hidden when no permitted actions
+  19 tests
+
+Phase 2C-2 — Edit/Delete Button UI Visibility:
+  Index + show view Edit/Delete buttons hidden without permission
+  Per-record checks via $record->module + canOnModule()
+  18 tests
+
+Phase 2C-3 — Password Reveal/Copy Button UI Visibility:
+  Index copy buttons + show reveal forms hidden without can_reveal
+  Masked password span remains visible (no permission change)
+  14 tests
+
+Phase 2C-4 — Sidebar Navigation Link Visibility:
+  View Composer (SidebarComposer) provides $showXxx flags
+  9 module links + My Vault wrapped in @if conditions
+  My Vault: visible when vault read OR owns entries
+  Super-admin always sees all links
+  Dashboard, Calendar, Notifications, Notes, Tasks, My Tasks,
+    My Permissions, Profile, Logout always visible
+  RBAC/System menus (Features, Modules, etc.) super-admin only
+  13 tests
+
+Phase 2C-5 — Dashboard Quick Actions Visibility:
+  7 permission flags computed in DashboardController
+  +Feature/+Module/+User: super-admin only
+  +Domain/+Hosting/+VPS/+VoIP/+Vault: can_create on respective module
+  +Task: always visible (user-owned)
+  7 tests
+
+Phase 2C-6 — Enterprise Permission Inspector:
+  User show page now shows ALL modules with effective permissions
+  6 summary cards (Roles, Accessible, Denied, Overrides, Allowed, Denied)
+  Source badges: Role/Override Allow/Override Deny/None/Super Admin
+  Super Admin green banner for unrestricted access
+  10 tests
+
+==========================================
+2. PERMISSION MODEL
+==========================================
+
+Three-tier architecture:
+  A. Super Admin — bypasses ALL permission checks
+     Role slug: 'super-admin'
+     Tests: hasRole('super-admin') → grants all access
+
+  B. Role Permissions — baseline per-module settings for a role
+     Table: module_role_permissions
+     Columns: module_id, role_id + 8 boolean permission columns
+
+  C. User Overrides — per-user exceptions on specific modules
+     Table: user_module_permissions
+     Columns: user_id, module_id + 8 nullable boolean permission columns
+     Override logic: if column is not null, its value wins (true or false)
+     If column is null, inherits from role permission
+
+Permission resolution (canOnModule method in HasModulePermissions trait):
+  1. Check UserModulePermission for user override (if exists and non-null → return)
+  2. Check ModuleRolePermission for any role where column = true → return true
+  3. Default: false
+
+Super admin check happens BEFORE calling canOnModule in all guard code:
+  if ($user->hasRole('super-admin')) { return; } // or return true
+
+==========================================
+3. ROLE PERMISSIONS (module_role_permissions)
+==========================================
+
+Table: module_role_permissions
+Schema:
+  id              bigIncrements
+  module_id       FK -> modules (cascade)
+  role_id         FK -> roles (cascade)
+  can_create      boolean, default false
+  can_read        boolean, default false
+  can_update      boolean, default false
+  can_delete      boolean, default false
+  can_approve     boolean, default false
+  can_export      boolean, default false
+  can_reveal      boolean, default false
+  can_import      boolean, default false
+  created_at      timestamp
+  updated_at      timestamp
+  UNIQUE: module_id, role_id
+
+One row per (module, role) pair. Multiple roles per user: any role with
+true = user has that permission (OR logic across roles). The only
+exception is getAccessibleModuleIds which merges overrides additively.
+
+==========================================
+4. USER OVERRIDES (user_module_permissions)
+==========================================
+
+Table: user_module_permissions
+Schema:
+  id              bigIncrements
+  user_id         FK -> users (cascade)
+  module_id       FK -> modules (cascade)
+  can_create      boolean, nullable
+  can_read        boolean, nullable
+  can_update      boolean, nullable
+  can_delete      boolean, nullable
+  can_approve     boolean, nullable
+  can_export      boolean, nullable
+  can_reveal      boolean, nullable
+  can_import      boolean, nullable
+  created_at      timestamp
+  updated_at      timestamp
+  UNIQUE: user_id, module_id
+
+Override resolution:
+  null  → inherit from role permission
+  true  → grant, overriding any role denial
+  false → deny, overriding any role grant
+
+Override management UI: User create/edit pages show Allow/Deny/Inherit
+selects for each permission on each role-accessible module.
+
+==========================================
+5. CRUD ENFORCEMENT
+==========================================
+
+All 9 web resource controllers implement server-side guards:
+
+  create/store:      abort_unless super-admin OR canOnModule($module, 'create')
+  edit/update:       abort_unless super-admin OR canOnModule($module, 'update')
+  destroy:           abort_unless super-admin OR canOnModule($module, 'delete')
+  restore/forceDelete: super-admin only
+
+Controllers: DomainController, HostingController, VpsController,
+VoipController, ServiceProviderController, DomainEmailController,
+OtherServiceController, VaultEntryController, ExpiryTrackerController
+
+TaskController: ownership-scoped (created_by or assignee), no can_create check
+
+UI visibility matches server-side guards:
+  Index: Create button hidden when !can_create
+  Index: Export button hidden when !can_export
+  Index/Show: Edit button hidden when !can_update
+  Index/Show: Delete button hidden when !can_delete
+  Bulk actions hidden when no permitted actions
+
+==========================================
+6. EXPORT ENFORCEMENT
+==========================================
+
+ExportController:
+  Super-admin: exports all records of any type
+  Admin with can_export on a module: exports module-scoped records
+  Normal user: exports records where user_id = own ID
+
+Export types restricted:
+  super-admin: all types (including 'users', 'roles', 'features', 'modules')
+  Others: only module-based types where can_export is granted
+
+==========================================
+7. REVEAL ENFORCEMENT
+==========================================
+
+8 reveal endpoints:
+  HostingController@revealPassword
+  VpsController@revealPassword
+  VoipController@revealPassword
+  VoipExtensionController@revealPassword
+  ServiceProviderController@revealPassword
+  DomainEmailController@revealPassword
+  OtherServiceController@revealPassword
+  VaultEntryController@revealPassword
+
+All check: super-admin OR canOnModule($module, 'reveal')
+Successful reveal logs to Spatie Activitylog (event: 'revealed')
+Denied reveal does NOT log
+
+==========================================
+8. SIDEBAR/UI PERMISSION AWARENESS
+==========================================
+
+SidebarComposer (View Composer):
+  Computes $showXxx flags for 9 module links (service-providers, hostings,
+    domains, domain-emails, voip, vps, other-services, expiry-trackers, vault)
+  Uses getAccessibleModuleIds('read') for non-super-admin users
+  My Vault: visible when vault read permission OR user owns vault entries
+  RBAC/System menus (Features, Modules, Permissions, Roles, Privileges):
+    super-admin only (server-rendered @hasrole, no View Composer)
+  Always-visible links: Dashboard, Calendar, Notifications, Notes,
+    Tasks, My Tasks, My Permissions, Profile, Logout
+
+Dashboard Quick Actions:
+  7 flags computed in DashboardController
+  Super-admin sees all; others see only permitted module create buttons
+  +Task always visible (user-owned, no can_create guard)
+
+==========================================
+9. PERMISSION INSPECTOR
+==========================================
+
+Route: GET /users/{id} (UserController@show, super-admin only)
+Displays:
+  User summary header: ID, Email, Roles, Status, Last Login
+  6 summary stat cards: Roles, Accessible Modules, Denied Modules,
+    Overrides, Allowed Permissions, Denied Permissions
+  Super Admin banner (green) when inspected user is super-admin
+  Permission Matrix table with ALL modules (including those without
+    any role permissions)
+  Columns: Module, Feature, Read, Create, Update, Delete, Approve,
+    Export, Reveal, Import
+  Per-cell: ✓ (green) or ✕ (red) with source badge below
+  Source badges: Role (blue), Override Allow (purple), Override Deny
+    (purple), None (gray), Super Admin (green)
+
+Backend: getEffectiveModulePermissions() in HasModulePermissions trait
+  returns array with role, user_override, effective, source per permission.
+
+==========================================
+10. CURRENT RBAC TEST COUNT
+==========================================
+
+Test File               | Tests | Assertions
+------------------------|-------|-----------
+RbacPhase1Test          | 12    | 28
+RbacPhase2B1Test        | 13    | 24
+RbacPhase2B2Test        | 44    | 88
+RbacPhase2B3Test        | 17    | 34
+RbacPhase2C1Test        | 19    | 38
+RbacPhase2C2Test        | 18    | 36
+RbacPhase2C3Test        | 14    | 28
+RbacPhase2C4Test        | 13    | 38
+RbacPhase2C5Test        | 7     | 30
+RbacPhase2C6Test        | 10    | 48
+------------------------|-------|-----------
+TOTAL                   | 167   | 386
+
+All tests use RefreshDatabase.
+All tests pass on PHP 8.x + Laravel 11.x + SQLite in-memory.
+
+==========================================
+11. FUTURE MODULE CHECKLIST
+==========================================
+
+When adding a new module entity to the system, the following steps are
+required to fully integrate with RBAC v1.0:
+
+  1. Add module entry to FeatureModuleSeeder (name + slug)
+  2. Run seeder: php artisan db:seed --class=FeatureModuleSeeder
+  3. ModuleRolePermission rows automatically created? NO — must be
+     set up via RBAC UI (role edit → module permissions matrix).
+  4. Data scoping: add module_id FK to the new model's migration
+  5. Module model: add belongsTo(Module::class) relationship
+  6. Module model: implement 3-tier scoping (see existing models for pattern)
+  7. Controller: add server-side guards (can_create/update/delete) in
+     store/update/destroy — see Phase 2B-2 pattern
+  8. Controller: add reveal guard if password field exists — see Phase 2B-3
+  9. Index view: add @if($canCreate) around Create button — Phase 2C-1
+  10. Index view: add @if($canExport) around Export button — Phase 2C-1
+  11. Index/Show view: add Edit/Delete button guards — Phase 2C-2
+  12. Show view: add password reveal/copy button guards — Phase 2C-3
+      (if applicable)
+  13. Sidebar: add module link in admin.blade.php with @if($showXxx)
+      AND add slug to SidebarComposer $moduleSlugMap — Phase 2C-4
+  14. Dashboard: add quick action button in dashboard/index.blade.php
+      AND add flag in DashboardController computeDashboardData() — Phase 2C-5
+  15. Permission Inspector: automatically appears in the matrix since it
+      loads ALL modules — Phase 2C-6 (no additional work needed)
+
+==========================================
+12. ARCHITECTURE FREEZE RULE
+==========================================
+
+NO RBAC SCHEMA CHANGE WITHOUT ARCHITECTURE REVIEW.
+
+The following are FROZEN and MUST NOT be modified without written
+architecture review and approval:
+
+  A. Table structures:
+     - module_role_permissions (columns, types, constraints)
+     - user_module_permissions (columns, types, constraints)
+     - Any migration that adds/removes/renames permission columns
+
+  B. Permission resolution logic:
+     - canOnModule() method signature and behavior
+     - getEffectiveModulePermissions() merge logic
+     - getAccessibleModuleIds() merge logic
+     - The override precedence: user override → role permission → false
+     - Super-admin bypass: the rule that hasRole('super-admin') skips all checks
+
+  C. Server-side guard pattern:
+     - abort_unless super-admin OR canOnModule($record->module, 'action')
+     - The 3-tier data scoping pattern (super-admin → admin → owner)
+     - The rule that super-admin bypass is checked BEFORE canOnModule
+
+The following MAY be changed without review:
+  - UI presentation of permission data (colors, layout, badges)
+  - Adding new filter/sort options to existing views
+  - Adding new test cases
+  - Adding new modules following the Future Module Checklist
+  - Adding documentation, reports, or read-only views of permission data
+
+Reason: RBAC v1.0 has 167 passing tests covering all enforcement layers.
+Any schema or logic change risks cascading failures across all phases.
+Changes require full regression test run (all 167 tests must pass).
+
+==========================================
+END OF RBAC V1.0 FROZEN SPECIFICATION
+==========================================

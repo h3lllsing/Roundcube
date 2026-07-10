@@ -7,6 +7,7 @@ use App\Http\Requests\StoreOtherServiceRequest;
 use App\Http\Requests\UpdateOtherServiceRequest;
 use App\Models\OtherService;
 use App\Services\OtherServiceService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use OpenApi\Attributes as OA;
 
@@ -23,7 +24,7 @@ class OtherServiceController extends Controller
             new OA\Parameter(name: 'module_id', in: 'query', schema: new OA\Schema(type: 'integer')),
             new OA\Parameter(name: 'search', in: 'query', schema: new OA\Schema(type: 'string')),
             new OA\Parameter(name: 'status', in: 'query', schema: new OA\Schema(type: 'string', enum: ['active', 'expired', 'cancelled'])),
-            new OA\Parameter(name: 'sort_by', in: 'query', required: false, schema: new OA\Schema(type: 'string', enum: ['name', 'service_type', 'provider', 'cost', 'status', 'expiry_date', 'created_at'])),
+            new OA\Parameter(name: 'sort_by', in: 'query', required: false, schema: new OA\Schema(type: 'string', enum: ['name', 'service_type', 'cost', 'status', 'expiry_date', 'created_at'])),
             new OA\Parameter(name: 'sort_order', in: 'query', required: false, schema: new OA\Schema(type: 'string', enum: ['asc', 'desc'])),
             new OA\Parameter(name: 'with_trashed', in: 'query', required: false, schema: new OA\Schema(type: 'boolean')),
             new OA\Parameter(name: 'per_page', in: 'query', schema: new OA\Schema(type: 'integer', default: 20)),
@@ -34,12 +35,18 @@ class OtherServiceController extends Controller
             ])),
         ]
     )]
-    public function index(Request $request): \Illuminate\Http\JsonResponse
+    public function index(Request $request): JsonResponse
     {
         $user = $request->user();
         $filters = $request->only(['module_id', 'search', 'status', 'per_page', 'sort_by', 'sort_order']);
-        if ($user->hasRole('super-admin') && $request->boolean('with_trashed')) $filters['with_trashed'] = true;
-        if (!$user->hasRole('super-admin')) $filters['user_id'] = $user->id;
+        if ($user->hasRole('super-admin') && $request->boolean('with_trashed')) {
+            $filters['with_trashed'] = true;
+        }
+        if (! $user->hasRole('super-admin')) {
+            $ids = $user->getAccessibleModuleIds('read');
+            $filters['accessible_module_ids'] = $ids ?: [0];
+        }
+
         return response()->json($this->otherServiceService->list($filters));
     }
 
@@ -53,13 +60,16 @@ class OtherServiceController extends Controller
             content: new OA\JsonContent(properties: [
                 new OA\Property(property: 'name', type: 'string'),
                 new OA\Property(property: 'service_type', type: 'string', enum: ['saas', 'api', 'monitoring', 'analytics', 'cdn', 'ssl', 'other']),
-                new OA\Property(property: 'provider', type: 'string', nullable: true),
+                new OA\Property(property: 'service_provider_id', type: 'integer', nullable: true),
+                new OA\Property(property: 'username', type: 'string', nullable: true),
+                new OA\Property(property: 'password', type: 'string', nullable: true),
+                new OA\Property(property: 'login_url', type: 'string', nullable: true),
                 new OA\Property(property: 'website', type: 'string', nullable: true),
                 new OA\Property(property: 'cost', type: 'number', format: 'float', nullable: true),
                 new OA\Property(property: 'start_date', type: 'string', format: 'date', nullable: true),
                 new OA\Property(property: 'expiry_date', type: 'string', format: 'date', nullable: true),
                 new OA\Property(property: 'status', type: 'string', default: 'active', enum: ['active', 'expired', 'cancelled']),
-                new OA\Property(property: 'notes', type: 'string', nullable: true),
+                new OA\Property(property: 'description', type: 'string', nullable: true),
                 new OA\Property(property: 'module_id', type: 'integer', nullable: true),
             ])
         ),
@@ -71,10 +81,16 @@ class OtherServiceController extends Controller
             new OA\Response(response: 422, description: 'Validation error'),
         ]
     )]
-    public function store(StoreOtherServiceRequest $request): \Illuminate\Http\JsonResponse
+    public function store(StoreOtherServiceRequest $request): JsonResponse
     {
         $validated = $request->validated();
         $validated['user_id'] = $request->user()->id;
+        $user = $request->user();
+        if (!$user->hasRole('super-admin')) {
+            $moduleId = $validated['module_id'] ?? null;
+            abort_unless($moduleId && $user->canOnModule(\App\Models\Module::find($moduleId), 'create'), 403, 'Forbidden');
+        }
+
         return $this->created($this->otherServiceService->create($validated), 'Other service created');
     }
 
@@ -93,13 +109,14 @@ class OtherServiceController extends Controller
             new OA\Response(response: 404, description: 'Not found'),
         ]
     )]
-    public function show(Request $request, OtherService $otherService): \Illuminate\Http\JsonResponse
+    public function show(Request $request, OtherService $otherService): JsonResponse
     {
         $otherService->load('module.feature', 'user');
         $user = $request->user();
-        if (!$user->hasRole('super-admin') && $otherService->user_id !== $user->id) {
+        if (! $user->hasRole('super-admin') && $otherService->user_id !== $user->id) {
             abort(403, 'Forbidden');
         }
+
         return $this->success($otherService);
     }
 
@@ -116,13 +133,16 @@ class OtherServiceController extends Controller
             content: new OA\JsonContent(properties: [
                 new OA\Property(property: 'name', type: 'string'),
                 new OA\Property(property: 'service_type', type: 'string', enum: ['saas', 'api', 'monitoring', 'analytics', 'cdn', 'ssl', 'other']),
-                new OA\Property(property: 'provider', type: 'string', nullable: true),
+                new OA\Property(property: 'service_provider_id', type: 'integer', nullable: true),
+                new OA\Property(property: 'username', type: 'string', nullable: true),
+                new OA\Property(property: 'password', type: 'string', nullable: true),
+                new OA\Property(property: 'login_url', type: 'string', nullable: true),
                 new OA\Property(property: 'website', type: 'string', nullable: true),
                 new OA\Property(property: 'cost', type: 'number', format: 'float', nullable: true),
                 new OA\Property(property: 'start_date', type: 'string', format: 'date', nullable: true),
                 new OA\Property(property: 'expiry_date', type: 'string', format: 'date', nullable: true),
                 new OA\Property(property: 'status', type: 'string', enum: ['active', 'expired', 'cancelled']),
-                new OA\Property(property: 'notes', type: 'string', nullable: true),
+                new OA\Property(property: 'description', type: 'string', nullable: true),
                 new OA\Property(property: 'module_id', type: 'integer', nullable: true),
             ])
         ),
@@ -134,13 +154,23 @@ class OtherServiceController extends Controller
             new OA\Response(response: 422, description: 'Validation error'),
         ]
     )]
-    public function update(UpdateOtherServiceRequest $request, OtherService $otherService): \Illuminate\Http\JsonResponse
+    public function update(UpdateOtherServiceRequest $request, OtherService $otherService): JsonResponse
     {
         $user = $request->user();
-        if (!$user->hasRole('super-admin') && $otherService->user_id !== $user->id) {
+        if (! $user->hasRole('super-admin') && $otherService->user_id !== $user->id) {
             abort(403, 'Forbidden');
         }
-        return $this->success($this->otherServiceService->update($otherService, $request->validated()), 'Other service updated');
+        if (!$user->hasRole('super-admin') && $otherService->module && !$user->canOnModule($otherService->module, 'update')) {
+            abort(403, 'Forbidden');
+        }
+        $this->checkOptimisticLock($otherService, $request);
+
+        $data = $request->validated();
+        if (empty($data['password'])) {
+            unset($data['password']);
+        }
+
+        return $this->success($this->otherServiceService->update($otherService, $data), 'Other service updated');
     }
 
     #[OA\Delete(
@@ -155,13 +185,17 @@ class OtherServiceController extends Controller
             new OA\Response(response: 200, description: 'Other service deleted', content: new OA\JsonContent(ref: '#/components/schemas/MessageResponse')),
         ]
     )]
-    public function destroy(Request $request, OtherService $otherService): \Illuminate\Http\JsonResponse
+    public function destroy(Request $request, OtherService $otherService): JsonResponse
     {
         $user = $request->user();
-        if (!$user->hasRole('super-admin') && $otherService->user_id !== $user->id) {
+        if (! $user->hasRole('super-admin') && $otherService->user_id !== $user->id) {
+            abort(403, 'Forbidden');
+        }
+        if (!$user->hasRole('super-admin') && $otherService->module && !$user->canOnModule($otherService->module, 'delete')) {
             abort(403, 'Forbidden');
         }
         $this->otherServiceService->delete($otherService);
+
         return $this->message('Other service deleted');
     }
 }

@@ -1,2 +1,1473 @@
 parameters:
-	ignoreErrors: []
+	ignoreErrors:
+		-
+			message: '#^Call to an undefined static method App\\Models\\Task\:\:whereNotNull\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Console/Commands/CheckOverdueTasks.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\ExpiryTracker\:\:where\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Console/Commands/SendEmailReminders.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\ExpiryTrackerNotification\:\:where\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Console/Commands/SendEmailReminders.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\AssetAssignment\:\:whereIn\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Dashboard/AssetsWidget.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Feature\:\:count\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Dashboard/OperationsWidget.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Feature\:\:whereHas\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Dashboard/OperationsWidget.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Module\:\:count\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Dashboard/OperationsWidget.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Module\:\:whereIn\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Dashboard/QuickActionsWidget.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\ExpiryTrackerNotification\:\:where\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Dashboard/RenewalsWidget.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\SmtpProfile\:\:count\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Dashboard/RenewalsWidget.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\SmtpProfile\:\:exists\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Dashboard/ServerHealthWidget.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\SmtpProfile\:\:where\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 2
+			path: app/Dashboard/ServerHealthWidget.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\ExpiryTracker\:\:whereNotNull\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Dashboard/SmtpWidget.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\SmtpProfile\:\:selectRaw\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Dashboard/SmtpWidget.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\SmtpProfile\:\:where\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Dashboard/SmtpWidget.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Task\:\:whereHas\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 2
+			path: app/Dashboard/TasksWidget.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\VaultEntry\:\:count\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Dashboard/VaultWidget.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\VaultEntry\:\:where\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 2
+			path: app/Dashboard/VaultWidget.php
+
+		-
+			message: '#^Call to an undefined static method Spatie\\Activitylog\\Models\\Activity\:\:where\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Dashboard/VaultWidget.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Module\:\:find\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Helpers/ModuleCache.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Module\:\:where\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 2
+			path: app/Helpers/ModuleCache.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Module\:\:find\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Http/Controllers/Api/AssetController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\LoginAudit\:\:create\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Http/Controllers/Api/AuthController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\User\:\:create\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Http/Controllers/Api/AuthController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\User\:\:findOrFail\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Http/Controllers/Api/AuthController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\User\:\:where\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Http/Controllers/Api/AuthController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Module\:\:find\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Http/Controllers/Api/DomainController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Module\:\:find\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Http/Controllers/Api/DomainEmailController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Module\:\:find\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Http/Controllers/Api/ExpiryTrackerController.php
+
+		-
+			message: '#^Call to an undefined static method Laravel\\Sanctum\\PersonalAccessToken\:\:where\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Http/Controllers/Api/ExportController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Module\:\:whereHas\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Http/Controllers/Api/FeatureController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Module\:\:find\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Http/Controllers/Api/HostingController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Module\:\:whereHas\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Http/Controllers/Api/ModulePermissionController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Module\:\:find\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 3
+			path: app/Http/Controllers/Api/NoteController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Module\:\:find\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Http/Controllers/Api/OtherServiceController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Module\:\:find\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Http/Controllers/Api/ServiceProviderController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Module\:\:find\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Http/Controllers/Api/VaultController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Module\:\:whereHas\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Http/Controllers/Api/VaultController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Module\:\:find\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Http/Controllers/Api/VoipController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Module\:\:find\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Http/Controllers/Api/VpsController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Webhook\:\:create\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Http/Controllers/Api/WebhookController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Asset\:\:findOrFail\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 5
+			path: app/Http/Controllers/Web/AssetController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Module\:\:orderBy\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Http/Controllers/Web/AssetController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\VaultEntry\:\:orderBy\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Http/Controllers/Web/AssetController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\VaultEntry\:\:where\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Http/Controllers/Web/AssetController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Attachment\:\:findOrFail\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 2
+			path: app/Http/Controllers/Web/AttachmentController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\User\:\:findOrFail\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Http/Controllers/Web/AuthController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\User\:\:where\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Http/Controllers/Web/AuthController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Module\:\:orderBy\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Http/Controllers/Web/BaseResourceController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\User\:\:orderBy\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Http/Controllers/Web/BaseResourceController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Domain\:\:create\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Http/Controllers/Web/DomainController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Domain\:\:findOrFail\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Http/Controllers/Web/DomainController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Hosting\:\:orderBy\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Http/Controllers/Web/DomainController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Hosting\:\:where\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Http/Controllers/Web/DomainController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\ServiceProvider\:\:orderBy\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Http/Controllers/Web/DomainController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Domain\:\:orderBy\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 3
+			path: app/Http/Controllers/Web/DomainEmailController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\DomainEmail\:\:create\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Http/Controllers/Web/DomainEmailController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\DomainEmail\:\:findOrFail\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 4
+			path: app/Http/Controllers/Web/DomainEmailController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\ServiceProvider\:\:orderBy\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 2
+			path: app/Http/Controllers/Web/DomainEmailController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\ExpiryTracker\:\:findOrFail\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 5
+			path: app/Http/Controllers/Web/ExpiryTrackerController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Feature\:\:findOrFail\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 2
+			path: app/Http/Controllers/Web/FeatureController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Hosting\:\:create\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Http/Controllers/Web/HostingController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Hosting\:\:findOrFail\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 3
+			path: app/Http/Controllers/Web/HostingController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\ServiceProvider\:\:orderBy\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Http/Controllers/Web/HostingController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Feature\:\:orderBy\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 2
+			path: app/Http/Controllers/Web/ModuleController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Module\:\:create\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Http/Controllers/Web/ModuleController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Module\:\:findOrFail\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 3
+			path: app/Http/Controllers/Web/ModuleController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Module\:\:findOrFail\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 2
+			path: app/Http/Controllers/Web/ModulePermissionController.php
+
+		-
+			message: '#^Call to an undefined static method HasinHayder\\Tyro\\Models\\Role\:\:find\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 2
+			path: app/Http/Controllers/Web/ModulePermissionController.php
+
+		-
+			message: '#^Call to an undefined static method HasinHayder\\Tyro\\Models\\Role\:\:whereNotIn\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Http/Controllers/Web/ModulePermissionController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Feature\:\:orderBy\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 2
+			path: app/Http/Controllers/Web/NoteController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Module\:\:findOrFail\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Http/Controllers/Web/NoteController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Module\:\:orderBy\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 2
+			path: app/Http/Controllers/Web/NoteController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Note\:\:create\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Http/Controllers/Web/NoteController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Note\:\:findOrFail\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Http/Controllers/Web/NoteController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\OtherService\:\:create\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Http/Controllers/Web/OtherServiceController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\OtherService\:\:findOrFail\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 3
+			path: app/Http/Controllers/Web/OtherServiceController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\ServiceProvider\:\:orderBy\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Http/Controllers/Web/OtherServiceController.php
+
+		-
+			message: '#^Call to an undefined static method HasinHayder\\Tyro\\Models\\Privilege\:\:findOrFail\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 2
+			path: app/Http/Controllers/Web/PrivilegeController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\User\:\:orderBy\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Http/Controllers/Web/ReportController.php
+
+		-
+			message: '#^Call to an undefined static method HasinHayder\\Tyro\\Models\\Role\:\:findOrFail\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 2
+			path: app/Http/Controllers/Web/RoleController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Module\:\:whereIn\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Http/Controllers/Web/RoleTemplateController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\RoleTemplate\:\:findOrFail\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Http/Controllers/Web/RoleTemplateController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\RoleTemplate\:\:orderBy\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Http/Controllers/Web/RoleTemplateController.php
+
+		-
+			message: '#^Call to an undefined static method HasinHayder\\Tyro\\Models\\Role\:\:findOrFail\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Http/Controllers/Web/RoleTemplateController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\ServiceProvider\:\:create\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Http/Controllers/Web/ServiceProviderController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\ServiceProvider\:\:findOrFail\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 2
+			path: app/Http/Controllers/Web/ServiceProviderController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\ServiceProvider\:\:withCount\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Http/Controllers/Web/ServiceProviderController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\SmtpProfile\:\:create\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Http/Controllers/Web/SmtpProfileController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\SmtpProfile\:\:where\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 3
+			path: app/Http/Controllers/Web/SmtpProfileController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Module\:\:find\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Http/Controllers/Web/TaskController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Module\:\:orderBy\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 4
+			path: app/Http/Controllers/Web/TaskController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Task\:\:findOrFail\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 3
+			path: app/Http/Controllers/Web/TaskController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Task\:\:whereHas\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Http/Controllers/Web/TaskController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\User\:\:orderBy\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 3
+			path: app/Http/Controllers/Web/TaskController.php
+
+		-
+			message: '#^Call to an undefined static method Spatie\\Activitylog\\Models\\Activity\:\:where\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Http/Controllers/Web/TaskController.php
+
+		-
+			message: '#^Anonymous function has an unused use \$user\.$#'
+			identifier: closure.unusedUse
+			count: 1
+			path: app/Http/Controllers/Web/UserController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\LoginAudit\:\:where\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Http/Controllers/Web/UserController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\LoginAudit\:\:whereColumn\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Http/Controllers/Web/UserController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Module\:\:whereIn\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 2
+			path: app/Http/Controllers/Web/UserController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\ModuleRolePermission\:\:whereIn\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Http/Controllers/Web/UserController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Task\:\:whereHas\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Http/Controllers/Web/UserController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\User\:\:create\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 2
+			path: app/Http/Controllers/Web/UserController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\User\:\:findOrFail\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 11
+			path: app/Http/Controllers/Web/UserController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\User\:\:orderBy\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Http/Controllers/Web/UserController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\User\:\:whereHas\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Http/Controllers/Web/UserController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\UserModulePermission\:\:where\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 3
+			path: app/Http/Controllers/Web/UserController.php
+
+		-
+			message: '#^Call to an undefined static method HasinHayder\\Tyro\\Models\\Role\:\:whereNotIn\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 3
+			path: app/Http/Controllers/Web/UserController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Module\:\:orderBy\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 2
+			path: app/Http/Controllers/Web/VaultController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\User\:\:orderBy\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 2
+			path: app/Http/Controllers/Web/VaultController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\VaultEntry\:\:findOrFail\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 3
+			path: app/Http/Controllers/Web/VaultController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\ServiceProvider\:\:orderBy\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Http/Controllers/Web/VoipController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Voip\:\:create\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Http/Controllers/Web/VoipController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Voip\:\:findOrFail\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 5
+			path: app/Http/Controllers/Web/VoipController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\ServiceProvider\:\:orderBy\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Http/Controllers/Web/VpsController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Vps\:\:create\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Http/Controllers/Web/VpsController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Vps\:\:findOrFail\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 3
+			path: app/Http/Controllers/Web/VpsController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\User\:\:orderBy\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 2
+			path: app/Http/Controllers/Web/WebhookController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Webhook\:\:create\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Http/Controllers/Web/WebhookController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Webhook\:\:findOrFail\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 4
+			path: app/Http/Controllers/Web/WebhookController.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\FeatureResource\:\:\$created_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/FeatureResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\FeatureResource\:\:\$creator\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/FeatureResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\FeatureResource\:\:\$description\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/FeatureResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\FeatureResource\:\:\$icon\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/FeatureResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\FeatureResource\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/FeatureResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\FeatureResource\:\:\$is_active\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/FeatureResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\FeatureResource\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/FeatureResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\FeatureResource\:\:\$slug\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/FeatureResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\FeatureResource\:\:\$updated_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/FeatureResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\ModuleResource\:\:\$created_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/ModuleResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\ModuleResource\:\:\$description\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/ModuleResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\ModuleResource\:\:\$feature_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/ModuleResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\ModuleResource\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/ModuleResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\ModuleResource\:\:\$is_active\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/ModuleResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\ModuleResource\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/ModuleResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\ModuleResource\:\:\$rolePermissions\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/ModuleResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\ModuleResource\:\:\$slug\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/ModuleResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\ModuleResource\:\:\$updated_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/ModuleResource.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\VaultEntry\:\:where\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Http/View/Composers/SidebarComposer.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\User\:\:whereHas\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Listeners/NotifyMonitorFailure.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\User\:\:whereIn\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Listeners/SendTaskAssignedNotification.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Attachment\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Models/Attachment.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Feature\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Models/Feature.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Module\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Models/Module.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\ModuleRolePermission\:\:\$module_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Models/ModuleRolePermission.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\ModuleRolePermission\:\:\$role_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Models/ModuleRolePermission.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Note\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Models/Note.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\SmtpProfile\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Models/SmtpProfile.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\SmtpProfile\:\:where\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Models/SmtpProfile.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Task\:\:\$title\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Models/Task.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\User\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 7
+			path: app/Models/User.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\ModuleRolePermission\:\:whereIn\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 3
+			path: app/Models/User.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\UserModulePermission\:\:where\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 3
+			path: app/Models/User.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\VaultEntry\:\:\$encrypted_password\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Models/VaultEntry.php
+
+		-
+			message: '#^Constant L5_SWAGGER_CONST_HOST not found\.$#'
+			identifier: constant.notFound
+			count: 1
+			path: app/OpenApi.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Asset\:\:where\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 2
+			path: app/Reports/AssetReports.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Domain\:\:where\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 2
+			path: app/Reports/DomainReports.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Domain\:\:whereIn\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Reports/DomainReports.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Hosting\:\:where\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Reports/HostingReports.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Hosting\:\:whereIn\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Reports/HostingReports.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\ExpiryTracker\:\:whereIn\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 3
+			path: app/Reports/RenewalReports.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Task\:\:where\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 2
+			path: app/Reports/TaskReports.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\User\:\:whereNull\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Reports/UserReports.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Vps\:\:where\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Reports/VpsReports.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\User\:\:orderBy\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Services/ActivityLogService.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Asset\:\:create\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Services/AssetService.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\AssetAssignment\:\:create\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Services/AssetService.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\AssetAssignment\:\:where\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Services/AssetService.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Attachment\:\:whereNull\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Services/AttachmentService.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\LoginAudit\:\:create\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Services/AuthService.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\User\:\:create\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Services/AuthService.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\LoginAudit\:\:whereIn\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Services/BulkActionService.php
+
+		-
+			message: '#^Call to an undefined static method HasinHayder\\Tyro\\Models\\Role\:\:whereIn\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Services/BulkActionService.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Task\:\:whereNotNull\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Services/CalendarService.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Feature\:\:count\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Services/DashboardService.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Feature\:\:whereHas\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Services/DashboardService.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Module\:\:count\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Services/DashboardService.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Module\:\:whereHas\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Services/DashboardService.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Note\:\:count\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Services/DashboardService.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Note\:\:where\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 2
+			path: app/Services/DashboardService.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Task\:\:whereHas\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 2
+			path: app/Services/DashboardService.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\User\:\:count\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Services/DashboardService.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\User\:\:whereNotNull\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Services/DashboardService.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\VaultEntry\:\:where\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Services/DashboardService.php
+
+		-
+			message: '#^Call to an undefined static method Spatie\\Activitylog\\Models\\Activity\:\:where\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Services/DashboardService.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\DomainEmail\:\:create\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Services/DomainEmailService.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Domain\:\:create\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Services/DomainService.php
+
+		-
+			message: '#^Call to an undefined static method Illuminate\\Notifications\\DatabaseNotification\:\:where\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Services/ExpiryNotificationService.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\ExpiryTracker\:\:create\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Services/ExpiryTrackerService.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Module\:\:orderBy\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Services/ExpiryTrackerService.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\ServiceProvider\:\:orderBy\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Services/ExpiryTrackerService.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\SmtpProfile\:\:where\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Services/ExpiryTrackerService.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\User\:\:orderBy\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Services/ExpiryTrackerService.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\User\:\:whereIn\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Services/ExpiryTrackerService.php
+
+		-
+			message: '#^Call to an undefined static method Laravel\\Sanctum\\PersonalAccessToken\:\:where\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Services/ExportService.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Feature\:\:create\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Services/FeatureService.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Feature\:\:where\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Services/FeatureService.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Hosting\:\:create\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Services/HostingService.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\LoginAudit\:\:findOrFail\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Services/LoginAuditService.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\ModuleRolePermission\:\:updateOrCreate\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Services/ModulePermissionService.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\ModuleRolePermission\:\:where\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 3
+			path: app/Services/ModulePermissionService.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Module\:\:create\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Services/ModuleService.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Note\:\:whereNotNull\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Services/NoteService.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Note\:\:whereNull\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Services/NoteService.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\User\:\:whereHas\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Services/NoteService.php
+
+		-
+			message: '#^Call to an undefined static method HasinHayder\\Tyro\\Models\\Role\:\:where\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Services/NoteService.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\OtherService\:\:create\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Services/OtherServiceService.php
+
+		-
+			message: '#^Call to an undefined static method HasinHayder\\Tyro\\Models\\Privilege\:\:create\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Services/PrivilegeService.php
+
+		-
+			message: '#^Call to an undefined static method HasinHayder\\Tyro\\Models\\Privilege\:\:withCount\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 2
+			path: app/Services/PrivilegeService.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\ExpiryTracker\:\:make\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Services/RenewalNotificationService.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\ExpiryTrackerNotification\:\:create\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Services/RenewalNotificationService.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\ExpiryTrackerNotification\:\:where\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Services/RenewalNotificationService.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\User\:\:whereHas\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Services/RenewalNotificationService.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\ExpiryTracker\:\:where\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 2
+			path: app/Services/RenewalSyncService.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\LoginAudit\:\:whereDate\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 3
+			path: app/Services/ReportService.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Task\:\:whereDate\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 2
+			path: app/Services/ReportService.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\User\:\:select\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Services/ReportService.php
+
+		-
+			message: '#^Call to an undefined static method Spatie\\Activitylog\\Models\\Activity\:\:whereDate\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Services/ReportService.php
+
+		-
+			message: '#^Call to an undefined static method HasinHayder\\Tyro\\Models\\Privilege\:\:findOrFail\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 2
+			path: app/Services/RoleService.php
+
+		-
+			message: '#^Call to an undefined static method HasinHayder\\Tyro\\Models\\Privilege\:\:orderBy\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Services/RoleService.php
+
+		-
+			message: '#^Call to an undefined static method HasinHayder\\Tyro\\Models\\Role\:\:create\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Services/RoleService.php
+
+		-
+			message: '#^Call to an undefined static method HasinHayder\\Tyro\\Models\\Role\:\:findOrFail\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 3
+			path: app/Services/RoleService.php
+
+		-
+			message: '#^Call to an undefined static method HasinHayder\\Tyro\\Models\\Role\:\:withCount\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Services/RoleService.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\ModuleRolePermission\:\:create\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Services/RoleTemplateService.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\ModuleRolePermission\:\:where\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 2
+			path: app/Services/RoleTemplateService.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\RoleTemplate\:\:findOrFail\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Services/RoleTemplateService.php
+
+		-
+			message: '#^Call to an undefined static method HasinHayder\\Tyro\\Models\\Role\:\:orderBy\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Services/RoleTemplateService.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\ServiceProvider\:\:create\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Services/ServiceProviderService.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Module\:\:find\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Services/TaskService.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Module\:\:whereHas\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Services/TaskService.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Task\:\:create\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Services/TaskService.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Task\:\:whereHas\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Services/TaskService.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\User\:\:create\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Services/UserManagementService.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\User\:\:whereHas\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Services/UserManagementService.php
+
+		-
+			message: '#^Call to an undefined static method HasinHayder\\Tyro\\Models\\Role\:\:where\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 2
+			path: app/Services/UserManagementService.php
+
+		-
+			message: '#^Call to an undefined static method HasinHayder\\Tyro\\Models\\Role\:\:whereIn\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 2
+			path: app/Services/UserManagementService.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\ModuleRolePermission\:\:whereIn\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Services/UserPermissionService.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\UserModulePermission\:\:create\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Services/UserPermissionService.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\UserModulePermission\:\:where\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 6
+			path: app/Services/UserPermissionService.php
+
+		-
+			message: '#^Call to an undefined static method HasinHayder\\Tyro\\Models\\Role\:\:where\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Services/UserPermissionService.php
+
+
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Voip\:\:create\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Services/VoipService.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Vps\:\:create\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Services/VpsService.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Webhook\:\:where\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Services/WebhookService.php
+
+		-
+			message: '#^Call to an undefined static method Spatie\\Activitylog\\Models\\Activity\:\:where\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/View/Components/ActivityTimeline.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Module\:\:where\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Http/Controllers/Web/ImportController.php

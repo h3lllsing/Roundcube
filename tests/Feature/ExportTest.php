@@ -3,7 +3,13 @@
 namespace Tests\Feature;
 
 use App\Models\Domain;
+use App\Models\Module;
 use App\Models\User;
+use App\Models\UserModulePermission;
+use App\Support\DataTypeConfig;
+use Database\Seeders\FeatureModuleSeeder;
+use Database\Seeders\RolePermissionSeeder;
+use HasinHayder\Tyro\Database\Seeders\TyroSeeder;
 use HasinHayder\Tyro\Models\Role;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -17,7 +23,9 @@ class ExportTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->seed(\HasinHayder\Tyro\Database\Seeders\TyroSeeder::class);
+        $this->seed(TyroSeeder::class);
+        $this->seed(FeatureModuleSeeder::class);
+        $this->seed(RolePermissionSeeder::class);
         $role = Role::where('slug', 'super-admin')->firstOrFail();
         $this->admin = User::factory()->create();
         $this->admin->assignRole($role);
@@ -25,7 +33,7 @@ class ExportTest extends TestCase
 
     public function test_export_domains_csv(): void
     {
-        Domain::factory()->create(['name' => 'example.com', 'registrar' => 'Namecheap']);
+        Domain::factory()->create(['name' => 'example.com', 'service_provider_id' => \App\Models\ServiceProvider::factory()]);
 
         $response = $this->actingAs($this->admin)
             ->get('/api/export/domains');
@@ -48,22 +56,76 @@ class ExportTest extends TestCase
         $this->getJson('/api/export/domains')->assertUnauthorized();
     }
 
-    public function test_non_admin_only_exports_own_records(): void
+    public function test_non_admin_export_is_forbidden(): void
     {
         $user = User::factory()->create();
-        $otherUser = User::factory()->create();
 
-        Domain::factory()->create(['name' => 'my-domain.com', 'user_id' => $user->id]);
-        Domain::factory()->create(['name' => 'other-domain.com', 'user_id' => $otherUser->id]);
+        $role = Role::where('slug', 'customer')->firstOrFail();
+        $user->assignRole($role);
+        $user->load('roles');
 
         $token = $user->createToken('test')->plainTextToken;
 
         $response = $this->withHeader('Authorization', "Bearer $token")
             ->get('/api/export/domains');
 
+        $response->assertForbidden();
+    }
+
+    /** @return array<string, array{0: string}> */
+    public static function exportTypeProvider(): array
+    {
+        $types = array_keys(DataTypeConfig::exportTypes());
+        return array_combine($types, array_map(fn ($t) => [$t], $types));
+    }
+
+    /** @dataProvider exportTypeProvider */
+    public function test_each_export_type_returns_csv(string $type): void
+    {
+        $response = $this->actingAs($this->admin)
+            ->get("/api/export/{$type}");
+
+        $response->assertOk();
+        $response->assertHeader('Content-Type', 'text/csv; charset=utf-8');
+        $this->assertStringStartsWith("attachment; filename=\"{$type}-", $response->headers->get('Content-Disposition'));
+    }
+
+    // ─── CSV Injection ────────────────────────────────────────────
+
+    public function test_export_csv_injection_calculation(): void
+    {
+        Domain::factory()->create(['name' => '=1+1']);
+
+        $response = $this->actingAs($this->admin)
+            ->get('/api/export/domains');
+
         $response->assertOk();
         $content = $response->getContent();
-        $this->assertStringContainsString('my-domain.com', $content);
-        $this->assertStringNotContainsString('other-domain.com', $content);
+        $this->assertStringContainsString("\t=1+1", $content);
+    }
+
+    public function test_export_csv_injection_command(): void
+    {
+        Domain::factory()->create(['name' => '@command']);
+
+        $response = $this->actingAs($this->admin)
+            ->get('/api/export/domains');
+
+        $response->assertOk();
+        $content = $response->getContent();
+        $this->assertStringContainsString("\t@command", $content);
+    }
+
+    public function test_export_normal_text_not_modified(): void
+    {
+        Domain::factory()->create(['name' => 'NormalName']);
+
+        $response = $this->actingAs($this->admin)
+            ->get('/api/export/domains');
+
+        $response->assertOk();
+        $content = $response->getContent();
+        $this->assertStringContainsString('NormalName', $content);
+        $this->assertStringNotContainsString("\tNormalName", $content);
     }
 }

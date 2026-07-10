@@ -3,6 +3,7 @@
 namespace Tests\Unit;
 
 use App\Models\Attachment;
+use App\Models\Feature;
 use App\Models\User;
 use App\Services\AttachmentService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -38,7 +39,7 @@ class AttachmentServiceTest extends TestCase
         $this->assertEquals('report.pdf', $attachment->original_name);
         $this->assertEquals($user->id, $attachment->user_id);
 
-        Storage::disk('public')->assertExists('attachments/' . $attachment->filename);
+        Storage::disk('public')->assertExists('attachments/'.$attachment->filename);
     }
 
     public function test_create_with_notable(): void
@@ -46,7 +47,7 @@ class AttachmentServiceTest extends TestCase
         Storage::fake('public');
 
         $user = User::factory()->create();
-        $feature = \App\Models\Feature::factory()->create();
+        $feature = Feature::factory()->create();
         $file = UploadedFile::fake()->create('feature.pdf', 200, 'application/pdf');
 
         $attachment = $this->service->create([
@@ -73,7 +74,7 @@ class AttachmentServiceTest extends TestCase
         $filename = $attachment->filename;
         $this->service->delete($attachment);
 
-        Storage::disk('public')->assertMissing('attachments/' . $filename);
+        Storage::disk('public')->assertExists('attachments/'.$filename);
         $this->assertSoftDeleted($attachment);
     }
 
@@ -96,12 +97,10 @@ class AttachmentServiceTest extends TestCase
     public function test_list_for_notable(): void
     {
         $user = User::factory()->create();
-        $feature = \App\Models\Feature::factory()->create();
+        $feature = Feature::factory()->create();
 
-        $attachment = Attachment::create([
+        $attachment = $feature->attachments()->create([
             'user_id' => $user->id,
-            'notable_type' => get_class($feature),
-            'notable_id' => $feature->id,
             'filename' => 'notable.txt',
             'original_name' => 'notable.txt',
             'mime_type' => 'text/plain',
@@ -144,5 +143,31 @@ class AttachmentServiceTest extends TestCase
         $result = $this->service->listFor(null, ['per_page' => 200]);
 
         $this->assertEquals(100, $result->perPage());
+    }
+
+    public function test_list_invalid_sort_order_falls_back_to_desc(): void
+    {
+        $user = User::factory()->create();
+        Attachment::create(['user_id' => $user->id, 'filename' => 'a.txt', 'original_name' => 'A', 'mime_type' => 'text/plain', 'size' => 100]);
+        Attachment::create(['user_id' => $user->id, 'filename' => 'b.txt', 'original_name' => 'B', 'mime_type' => 'text/plain', 'size' => 200]);
+
+        $result = $this->service->listFor(null, ['sort_order' => 'invalid']);
+
+        $this->assertCount(2, $result->items());
+    }
+
+    public function test_create_throws_when_store_fails(): void
+    {
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('Failed to store file');
+
+        $user = User::factory()->create();
+        $file = $this->createMock(UploadedFile::class);
+        $file->method('store')->willReturn(false);
+        $file->method('getClientOriginalName')->willReturn('fail.pdf');
+        $file->method('getMimeType')->willReturn('application/pdf');
+        $file->method('getSize')->willReturn(100);
+
+        $this->service->create(['user_id' => $user->id, 'file' => $file]);
     }
 }

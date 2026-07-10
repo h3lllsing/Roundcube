@@ -18,6 +18,4 @@ use OpenApi\Attributes as OA;
     ],
     type: 'object'
 )]
-class ModuleData
-{
-}
+class ModuleData {}

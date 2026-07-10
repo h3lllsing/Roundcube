@@ -1,0 +1,397 @@
+<?xml version="1.0"?>
+<phpunit xmlns="https://schema.phpunit.de/coverage/1.0">
+  <file name="TaskAssigned.php" path="\Notifications">
+    <totals>
+      <lines total="39" comments="2" code="37" executable="13" executed="13" percent="100.00"/>
+      <methods count="3" tested="3" percent="100.00"/>
+      <functions count="0" tested="0" percent="0"/>
+      <classes count="1" tested="1" percent="100.00"/>
+      <traits count="0" tested="0" percent="0"/>
+    </totals>
+    <class name="App\Notifications\TaskAssigned" start="9" executable="13" executed="13" crap="3">
+      <namespace name="App\Notifications"/>
+      <method name="__construct" signature="__construct(App\Models\Task $task)" start="13" end="15" crap="1" executable="1" executed="1" coverage="100"/>
+      <method name="via" signature="via(object $notifiable): array" start="18" end="21" crap="1" executable="1" executed="1" coverage="100"/>
+      <method name="toArray" signature="toArray(object $notifiable): array" start="24" end="37" crap="1" executable="11" executed="11" coverage="100"/>
+    </class>
+    <coverage>
+      <line nr="15">
+        <covered by="Tests\Unit\TaskAssignedNotificationTest::test_via_returns_database_channel"/>
+        <covered by="Tests\Unit\TaskAssignedNotificationTest::test_to_array_returns_task_data"/>
+        <covered by="Tests\Unit\TaskAssignedNotificationTest::test_to_array_handles_null_creator"/>
+        <covered by="Tests\Unit\TaskAssignedNotificationTest::test_to_array_handles_null_module"/>
+        <covered by="Tests\Unit\TaskServiceTest::test_creates_task_with_assignees"/>
+        <covered by="Tests\Unit\TaskServiceTest::test_update_with_assignees_sync"/>
+        <covered by="Tests\Feature\SendTaskAssignedNotificationTest::test_notifies_assignees_when_task_created"/>
+        <covered by="Tests\Feature\SendTaskAssignedNotificationTest::test_notifies_assignees_when_task_updated"/>
+        <covered by="Tests\Feature\SendTaskAssignedNotificationTest::test_skips_nonexistent_users"/>
+        <covered by="Tests\Feature\SendTaskAssignedNotificationTest::test_notification_contains_task_details"/>
+        <covered by="Tests\Feature\TaskTest::test_assignee_can_update_task_without_module_permission"/>
+      </line>
+      <line nr="20">
+        <covered by="Tests\Unit\TaskAssignedNotificationTest::test_via_returns_database_channel"/>
+        <covered by="Tests\Unit\TaskServiceTest::test_creates_task_with_assignees"/>
+        <covered by="Tests\Unit\TaskServiceTest::test_update_with_assignees_sync"/>
+        <covered by="Tests\Feature\SendTaskAssignedNotificationTest::test_notifies_assignees_when_task_created"/>
+        <covered by="Tests\Feature\SendTaskAssignedNotificationTest::test_notifies_assignees_when_task_updated"/>
+        <covered by="Tests\Feature\SendTaskAssignedNotificationTest::test_skips_nonexistent_users"/>
+        <covered by="Tests\Feature\SendTaskAssignedNotificationTest::test_notification_contains_task_details"/>
+        <covered by="Tests\Feature\TaskTest::test_assignee_can_update_task_without_module_permission"/>
+      </line>
+      <line nr="27">
+        <covered by="Tests\Unit\TaskAssignedNotificationTest::test_to_array_returns_task_data"/>
+        <covered by="Tests\Unit\TaskAssignedNotificationTest::test_to_array_handles_null_creator"/>
+        <covered by="Tests\Unit\TaskAssignedNotificationTest::test_to_array_handles_null_module"/>
+        <covered by="Tests\Feature\SendTaskAssignedNotificationTest::test_notification_contains_task_details"/>
+        <covered by="Tests\Feature\TaskTest::test_assignee_can_update_task_without_module_permission"/>
+      </line>
+      <line nr="28">
+        <covered by="Tests\Unit\TaskAssignedNotificationTest::test_to_array_returns_task_data"/>
+        <covered by="Tests\Unit\TaskAssignedNotificationTest::test_to_array_handles_null_creator"/>
+        <covered by="Tests\Unit\TaskAssignedNotificationTest::test_to_array_handles_null_module"/>
+        <covered by="Tests\Feature\SendTaskAssignedNotificationTest::test_notification_contains_task_details"/>
+        <covered by="Tests\Feature\TaskTest::test_assignee_can_update_task_without_module_permission"/>
+      </line>
+      <line nr="29">
+        <covered by="Tests\Unit\TaskAssignedNotificationTest::test_to_array_returns_task_data"/>
+        <covered by="Tests\Unit\TaskAssignedNotificationTest::test_to_array_handles_null_creator"/>
+        <covered by="Tests\Unit\TaskAssignedNotificationTest::test_to_array_handles_null_module"/>
+        <covered by="Tests\Feature\SendTaskAssignedNotificationTest::test_notification_contains_task_details"/>
+        <covered by="Tests\Feature\TaskTest::test_assignee_can_update_task_without_module_permission"/>
+      </line>
+      <line nr="30">
+        <covered by="Tests\Unit\TaskAssignedNotificationTest::test_to_array_returns_task_data"/>
+        <covered by="Tests\Unit\TaskAssignedNotificationTest::test_to_array_handles_null_creator"/>
+        <covered by="Tests\Unit\TaskAssignedNotificationTest::test_to_array_handles_null_module"/>
+        <covered by="Tests\Feature\SendTaskAssignedNotificationTest::test_notification_contains_task_details"/>
+        <covered by="Tests\Feature\TaskTest::test_assignee_can_update_task_without_module_permission"/>
+      </line>
+      <line nr="31">
+        <covered by="Tests\Unit\TaskAssignedNotificationTest::test_to_array_returns_task_data"/>
+        <covered by="Tests\Unit\TaskAssignedNotificationTest::test_to_array_handles_null_creator"/>
+        <covered by="Tests\Unit\TaskAssignedNotificationTest::test_to_array_handles_null_module"/>
+        <covered by="Tests\Feature\SendTaskAssignedNotificationTest::test_notification_contains_task_details"/>
+        <covered by="Tests\Feature\TaskTest::test_assignee_can_update_task_without_module_permission"/>
+      </line>
+      <line nr="32">
+        <covered by="Tests\Unit\TaskAssignedNotificationTest::test_to_array_returns_task_data"/>
+        <covered by="Tests\Unit\TaskAssignedNotificationTest::test_to_array_handles_null_creator"/>
+        <covered by="Tests\Unit\TaskAssignedNotificationTest::test_to_array_handles_null_module"/>
+        <covered by="Tests\Feature\SendTaskAssignedNotificationTest::test_notification_contains_task_details"/>
+        <covered by="Tests\Feature\TaskTest::test_assignee_can_update_task_without_module_permission"/>
+      </line>
+      <line nr="33">
+        <covered by="Tests\Unit\TaskAssignedNotificationTest::test_to_array_returns_task_data"/>
+        <covered by="Tests\Unit\TaskAssignedNotificationTest::test_to_array_handles_null_creator"/>
+        <covered by="Tests\Unit\TaskAssignedNotificationTest::test_to_array_handles_null_module"/>
+        <covered by="Tests\Feature\SendTaskAssignedNotificationTest::test_notification_contains_task_details"/>
+        <covered by="Tests\Feature\TaskTest::test_assignee_can_update_task_without_module_permission"/>
+      </line>
+      <line nr="34">
+        <covered by="Tests\Unit\TaskAssignedNotificationTest::test_to_array_returns_task_data"/>
+        <covered by="Tests\Unit\TaskAssignedNotificationTest::test_to_array_handles_null_creator"/>
+        <covered by="Tests\Unit\TaskAssignedNotificationTest::test_to_array_handles_null_module"/>
+        <covered by="Tests\Feature\SendTaskAssignedNotificationTest::test_notification_contains_task_details"/>
+        <covered by="Tests\Feature\TaskTest::test_assignee_can_update_task_without_module_permission"/>
+      </line>
+      <line nr="35">
+        <covered by="Tests\Unit\TaskAssignedNotificationTest::test_to_array_returns_task_data"/>
+        <covered by="Tests\Unit\TaskAssignedNotificationTest::test_to_array_handles_null_creator"/>
+        <covered by="Tests\Unit\TaskAssignedNotificationTest::test_to_array_handles_null_module"/>
+        <covered by="Tests\Feature\SendTaskAssignedNotificationTest::test_notification_contains_task_details"/>
+        <covered by="Tests\Feature\TaskTest::test_assignee_can_update_task_without_module_permission"/>
+      </line>
+      <line nr="26">
+        <covered by="Tests\Unit\TaskAssignedNotificationTest::test_to_array_returns_task_data"/>
+        <covered by="Tests\Unit\TaskAssignedNotificationTest::test_to_array_handles_null_creator"/>
+        <covered by="Tests\Unit\TaskAssignedNotificationTest::test_to_array_handles_null_module"/>
+        <covered by="Tests\Feature\SendTaskAssignedNotificationTest::test_notification_contains_task_details"/>
+        <covered by="Tests\Feature\TaskTest::test_assignee_can_update_task_without_module_permission"/>
+      </line>
+      <line nr="36">
+        <covered by="Tests\Unit\TaskAssignedNotificationTest::test_to_array_returns_task_data"/>
+        <covered by="Tests\Unit\TaskAssignedNotificationTest::test_to_array_handles_null_creator"/>
+        <covered by="Tests\Unit\TaskAssignedNotificationTest::test_to_array_handles_null_module"/>
+        <covered by="Tests\Feature\SendTaskAssignedNotificationTest::test_notification_contains_task_details"/>
+        <covered by="Tests\Feature\TaskTest::test_assignee_can_update_task_without_module_permission"/>
+      </line>
+    </coverage>
+    <source>
+      <line no="1">
+        <token name="T_OPEN_TAG">&lt;?php</token>
+      </line>
+      <line no="2"/>
+      <line no="3">
+        <token name="T_NAMESPACE">namespace</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_NAME_QUALIFIED">App\Notifications</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="4"/>
+      <line no="5">
+        <token name="T_USE">use</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_NAME_QUALIFIED">App\Models\Task</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="6">
+        <token name="T_USE">use</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_NAME_QUALIFIED">Illuminate\Bus\Queueable</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="7">
+        <token name="T_USE">use</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_NAME_QUALIFIED">Illuminate\Notifications\Notification</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="8"/>
+      <line no="9">
+        <token name="T_CLASS">class</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">TaskAssigned</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_EXTENDS">extends</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">Notification</token>
+      </line>
+      <line no="10">
+        <token name="T_OPEN_CURLY">{</token>
+      </line>
+      <line no="11">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_USE">use</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">Queueable</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="12"/>
+      <line no="13">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_PUBLIC">public</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_FUNCTION">function</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">__construct</token>
+        <token name="T_OPEN_BRACKET">(</token>
+      </line>
+      <line no="14">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_PRIVATE">private</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_READONLY">readonly</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">Task</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$task</token>
+      </line>
+      <line no="15">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_CURLY">{</token>
+        <token name="T_CLOSE_CURLY">}</token>
+      </line>
+      <line no="16"/>
+      <line no="17">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_DOC_COMMENT">/** @return array&lt;int, string&gt; */</token>
+      </line>
+      <line no="18">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_PUBLIC">public</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_FUNCTION">function</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">via</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_STRING">object</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$notifiable</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_COLON">:</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_ARRAY">array</token>
+      </line>
+      <line no="19">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_OPEN_CURLY">{</token>
+      </line>
+      <line no="20">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_RETURN">return</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_SQUARE">[</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'database'</token>
+        <token name="T_CLOSE_SQUARE">]</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="21">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_CLOSE_CURLY">}</token>
+      </line>
+      <line no="22"/>
+      <line no="23">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_DOC_COMMENT">/** @return array&lt;string, mixed&gt; */</token>
+      </line>
+      <line no="24">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_PUBLIC">public</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_FUNCTION">function</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">toArray</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_STRING">object</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$notifiable</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_COLON">:</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_ARRAY">array</token>
+      </line>
+      <line no="25">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_OPEN_CURLY">{</token>
+      </line>
+      <line no="26">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_RETURN">return</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_SQUARE">[</token>
+      </line>
+      <line no="27">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'type'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'task_assigned'</token>
+        <token name="T_COMMA">,</token>
+      </line>
+      <line no="28">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'task_id'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$this</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">task</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">id</token>
+        <token name="T_COMMA">,</token>
+      </line>
+      <line no="29">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'title'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$this</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">task</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">title</token>
+        <token name="T_COMMA">,</token>
+      </line>
+      <line no="30">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'status'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$this</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">task</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">status</token>
+        <token name="T_COMMA">,</token>
+      </line>
+      <line no="31">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'priority'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$this</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">task</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">priority</token>
+        <token name="T_COMMA">,</token>
+      </line>
+      <line no="32">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'due_date'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$this</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">task</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">due_date</token>
+        <token name="T_COMMA">,</token>
+      </line>
+      <line no="33">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'assigned_by_name'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$this</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">task</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">creator</token>
+        <token name="T_NULLSAFE_OBJECT_OPERATOR">?-&gt;</token>
+        <token name="T_STRING">name</token>
+        <token name="T_COMMA">,</token>
+      </line>
+      <line no="34">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'assigned_by_id'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$this</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">task</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">created_by</token>
+        <token name="T_COMMA">,</token>
+      </line>
+      <line no="35">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'module_name'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$this</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">task</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">module</token>
+        <token name="T_NULLSAFE_OBJECT_OPERATOR">?-&gt;</token>
+        <token name="T_STRING">name</token>
+        <token name="T_COMMA">,</token>
+      </line>
+      <line no="36">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_CLOSE_SQUARE">]</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="37">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_CLOSE_CURLY">}</token>
+      </line>
+      <line no="38">
+        <token name="T_CLOSE_CURLY">}</token>
+      </line>
+      <line no="39"/>
+    </source>
+  </file>
+</phpunit>

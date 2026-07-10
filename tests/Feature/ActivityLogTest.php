@@ -2,7 +2,10 @@
 
 namespace Tests\Feature;
 
+use App\Models\Feature;
 use App\Models\User;
+use Database\Seeders\FeatureModuleSeeder;
+use HasinHayder\Tyro\Database\Seeders\TyroSeeder;
 use HasinHayder\Tyro\Models\Role;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Activitylog\Models\Activity;
@@ -15,8 +18,8 @@ class ActivityLogTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->seed(\HasinHayder\Tyro\Database\Seeders\TyroSeeder::class);
-        $this->seed(\Database\Seeders\FeatureModuleSeeder::class);
+        $this->seed(TyroSeeder::class);
+        $this->seed(FeatureModuleSeeder::class);
     }
 
     public function test_list_activity_logs_as_super_admin()
@@ -49,7 +52,7 @@ class ActivityLogTest extends TestCase
         $role = Role::where('slug', 'super-admin')->firstOrFail();
         $user->assignRole($role);
         $token = $user->createToken('test')->plainTextToken;
-        $feature = \App\Models\Feature::first();
+        $feature = Feature::first();
 
         activity()->performedOn($feature)->causedBy($user)->event('created')->log('test_created');
         activity()->performedOn($feature)->causedBy($user)->event('updated')->log('test_updated');
@@ -67,7 +70,7 @@ class ActivityLogTest extends TestCase
         $role = Role::where('slug', 'super-admin')->firstOrFail();
         $user->assignRole($role);
         $token = $user->createToken('test')->plainTextToken;
-        $feature = \App\Models\Feature::first();
+        $feature = Feature::first();
 
         activity()->performedOn($feature)->causedBy($user)->event('created')->log('show_test');
         $activity = Activity::first();
@@ -85,7 +88,7 @@ class ActivityLogTest extends TestCase
         $role = Role::where('slug', 'super-admin')->firstOrFail();
         $user->assignRole($role);
         $token = $user->createToken('test')->plainTextToken;
-        $feature = \App\Models\Feature::first();
+        $feature = Feature::first();
 
         activity()->performedOn($feature)->causedBy($user)->event('created')->log('unique_search_term');
         activity()->performedOn($feature)->causedBy($user)->event('created')->log('other_term');
@@ -104,7 +107,7 @@ class ActivityLogTest extends TestCase
         $role = Role::where('slug', 'super-admin')->firstOrFail();
         $user->assignRole($role);
         $token = $user->createToken('test')->plainTextToken;
-        $feature = \App\Models\Feature::first();
+        $feature = Feature::first();
 
         activity()->performedOn($feature)->causedBy($user)->event('created')->log('sort_created');
         activity()->performedOn($feature)->causedBy($user)->event('updated')->log('sort_updated');
@@ -134,10 +137,9 @@ class ActivityLogTest extends TestCase
         $role = Role::where('slug', 'super-admin')->firstOrFail();
         $user->assignRole($role);
         $token = $user->createToken('test')->plainTextToken;
-        $feature = \App\Models\Feature::first();
+        $feature = Feature::first();
 
-        activity()->performedOn($feature)->causedBy($user)->event('created')->log('structure_test');
-        $activity = Activity::first();
+        $activity = activity()->performedOn($feature)->causedBy($user)->event('created')->log('structure_test');
 
         $response = $this->withHeader('Authorization', "Bearer $token")
             ->getJson("/api/activity-logs/{$activity->id}");
@@ -147,9 +149,12 @@ class ActivityLogTest extends TestCase
         $this->assertArrayHasKey('subject', $data);
         $this->assertArrayHasKey('causer', $data);
         $this->assertArrayHasKey('properties', $data);
-        $this->assertEquals('App\Models\Feature', $data['subject_type']);
+        $this->assertEquals($feature->getMorphClass(), $data['subject_type']);
         $this->assertEquals($feature->id, $data['subject_id']);
-        $this->assertNull($data['causer']);
+        $this->assertNotNull($data['causer']);
+        $this->assertEquals($user->id, $data['causer']['id']);
+        $this->assertEquals($user->name, $data['causer']['name']);
+        $this->assertEquals($user->email, $data['causer']['email']);
     }
 
     public function test_activity_log_subject_label_for_feature()
@@ -158,7 +163,7 @@ class ActivityLogTest extends TestCase
         $role = Role::where('slug', 'super-admin')->firstOrFail();
         $user->assignRole($role);
         $token = $user->createToken('test')->plainTextToken;
-        $feature = \App\Models\Feature::first();
+        $feature = Feature::first();
 
         activity()->performedOn($feature)->causedBy($user)->event('created')->log('label_test');
 
@@ -168,5 +173,111 @@ class ActivityLogTest extends TestCase
         $response->assertStatus(200);
         $activity = $response->json('data')[0];
         $this->assertEquals($feature->name, $activity['subject']['label']);
+    }
+
+    public function test_activity_log_filter_by_subject_type()
+    {
+        $user = User::factory()->create();
+        $role = Role::where('slug', 'super-admin')->firstOrFail();
+        $user->assignRole($role);
+        $token = $user->createToken('test')->plainTextToken;
+        $feature = Feature::first();
+
+        activity()->performedOn($feature)->causedBy($user)->event('created')->log('subject_type_test');
+
+        $response = $this->withHeader('Authorization', "Bearer $token")
+            ->getJson('/api/activity-logs?subject_type='.$feature->getMorphClass());
+
+        $response->assertStatus(200);
+        $this->assertStringContainsString('subject_type_test', $response->getContent());
+    }
+
+    public function test_activity_log_filter_by_causer_id()
+    {
+        $user = User::factory()->create();
+        $role = Role::where('slug', 'super-admin')->firstOrFail();
+        $user->assignRole($role);
+        $token = $user->createToken('test')->plainTextToken;
+        $feature = Feature::first();
+
+        activity()->performedOn($feature)->causedBy($user)->event('created')->log('causer_filter_test');
+
+        $response = $this->withHeader('Authorization', "Bearer $token")
+            ->getJson('/api/activity-logs?causer_id='.$user->id);
+
+        $response->assertStatus(200);
+        $this->assertStringContainsString('causer_filter_test', $response->getContent());
+    }
+
+    public function test_activity_log_filter_by_date_range()
+    {
+        $user = User::factory()->create();
+        $role = Role::where('slug', 'super-admin')->firstOrFail();
+        $user->assignRole($role);
+        $token = $user->createToken('test')->plainTextToken;
+        $feature = Feature::first();
+
+        activity()->performedOn($feature)->causedBy($user)->event('created')->log('date_range_test');
+
+        $today = now()->format('Y-m-d');
+        $response = $this->withHeader('Authorization', "Bearer $token")
+            ->getJson("/api/activity-logs?date_from=$today&date_to=$today&per_page=100");
+
+        $response->assertStatus(200);
+        $this->assertStringContainsString('date_range_test', $response->getContent());
+    }
+
+    public function test_activity_log_invalid_sort_by_falls_back()
+    {
+        $user = User::factory()->create();
+        $role = Role::where('slug', 'super-admin')->firstOrFail();
+        $user->assignRole($role);
+        $token = $user->createToken('test')->plainTextToken;
+
+        $response = $this->withHeader('Authorization', "Bearer $token")
+            ->getJson('/api/activity-logs?sort_by=invalid_field');
+
+        $response->assertStatus(200);
+    }
+
+    public function test_activity_log_invalid_sort_order_falls_back()
+    {
+        $user = User::factory()->create();
+        $role = Role::where('slug', 'super-admin')->firstOrFail();
+        $user->assignRole($role);
+        $token = $user->createToken('test')->plainTextToken;
+
+        $response = $this->withHeader('Authorization', "Bearer $token")
+            ->getJson('/api/activity-logs?sort_order=invalid');
+
+        $response->assertStatus(200);
+    }
+
+    public function test_activity_log_show_forbidden_for_non_super_admin()
+    {
+        $user = User::factory()->create();
+        $log = activity()->performedOn($user)->causedBy($user)->event('created')->log('test_log');
+        $token = $user->createToken('test')->plainTextToken;
+
+        $response = $this->withHeader('Authorization', "Bearer $token")
+            ->getJson("/api/activity-logs/{$log->id}");
+
+        $response->assertStatus(403);
+    }
+
+    public function test_web_activity_log_filters(): void
+    {
+        $user = User::factory()->create();
+        $role = Role::where('slug', 'super-admin')->firstOrFail();
+        $user->assignRole($role);
+        $feature = Feature::first();
+
+        activity()->performedOn($feature)->causedBy($user)->event('created')->log('web_filter_test');
+
+        $today = now()->format('Y-m-d');
+        $this->actingAs($user);
+        $this->get(route('activity-logs.index', ['causer_id' => $user->id]))->assertStatus(200);
+        $this->get(route('activity-logs.index', ['date_from' => $today]))->assertStatus(200);
+        $this->get(route('activity-logs.index', ['date_to' => $today]))->assertStatus(200);
     }
 }

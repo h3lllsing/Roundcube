@@ -16,12 +16,17 @@ return new class extends Migration
             $table->json('events')->nullable();
             $table->boolean('is_active')->default(true);
             $table->timestamp('last_fired_at')->nullable();
+            $table->softDeletes();
             $table->timestamps();
         });
     }
 
     public function down(): void
     {
+        Schema::table('webhooks', function (Blueprint $table) {
+            $table->dropSoftDeletes();
+        });
+
         Schema::dropIfExists('webhooks');
     }
 };

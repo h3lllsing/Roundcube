@@ -3,8 +3,11 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\StoreWebhookRequest;
+use App\Http\Requests\UpdateWebhookRequest;
 use App\Models\Webhook;
 use App\Services\WebhookService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class WebhookController extends Controller
@@ -13,29 +16,31 @@ class WebhookController extends Controller
         private readonly WebhookService $webhookService
     ) {}
 
-    public function index(Request $request): \Illuminate\Http\JsonResponse
+    public function index(Request $request): JsonResponse
     {
         $user = $request->user();
 
-        if ($user->hasRole('super-admin')) {
-            $webhooks = Webhook::with('user')->latest()->get();
-        } else {
-            $webhooks = Webhook::where('user_id', $user->id)->latest()->get();
+        if (! $user->hasRole('super-admin')) {
+            Webhook::addGlobalScope('ownership', fn ($q) => $q->where('user_id', $user->id));
         }
 
-        return $this->success($webhooks);
+        $query = Webhook::with('user');
+
+        $request->validate(['search' => 'nullable|string|max:255']);
+        if ($search = $request->get('search')) {
+            $query->where('name', 'like', "%{$search}%");
+        }
+
+        $webhooks = $query->latest()->paginate(50);
+
+        return response()->json($webhooks);
     }
 
-    public function store(Request $request): \Illuminate\Http\JsonResponse
+    public function store(StoreWebhookRequest $request): JsonResponse
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'url' => 'required|url|max:2048',
-            'events' => 'nullable|array',
-            'events.*' => 'string',
-            'is_active' => 'boolean',
-        ]);
+        abort_unless($request->user()->hasRole('super-admin'), 403);
 
+        $validated = $request->validated();
         $validated['user_id'] = $request->user()->id;
 
         $webhook = Webhook::create($validated);
@@ -43,37 +48,30 @@ class WebhookController extends Controller
         return $this->created($webhook, 'Webhook created');
     }
 
-    public function show(Request $request, Webhook $webhook): \Illuminate\Http\JsonResponse
+    public function show(Request $request, Webhook $webhook): JsonResponse
     {
-        if ($webhook->user_id !== $request->user()->id && !$request->user()->hasRole('super-admin')) {
+        if ($webhook->user_id !== $request->user()->id && ! $request->user()->hasRole('super-admin')) {
             return $this->message('Forbidden', 403);
         }
 
         return $this->success($webhook);
     }
 
-    public function update(Request $request, Webhook $webhook): \Illuminate\Http\JsonResponse
+    public function update(UpdateWebhookRequest $request, Webhook $webhook): JsonResponse
     {
-        if ($webhook->user_id !== $request->user()->id && !$request->user()->hasRole('super-admin')) {
+        if ($webhook->user_id !== $request->user()->id && ! $request->user()->hasRole('super-admin')) {
             return $this->message('Forbidden', 403);
         }
 
-        $validated = $request->validate([
-            'name' => 'sometimes|string|max:255',
-            'url' => 'sometimes|url|max:2048',
-            'events' => 'nullable|array',
-            'events.*' => 'string',
-            'is_active' => 'boolean',
-        ]);
-
-        $webhook->update($validated);
+        $this->checkOptimisticLock($webhook, $request);
+        $webhook->update($request->validated());
 
         return $this->success($webhook, 'Webhook updated');
     }
 
-    public function destroy(Request $request, Webhook $webhook): \Illuminate\Http\JsonResponse
+    public function destroy(Request $request, Webhook $webhook): JsonResponse
     {
-        if ($webhook->user_id !== $request->user()->id && !$request->user()->hasRole('super-admin')) {
+        if ($webhook->user_id !== $request->user()->id && ! $request->user()->hasRole('super-admin')) {
             return $this->message('Forbidden', 403);
         }
 
@@ -82,13 +80,13 @@ class WebhookController extends Controller
         return $this->message('Webhook deleted');
     }
 
-    public function test(Request $request, Webhook $webhook): \Illuminate\Http\JsonResponse
+    public function test(Request $request, Webhook $webhook): JsonResponse
     {
-        if ($webhook->user_id !== $request->user()->id && !$request->user()->hasRole('super-admin')) {
+        if ($webhook->user_id !== $request->user()->id && ! $request->user()->hasRole('super-admin')) {
             return $this->message('Forbidden', 403);
         }
 
-        $this->webhookService->fire('test', [
+        $this->webhookService->fireOne($webhook, 'test', [
             'event' => 'test',
             'message' => 'Test webhook',
         ]);

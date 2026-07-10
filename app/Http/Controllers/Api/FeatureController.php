@@ -9,7 +9,10 @@ use App\Http\Resources\FeatureResource;
 use App\Models\Feature;
 use App\Models\Module;
 use App\Services\FeatureService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use OpenApi\Attributes as OA;
 
@@ -38,7 +41,7 @@ class FeatureController extends Controller
             ])),
         ]
     )]
-    public function index(Request $request): \Illuminate\Http\Resources\Json\AnonymousResourceCollection
+    public function index(Request $request): AnonymousResourceCollection
     {
         $user = $request->user();
         $filters = $request->only(['is_active', 'search', 'per_page', 'sort_by', 'sort_order']);
@@ -47,15 +50,16 @@ class FeatureController extends Controller
             $filters['with_trashed'] = true;
         }
 
-        if (!$user->hasRole('super-admin')) {
+        if (! $user->hasRole('super-admin')) {
             $filters['accessible_module_ids'] = Module::whereHas('rolePermissions', function ($q) use ($user) {
                 $q->whereIn('role_id', $user->roles()->pluck('roles.id'))->where('can_read', true);
             })->pluck('id');
         }
 
         $version = Cache::get('features:version', 0);
-        $cacheKey = 'features:list:v' . $version . ':' . $user->id . ':' . md5(json_encode($filters) ?: '');
-        $features = Cache::remember($cacheKey, 60, fn() => $this->featureService->list($filters));
+        $cacheKey = 'features:list:v'.$version.':'.$user->id.':'.md5(json_encode($filters) ?: '');
+        $features = Cache::remember($cacheKey, 60, fn () => $this->featureService->list($filters));
+
         return FeatureResource::collection($features);
     }
 
@@ -81,7 +85,10 @@ class FeatureController extends Controller
     )]
     public function store(StoreFeatureRequest $request): FeatureResource
     {
+        abort_unless($request->user()->hasRole('super-admin'), 403);
+
         $feature = $this->featureService->create($request->validated());
+
         return new FeatureResource($feature);
     }
 
@@ -101,6 +108,7 @@ class FeatureController extends Controller
     public function show(Feature $feature): FeatureResource
     {
         $feature->loadMissing('modules');
+
         return new FeatureResource($feature);
     }
 
@@ -129,7 +137,11 @@ class FeatureController extends Controller
     )]
     public function update(UpdateFeatureRequest $request, Feature $feature): FeatureResource
     {
-        $feature = $this->featureService->update($feature, $request->validated());
+    abort_unless($request->user()->hasRole('super-admin'), 403);
+    $this->checkOptimisticLock($feature, $request);
+
+    $feature = $this->featureService->update($feature, $request->validated());
+
         return new FeatureResource($feature);
     }
 
@@ -146,9 +158,12 @@ class FeatureController extends Controller
             new OA\Response(response: 404, description: 'Feature not found'),
         ]
     )]
-    public function destroy(Feature $feature): \Illuminate\Http\JsonResponse
+    public function destroy(Feature $feature): JsonResponse
     {
+        abort_unless(Auth::user()->hasRole('super-admin'), 403);
+
         $this->featureService->delete($feature);
+
         return $this->message('Feature deleted');
     }
 }

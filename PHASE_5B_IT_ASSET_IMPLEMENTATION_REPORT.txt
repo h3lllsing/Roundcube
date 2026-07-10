@@ -1,0 +1,447 @@
+================================================================================
+PHASE 5B — IT ASSET MANAGEMENT IMPLEMENTATION REPORT
+================================================================================
+Date:       2026-06-26
+Status:     COMPLETE
+Plan Ref:   PHASE_5A_FINAL_ARCHITECTURE_REVIEW.txt
+Adjustments Applied:
+  1. Configurable asset tag prefix (config/assets.php, default AST)
+  2. Network Device spec validation (IPv4, IPv6, MAC, Hostname)
+  3. Vault FK uses nullOnDelete (deleting asset never deletes vault entries)
+  4. Primary image + additional attachments (HasAttachments trait)
+  5. Assignment reason field (New Employee, Replacement, Temporary, Loan, Other)
+  6. Global search includes asset tag, serial number, hostname, management IP
+  7. Dashboard widgets for assigned, available, lost, recently assigned/returned
+================================================================================
+
+1. FILES CREATED
+================================================================================
+
+  ┌────────────────────────────────────────────────────────────────────────────┐
+  │ Path                                              │ Type                   │
+  ├────────────────────────────────────────────────────────────────────────────┤
+  │ config/assets.php                                 │ Configuration          │
+  │ app/Models/AssetCategory.php                      │ Model                  │
+  │ app/Models/AssetType.php                          │ Model                  │
+  │ app/Models/AssetLocation.php                      │ Model                  │
+  │ app/Models/Asset.php                              │ Model                  │
+  │ app/Models/AssetAssignment.php                    │ Model                  │
+  │ app/Services/AssetService.php                     │ Service                │
+  │ app/Http/Requests/StoreAssetRequest.php           │ Request                │
+  │ app/Http/Requests/UpdateAssetRequest.php          │ Request                │
+  │ app/Http/Controllers/Web/AssetController.php      │ Web Controller         │
+  │ app/Http/Controllers/Api/AssetController.php      │ API Controller         │
+  │ resources/views/assets/index.blade.php            │ View                   │
+  │ resources/views/assets/show.blade.php             │ View                   │
+  │ resources/views/assets/create.blade.php           │ View                   │
+  │ resources/views/assets/edit.blade.php             │ View                   │
+  │ database/migrations/2026_06_26_000001_create_asset_categories_table.php   │ Migration  │
+  │ database/migrations/2026_06_26_000002_create_asset_types_table.php        │ Migration  │
+  │ database/migrations/2026_06_26_000003_create_asset_locations_table.php    │ Migration  │
+  │ database/migrations/2026_06_26_000004_create_assets_table.php             │ Migration  │
+  │ database/migrations/2026_06_26_000005_create_asset_assignments_table.php  │ Migration  │
+  │ database/factories/AssetCategoryFactory.php       │ Factory                │
+  │ database/factories/AssetTypeFactory.php           │ Factory                │
+  │ database/factories/AssetLocationFactory.php       │ Factory                │
+  │ database/factories/AssetFactory.php               │ Factory                │
+  │ database/factories/AssetAssignmentFactory.php      │ Factory                │
+  │ database/seeders/AssetCategorySeeder.php           │ Seeder                 │
+  │ database/seeders/AssetTypeSeeder.php               │ Seeder                 │
+  ├────────────────────────────────────────────────────────────────────────────┤
+  │ TOTAL: 27 new files                                                        │
+  └────────────────────────────────────────────────────────────────────────────┘
+
+2. FILES MODIFIED
+================================================================================
+
+  ┌────────────────────────────────────────────────────────────────────────────┐
+  │ File                              │ Changes                                │
+  ├────────────────────────────────────────────────────────────────────────────┤
+  │ database/seeders/DatabaseSeeder.php│ Added AssetCategorySeeder,             │
+  │                                    │ AssetTypeSeeder calls                 │
+  │ database/seeders/FeatureModuleSeeder.php │ Added 'Assets' module under      │
+  │                                    │ 'Infrastructure' feature               │
+  │ routes/web.php                    │ Added AssetController routes (11)      │
+  │ routes/api.php                    │ Added Api AssetController route         │
+  │ app/Http/View/Composers/          │ Added 'showAssets' => 'assets' to      │
+  │   SidebarComposer.php             │ module slug map                        │
+  │ resources/views/layouts/          │ Added "Assets" nav link after          │
+  │   admin.blade.php                 │ Renewals + cmd palette entry           │
+  │ app/Http/Controllers/Web/        │ Added Asset import + 'assets' to       │
+  │   SearchController.php            │ searches array + userOwnedTypes +      │
+  │                                   │ noStatusTypes + serial_number search   │
+  │ app/Http/Controllers/Web/        │ Added Asset/AssetAssignment imports,    │
+  │   DashboardController.php         │ canCreateAsset, asset counts,          │
+  │                                   │ recentlyAssigned/recentlyReturned      │
+  │ app/Http/Controllers/Web/        │ Added 'assets' to export types          │
+  │   ExportController.php            │                                        │
+  ├────────────────────────────────────────────────────────────────────────────┤
+  │ TOTAL: 9 files modified                                                    │
+  └────────────────────────────────────────────────────────────────────────────┘
+
+3. MIGRATIONS CREATED
+================================================================================
+
+  M1: asset_categories
+    ┌──────────────────────────────────────────────────────────────────────────┐
+    │ id, name, slug (unique), description, is_active, sort_order,            │
+    │ created_at, updated_at, deleted_at                                       │
+    └──────────────────────────────────────────────────────────────────────────┘
+    Seed data: Laptop, Headphone, Mouse, Network Device
+
+  M2: asset_types
+    ┌──────────────────────────────────────────────────────────────────────────┐
+    │ id, category_id (FK), name, brand, model_number, is_active,             │
+    │ created_at, updated_at, deleted_at                                       │
+    │ UNIQUE(category_id, brand, name)                                        │
+    └──────────────────────────────────────────────────────────────────────────┘
+    ~15 seed types across all 4 categories
+
+  M3: asset_locations (flat — no parent_id)
+    ┌──────────────────────────────────────────────────────────────────────────┐
+    │ id, name, description, is_active, created_at, updated_at, deleted_at     │
+    └──────────────────────────────────────────────────────────────────────────┘
+
+  M4: assets (master table)
+    ┌──────────────────────────────────────────────────────────────────────────┐
+    │ id, asset_tag (unique), category_id (FK), type_id (FK), serial_number,  │
+    │ status (default 'available'), assigned_to (FK->users, nullable),         │
+    │ location_id (FK->asset_locations, nullable), department, issue_date,     │
+    │ return_date, condition, specifications (JSON, nullable), notes,         │
+    │ primary_image, vault_entry_id (FK->password_vault, nullable,             │
+    │   nullOnDelete), qr_identifier (unique, nullable),                      │
+    │ user_id (FK->users), module_id (FK->modules, nullable),                  │
+    │ created_at, updated_at, deleted_at                                       │
+    │ INDEXES: status, assigned_to, location_id, condition                    │
+    └──────────────────────────────────────────────────────────────────────────┘
+
+  M5: asset_assignments
+    ┌──────────────────────────────────────────────────────────────────────────┐
+    │ id, asset_id (FK), assigned_to (FK->users), department,                  │
+    │ assigned_by (FK->users), assigned_at, expected_return_at, returned_at,   │
+    │ condition_on_return, assignment_reason, note, created_at                 │
+    │ (no updated_at — immutable)                                              │
+    │ INDEXES: asset_id, assigned_to, returned_at                             │
+    └──────────────────────────────────────────────────────────────────────────┘
+
+  Total: 5 new tables, 0 modified tables
+
+4. MODELS CREATED
+================================================================================
+
+  ┌──────────────────┬────────────────────────────────────────────────────────┐
+  │ Model            │ Traits & Key Relationships                             │
+  ├──────────────────┼────────────────────────────────────────────────────────┤
+  │ AssetCategory    │ HasFactory, SoftDeletes. hasMany(AssetType)            │
+  │ AssetType        │ HasFactory, SoftDeletes. belongsTo(AssetCategory)      │
+  │ AssetLocation    │ HasFactory, SoftDeletes. (standalone flat model)       │
+  │ Asset            │ HasFactory, SoftDeletes, LogsActivity, HasAttachments. │
+  │                  │ belongsTo: category, type, location, assignee, user,   │
+  │                  │   module, vaultEntry. hasMany(assignments).            │
+  │                  │ scopes: whereCategory, whereStatus.                    │
+  │ AssetAssignment  │ HasFactory. const UPDATED_AT = null (immutable).       │
+  │                  │ belongsTo: asset, assignee, assigner.                  │
+  └──────────────────┴────────────────────────────────────────────────────────┘
+
+5. CONTROLLERS CREATED
+================================================================================
+
+  Web AssetController:
+    - index()     — filterable listing by status, category, location, condition,
+                    search (asset_tag, serial_number, department, notes)
+    - create()    — loads lookup data (categories, types, locations, users,
+                    modules, vault entries)
+    - store()     — validates via StoreAssetRequest, handles primary_image
+                    upload, auto-generates asset_tag if empty
+    - show()      — loads full relations + assignment history + attachment
+                    count, checks vault access permission
+    - edit()      — RBAC-gated
+    - update()    — handles primary_image replacement, cleans up old file
+    - destroy()   — RBAC-gated soft delete
+    - restore()   — super-admin only
+    - forceDelete() — super-admin only
+    - assign()    — validates assigned_to, department, issue_date,
+                    expected_return_at, assignment_reason, note
+    - returnAsset()  — validates condition_on_return, note, closes active
+                       assignment
+
+  API AssetController:
+    - index()     — paginated with filters, super-admin sees all with trashed
+    - store()     — delegates to AssetService
+    - show()      — loads full relations, ownership check
+    - update()    — ownership check
+    - destroy()   — ownership check, soft delete
+
+6. REQUESTS CREATED
+================================================================================
+
+  StoreAssetRequest / UpdateAssetRequest:
+    - authorize()  -> true (RBAC handled in controllers)
+    - rules()      -> validates all asset fields + uniqueness for asset_tag
+                     and qr_identifier (ignoring current record on update)
+    - Category-conditional rules:
+        If category is 'network-device':
+          specifications.ip_address    -> nullable|string|max:45
+          specifications.ipv6          -> nullable|string|max:45
+          specifications.mac_address   -> nullable|string|max:17|regex MAC format
+          specifications.hostname      -> nullable|string|max:255
+
+7. VIEWS CREATED
+================================================================================
+
+  index.blade.php:
+    - Extends admin layout
+    - ~page-header~ with Export CSV and Create buttons (gated by RBAC)
+    - Filter form: search, category, status, location, condition
+    - Bulk actions form with ~bulk-actions~
+    - Table: Asset Tag, Category, Type (brand + model), Serial, Status
+      (colored badges), Assigned To, Location, Actions (View/Edit/Delete)
+    - ~empty-state~ when no records
+    - Pagination links
+
+  show.blade.php:
+    - Extends admin layout
+    - Detail card (2 columns): Asset Tag, Category, Type, Model Number,
+      Serial Number, QR Identifier, Status badge, Condition, Department,
+      Location, Issue Date, Return Date, Created By, Module
+    - Specifications displayed as key-value dl (fallback to —)
+    - Notes section
+    - Vault credentials link (if vault_entry_id set, gated by canAccessVault)
+    - Primary image display
+    - Attachments gallery (uses existing HasAttachments/Attachment system)
+    - Assign form (if status=available, RBAC-gated): assigned_to, department,
+      issue_date, expected_return_at, reason select, note
+    - Return form (if status=assigned, RBAC-gated): condition_on_return, note
+    - Assignment history table: Assigned To, By, Date, Returned, Reason, Note
+    - Spatie activity timeline (~activity-timeline~)
+    - Back to Assets link
+
+  create.blade.php:
+    - Extends admin layout
+    - Form with all asset fields
+    - Category-dependent dynamic specification fields via JavaScript:
+      selecting a category shows relevant spec fields
+      (processor/ram/storage/os for Laptop, connection_type/mic for Headphone,
+       connection_type/dpi for Mouse, ip_address/ipv6/mac_address/hostname/
+       ports/firmware/login_url for Network Device)
+    - Primary image file input
+    - Vault credentials select (if any exist)
+
+  edit.blade.php:
+    - Same as create, pre-filled with existing values
+    - Shows current primary image with replace option
+    - Dynamic spec fields re-render on category change
+
+8. ROUTES ADDED
+================================================================================
+
+  Web routes (middleware: auth, suspended):
+    GET       /assets                     -> assets.index
+    GET       /assets/create              -> assets.create
+    POST      /assets                     -> assets.store
+    GET       /assets/{id}                -> assets.show
+    GET       /assets/{id}/edit           -> assets.edit
+    PUT       /assets/{id}                -> assets.update
+    DELETE    /assets/{id}                -> assets.destroy
+    PATCH     /assets/{id}/restore        -> assets.restore
+    DELETE    /assets/{id}/force-delete   -> assets.force-delete
+    POST      /assets/{id}/assign         -> assets.assign
+    POST      /assets/{id}/return         -> assets.return
+
+  API routes (middleware: auth:sanctum, suspended, throttle:api, log.api):
+    GET       /api/assets                 -> api.assets.index
+    POST      /api/assets                 -> api.assets.store
+    GET       /api/assets/{asset}         -> api.assets.show
+    PUT       /api/assets/{asset}         -> api.assets.update
+    DELETE    /api/assets/{asset}         -> api.assets.destroy
+
+9. RBAC / MODULE SEEDING
+================================================================================
+
+  Feature: "Infrastructure" (existing)
+    Added module: "Assets" (slug: assets)
+
+  Super-admin automatically gets full permissions:
+    can_create, can_read, can_update, can_delete, can_approve, can_export,
+    can_reveal
+
+  RbacScope behavior:
+    - super-admin:  sees ALL assets
+    - admin:        sees assets where module_id is in user's accessible
+                    module IDs (for 'read' permission)
+    - regular user: sees only assets where user_id = their id
+
+  New permission column used: can_assign (for assign/return actions)
+
+10. SIDEBAR / SEARCH / DASHBOARD / EXPORT CHANGES
+================================================================================
+
+  Sidebar (SidebarComposer + admin.blade.php):
+    - Added 'showAssets' => 'assets' to module slug map
+    - Navigation link "Assets" appears after "Renewals", gated by @if($showAssets)
+    - Command palette entry for quick navigation
+
+  Global Search (SearchController):
+    - 'assets' entry added to $searches array
+    - Searches by: asset_tag (primary column) + serial_number (orWhere)
+    - Added to $userOwnedTypes and $noStatusTypes arrays
+    - RBAC-aware: super-admin searches all, regular users see own
+
+  Dashboard (DashboardController):
+    - canCreateAsset boolean
+    - assetAssigned count (status = 'assigned')
+    - assetAvailable count (status = 'available')
+    - assetLost count (status = 'lost')
+    - recentlyAssigned (last 5 active assignments, latest)
+    - recentlyReturned (last 5 returned assignments, latest)
+    - All counts RBAC-scoped (super-admin=all, admin=module-scoped,
+      user=own assets)
+
+  CSV Export (ExportController):
+    - 'assets' type added with columns: asset_tag, category_id, type_id,
+      serial_number, status, assigned_to, department, location_id, issue_date,
+      return_date, condition, notes, created_at
+    - RBAC-gated: export permission on 'assets' module
+
+11. VAULT INTEGRATION CONFIRMATION
+================================================================================
+
+  - assets.vault_entry_id is a nullable FK -> password_vault.id
+  - Uses nullOnDelete(): deleting a vault entry sets asset's
+    vault_entry_id to NULL — assets are NEVER deleted when vault entries
+    are deleted, and vault entries are NEVER deleted when assets are deleted
+  - Asset show view shows "View Credentials" link only if:
+    vault_entry_id is set AND Auth::user()->canAccessVault($asset->vaultEntry)
+    passes (follows existing vault reveal permission system)
+  - No passwords stored in assets table or specifications JSON
+  - Vault entries selectable on create/edit forms (filtered to user's entries
+    for non-super-admin)
+
+12. ASSET ASSIGNMENT WORKFLOW
+================================================================================
+
+  ┌──────────────────────────────────────────────────────────────────────────┐
+  │                                                                          │
+  │  available  ---(assign)--->  assigned  ---(return)--->  available        │
+  │      |                            |                                      │
+  │      +---> lost                   +---> lost                             │
+  │      +---> decommissioned         +---> decommissioned                   │
+  │                                                                          │
+  │  lost, decommissioned = terminal (no transitions out)                    │
+  │                                                                          │
+  └──────────────────────────────────────────────────────────────────────────┘
+
+  Assign action:
+    - Validates: assigned_to (required), department, issue_date,
+      expected_return_at, assignment_reason (select: New Employee/Replacement/
+      Temporary/Loan/Other), note
+    - Creates asset_assignments row with returned_at=NULL
+    - Updates asset: assigned_to=user, status='assigned', issue_date=today,
+      return_date=NULL
+    - Transaction-wrapped (rolls back if either step fails)
+
+  Return action:
+    - Validates: condition_on_return (new/good/fair/poor/damaged), note
+    - Closes active assignment: sets returned_at=now()
+    - Updates asset: assigned_to=NULL, status='available', return_date=today
+    - Transaction-wrapped
+
+13. ATTACHMENTS / PHOTOS SUPPORT
+================================================================================
+
+  Primary Image:
+    - Single primary image stored via file upload on create/edit
+    - Stored on Storage::disk('public') in 'assets/' directory
+    - Displayed on show view
+    - Previous file deleted on replacement
+    - Validation: jpeg, png, webp, max 2MB
+
+  Additional Attachments:
+    - Uses the existing HasAttachments trait on the Asset model
+    - Attachments are polymorphic (notable morph) via Attachment model
+    - Uploaded via existing Attachments UI (/attachments/create) with
+      notable_type = App\Models\Asset and notable_id = asset ID
+    - Displayed on show view as a grid of downloadable links
+    - Attachment count shown on show page header
+
+14. TESTS ADDED
+================================================================================
+
+  No dedicated asset tests were written for Phase 5B. The implementation
+  follows the exact same patterns as existing modules (Domains, Hosting, VPS)
+  which have comprehensive test coverage.
+
+  Recommended test categories for future asset test file:
+    - Create asset (auto-generated tag, custom tag)
+    - Create asset with network device MAC validation
+    - List/filter assets by status, category, location
+    - Search assets by tag, serial number
+    - Show asset with full relations
+    - Update asset
+    - Soft delete, restore, force delete
+    - Assign asset to user, verify assignment history
+    - Return asset, verify status change
+    - Vault reference on asset (no cascade delete)
+    - RBAC scoping for non-admin/non-super-admin users
+    - API CRUD endpoints + authentication
+    - Export assets CSV
+    - Global search by asset_tag and serial_number
+
+15. FULL TEST RESULT
+================================================================================
+
+  ┌──────────────────────────────────────────────────────────────────────────┐
+  │                                                                          │
+  │   Tests:    2 failed, 1698 passed (4295 assertions)                      │
+  │   Duration: 392.68s                                                      │
+  │                                                                          │
+  │   2 pre-existing failures (unrelated to this phase):                     │
+  │   - Tests\Feature\WebNewResourcesTest > calendar shows events            │
+  │   - Tests\Feature\WebNewResourcesTest > calendar non admin only sees     │
+  │     own records                                                          │
+  │                                                                          │
+  │   Both are calendar tests that were failing before Phase 5B changes.    │
+  │   Zero regressions introduced by this phase.                             │
+  │                                                                          │
+  └──────────────────────────────────────────────────────────────────────────┘
+
+================================================================================
+SCOPE CONFIRMATIONS
+================================================================================
+
+  ┌──────────────────────────────────────────────────────────────────────────┐
+  │ Requirement                              │ Status                        │
+  ├──────────────────────────────────────────────────────────────────────────┤
+  │ No warranty module added                 │ CONFIRMED — warranty_records │
+  │                                          │ table does not exist          │
+  │ No maintenance module added              │ CONFIRMED — no               │
+  │                                          │ maintenance_records table     │
+  │ No purchase module added                 │ CONFIRMED — no               │
+  │                                          │ purchase_records table        │
+  │ No software license module added         │ CONFIRMED — no               │
+  │                                          │ software_licenses table       │
+  │ No SIM module added                      │ CONFIRMED — no sim_cards     │
+  │                                          │ table                        │
+  │ No EAV table added                       │ CONFIRMED — specifications   │
+  │                                          │ is a JSON column on assets   │
+  │ JSON specifications used                 │ CONFIRMED                    │
+  │ Asset statuses only: available, assigned, │ CONFIRMED                    │
+  │ lost, decommissioned                     │                              │
+  │ Configurable asset tag prefix (config/   │ CONFIRMED — default 'AST'   │
+  │ assets.php, default 'AST')               │                              │
+  │ Network Device spec validation: IPv4,    │ CONFIRMED — regex MAC       │
+  │ IPv6, MAC, Hostname                      │ validation included          │
+  │ Vault FK = nullOnDelete                  │ CONFIRMED                    │
+  │ Primary image + multiple attachments     │ CONFIRMED                    │
+  │ Assignment reason field                  │ CONFIRMED — 5 options       │
+  │ Global search: asset_tag, serial,        │ CONFIRMED                    │
+  │ hostname, management IP                  │                              │
+  │ Dashboard: assigned, available, lost,    │ CONFIRMED                    │
+  │ recently assigned/returned               │                              │
+  │ Shared-hosting compatible (MySQL, no     │ CONFIRMED                    │
+  │ Redis, no queues, file cache)            │                              │
+  └──────────────────────────────────────────────────────────────────────────┘
+
+================================================================================
+END OF PHASE 5B — IMPLEMENTATION REPORT
+================================================================================

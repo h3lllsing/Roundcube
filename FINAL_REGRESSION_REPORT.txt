@@ -1,0 +1,158 @@
+================================================================================
+                 FINAL REGRESSION REPORT — PHASE 2 (Test Coverage)
+================================================================================
+Date:       Wed Jun 24 2026
+Project:    unknow (Laravel)
+Environment: PHP 8.2.12, SQLite (testing), PCOV
+
+================================================================================
+1. TEST RESULT
+================================================================================
+
+php artisan test:
+  Tests:      1366 passed
+  Assertions: 2993
+  Failures:   0
+  Errors:     0
+  Duration:   370s (coverage enabled)
+
+  Result:     ✅ ALL GREEN
+
+================================================================================
+2. COVERAGE RESULT
+================================================================================
+
+  Classes:    84.66% (138/163)
+  Methods:    91.37% (635/695)
+  Lines:      96.61% (4729/4895)
+
+  Thresholds (from requirements):
+    Lines >= 96%     → 96.61%  ✅
+    Methods >= 91%   → 91.37%  ✅
+    Classes >= 84%   → 84.66%  ✅
+
+  All thresholds met.
+
+================================================================================
+3. MIGRATION STATUS
+================================================================================
+
+  All 45 migrations:  [1] Ran
+  Pending:            0
+  Status:             ✅ ALL RAN
+
+  No pending migrations.
+
+================================================================================
+4. CACHE OPERATIONS
+================================================================================
+
+  php artisan config:clear   → OK
+  php artisan cache:clear    → OK
+  php artisan view:clear     → OK
+
+================================================================================
+5. SCOPE CONFIRMATION
+================================================================================
+
+  Phase 2 (Test Coverage) changes — ONLY test files:
+
+  Files CREATED:
+    tests/Unit/ServiceProviderTest.php
+    tests/Feature/CheckOverdueTasksCommandTest.php
+    tests/Feature/SecurityFixesTest.php
+
+  Files MODIFIED:
+    tests/Unit/UserTest.php           (expanded)
+    tests/Unit/BulkActionServiceTest.php (expanded)
+    tests/Feature/ImportTest.php       (expanded)
+
+  Phase 1 routes still present:
+    ✓ api/users/{user}/suspend
+    ✓ api/users/{user}/unsuspend
+    ✓ users/{id}/suspend
+    ✓ users/{id}/unsuspend
+    ✓ vps/{id}/password
+    ✓ hostings/{id}/password
+    ✓ service-providers/{id}/password
+    ✓ domain-emails/{id}/password
+    ✓ other-services/{id}/password
+    ✓ voip/{id}/password
+    ✓ voip/{id}/extension-password
+    ✓ api/import/{type}
+    ✓ export/{type}
+    ✓ import
+    ✓ search
+    Total: 15/15 ✅
+
+  Scope assertion:
+    - No new features added in Phase 2
+    - No new routes added in Phase 2
+    - No new models added in Phase 2
+    - No new controllers added in Phase 2
+    - No new services added in Phase 2
+    - No new packages added
+    - No new UI/views added in Phase 2
+    - No new migrations added in Phase 2
+    - Total routes unchanged at 367
+    - All Phase 1 security routes intact
+
+  Result: ✅ SCOPE LOCKED — Phase 2 strictly test-only
+
+================================================================================
+6. CHANGED FILES SUMMARY (Phase 2 only)
+================================================================================
+
+  Created (3):
+    tests/Unit/ServiceProviderTest.php
+        13 methods: fillable, encrypted cast, hidden, relationships (expiryTrackers,
+        otherServices, voip, domainEmails, user, module), date casts
+    tests/Feature/CheckOverdueTasksCommandTest.php
+        7 methods: overdue detection, multi-assignee, skips non-overdue/completed/
+        cancelled/null-due, no-assignee edge cases
+    tests/Feature/SecurityFixesTest.php
+        20 methods: import auth (Web+API), export permission, dashboard scoping
+        (Web+API), password reveal activity logging (6 resources + extension),
+        suspend/unsuspend activity logging (Web+API), web import auth
+
+  Modified (3):
+    tests/Unit/UserTest.php
+        Expanded to 20 methods: hasRole, hasPrivilege, canOnModule,
+        suspend/unsuspend via forceFill, suspended_at cast, role/privilege
+        relationships, has-many relationships
+    tests/Unit/BulkActionServiceTest.php
+        +4 methods: empty_selection, non_admin_restores_own,
+        non_admin_cannot_restore_others, super_admin_force_delete
+    tests/Feature/ImportTest.php
+        +1 method: non_admin_cannot_import
+
+================================================================================
+7. SECURITY FIXES STILL COVERED (Phase 1 regression)
+================================================================================
+
+  Fix                                              Test Coverage
+  ─────────────────────────────────────────────    ───────────────────────────────
+  ImportController super-admin auth                SecurityFixesTest (2 methods)
+  Password removed from index selects              Existing feature tests pass
+  Password reveal activity logging                 SecurityFixesTest (7 methods)
+  Suspend/unsuspend activity logging               SecurityFixesTest (4 methods)
+  ExportController module_slug check               SecurityFixesTest (2 methods)
+  Dashboard notes scoped by user_id                SecurityFixesTest (4 methods)
+  Vault reveal activity logging                    WebCrudTest (1 method, existing)
+
+  Result: ✅ ALL PHASE 1 FIXES COVERED
+
+================================================================================
+8. REMAINING OPTIONAL POLISH ONLY
+================================================================================
+
+  No further items identified. Everything else is either:
+    - Existing coverage (87 test files, 1366 tests)
+    - Deliberately skipped (OpenApiSchemas DTOs, Export/MonitorController unit tests)
+      These are thin DTOs / already line-covered by feature tests
+
+  The project is at a stable, deployable state.
+
+================================================================================
+                         END OF REGRESSION REPORT
+================================================================================

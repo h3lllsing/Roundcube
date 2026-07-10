@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Traits\Blameable;
 use App\Traits\HasAttachments;
+use Database\Factories\FeatureFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -14,8 +15,8 @@ use Spatie\Activitylog\Traits\LogsActivity;
 
 class Feature extends Model
 {
-    /** @use HasFactory<\Database\Factories\FeatureFactory> */
-    use HasFactory, SoftDeletes, Blameable, LogsActivity, HasAttachments;
+    /** @use HasFactory<FeatureFactory> */
+    use Blameable, HasAttachments, HasFactory, LogsActivity, SoftDeletes;
 
     protected $fillable = [
         'name',
@@ -38,7 +39,7 @@ class Feature extends Model
             ->logFillable()
             ->logOnlyDirty()
             ->dontSubmitEmptyLogs()
-            ->setDescriptionForEvent(fn(string $eventName) => "Feature {$this->name} {$eventName}");
+            ->setDescriptionForEvent(fn (string $eventName) => "Feature {$this->name} {$eventName}");
     }
 
     /** @return HasMany<Module, $this> */

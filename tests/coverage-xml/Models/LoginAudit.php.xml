@@ -1,0 +1,459 @@
+<?xml version="1.0"?>
+<phpunit xmlns="https://schema.phpunit.de/coverage/1.0">
+  <file name="LoginAudit.php" path="\Models">
+    <totals>
+      <lines total="34" comments="1" code="33" executable="5" executed="5" percent="100.00"/>
+      <methods count="2" tested="2" percent="100.00"/>
+      <functions count="0" tested="0" percent="0"/>
+      <classes count="1" tested="1" percent="100.00"/>
+      <traits count="0" tested="0" percent="0"/>
+    </totals>
+    <class name="App\Models\LoginAudit" start="9" executable="5" executed="5" crap="2">
+      <namespace name="App\Models"/>
+      <method name="casts" signature="casts(): array" start="20" end="26" crap="1" executable="4" executed="4" coverage="100"/>
+      <method name="user" signature="user(): Illuminate\Database\Eloquent\Relations\BelongsTo" start="29" end="32" crap="1" executable="1" executed="1" coverage="100"/>
+    </class>
+    <coverage>
+      <line nr="23">
+        <covered by="Tests\Unit\BulkActionServiceTest::test_custom_type_login_audits_requires_super_admin"/>
+        <covered by="Tests\Unit\BulkActionServiceTest::test_custom_type_login_audits_super_admin"/>
+        <covered by="Tests\Unit\ModelRelationshipTest::test_login_audit_belongs_to_user"/>
+        <covered by="Tests\Unit\ReportServiceTest::test_login_summary"/>
+        <covered by="Tests\Unit\ReportServiceTest::test_login_summary_with_filters"/>
+        <covered by="Tests\Unit\ReportServiceTest::test_build_csv_returns_valid_csv"/>
+        <covered by="Tests\Unit\ReportServiceTest::test_build_csv_no_data"/>
+        <covered by="Tests\Feature\ApiNewResourcesTest::test_bulk_login_audits_allowed_for_super_admin"/>
+        <covered by="Tests\Feature\ApiNewResourcesTest::test_bulk_login_audits_forbidden_for_non_admin"/>
+        <covered by="Tests\Feature\ApiNewResourcesTest::test_api_export_login_audits_csv"/>
+        <covered by="Tests\Feature\ApiNewResourcesTest::test_api_login_audit_destroy"/>
+        <covered by="Tests\Feature\AuthTest::test_login_with_valid_credentials"/>
+        <covered by="Tests\Feature\AuthTest::test_login_with_invalid_credentials"/>
+        <covered by="Tests\Feature\AuthTest::test_logout"/>
+        <covered by="Tests\Feature\AuthTest::test_login_lockout_after_5_failures"/>
+        <covered by="Tests\Feature\AuthTest::test_login_returns_token_structure"/>
+        <covered by="Tests\Feature\AuthTest::test_web_login_with_valid_credentials"/>
+        <covered by="Tests\Feature\AuthTest::test_web_login_with_remember_me"/>
+        <covered by="Tests\Feature\AuthTest::test_web_login_with_invalid_credentials"/>
+        <covered by="Tests\Feature\AuthTest::test_web_logout"/>
+        <covered by="Tests\Feature\AuthTest::test_authenticated_user_cannot_access_login_page"/>
+        <covered by="Tests\Feature\AuthTest::test_suspended_user_cannot_login"/>
+        <covered by="Tests\Feature\AuthTest::test_logout_invalidates_session"/>
+        <covered by="Tests\Feature\LoginAuditTest::test_index_lists_audits"/>
+        <covered by="Tests\Feature\LoginAuditTest::test_index_search_by_email"/>
+        <covered by="Tests\Feature\LoginAuditTest::test_index_filter_by_event"/>
+        <covered by="Tests\Feature\LoginAuditTest::test_index_filter_by_user_id"/>
+        <covered by="Tests\Feature\LoginAuditTest::test_index_filter_by_date_range"/>
+        <covered by="Tests\Feature\LoginAuditTest::test_show_audit"/>
+        <covered by="Tests\Feature\LoginAuditTest::test_show_missing_returns_404"/>
+        <covered by="Tests\Feature\LoginAuditTest::test_web_login_audit_date_filters"/>
+        <covered by="Tests\Feature\ReportTest::test_report_logins"/>
+        <covered by="Tests\Feature\ReportTest::test_report_logins_with_user_id_filter"/>
+        <covered by="Tests\Feature\ReportTest::test_web_report_page_loads"/>
+        <covered by="Tests\Feature\ReportTest::test_web_report_filters"/>
+        <covered by="Tests\Feature\ReportTest::test_web_report_export_with_data"/>
+        <covered by="Tests\Feature\ReportTest::test_api_report_export_logins"/>
+        <covered by="Tests\Feature\UsersTest::test_web_user_index_filters"/>
+        <covered by="Tests\Feature\WebCrudTest::test_users_index"/>
+        <covered by="Tests\Feature\WebCrudTest::test_users_index_searches_by_name"/>
+        <covered by="Tests\Feature\WebCrudTest::test_users_index_searches_by_email"/>
+        <covered by="Tests\Feature\WebCrudTest::test_users_index_filters_by_role"/>
+        <covered by="Tests\Feature\WebDashboardTest::test_user_can_login"/>
+        <covered by="Tests\Feature\WebDashboardTest::test_login_fails_with_wrong_credentials"/>
+        <covered by="Tests\Feature\WebDashboardTest::test_user_can_logout"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_login_audit_index_page_loads"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_login_audit_show_displays"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_reports_page_loads"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_reports_export_csv"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_login_audit_filters_work"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_export_login_audits_returns_csv"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_users_index_shows_last_login"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_reports_index_has_user_filter"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_reports_user_filter_affects_login_summary"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_login_audit_destroy_deletes"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_bulk_action_login_audits_forbidden_for_non_admin"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_bulk_action_login_audits_allowed_for_super_admin"/>
+        <covered by="Tests\Feature\WebResourcePagesTest::test_user_search_and_role_filter_work"/>
+      </line>
+      <line nr="31">
+        <covered by="Tests\Unit\ModelRelationshipTest::test_login_audit_belongs_to_user"/>
+        <covered by="Tests\Unit\ReportServiceTest::test_login_summary_with_filters"/>
+        <covered by="Tests\Feature\LoginAuditTest::test_index_lists_audits"/>
+        <covered by="Tests\Feature\LoginAuditTest::test_index_search_by_email"/>
+        <covered by="Tests\Feature\LoginAuditTest::test_index_filter_by_event"/>
+        <covered by="Tests\Feature\LoginAuditTest::test_index_filter_by_user_id"/>
+        <covered by="Tests\Feature\LoginAuditTest::test_index_filter_by_date_range"/>
+        <covered by="Tests\Feature\LoginAuditTest::test_show_audit"/>
+        <covered by="Tests\Feature\LoginAuditTest::test_web_login_audit_date_filters"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_login_audit_index_page_loads"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_login_audit_show_displays"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_login_audit_filters_work"/>
+      </line>
+      <line nr="22">
+        <covered by="Tests\Unit\BulkActionServiceTest::test_custom_type_login_audits_requires_super_admin"/>
+        <covered by="Tests\Unit\BulkActionServiceTest::test_custom_type_login_audits_super_admin"/>
+        <covered by="Tests\Unit\ModelRelationshipTest::test_login_audit_belongs_to_user"/>
+        <covered by="Tests\Unit\ReportServiceTest::test_login_summary"/>
+        <covered by="Tests\Unit\ReportServiceTest::test_login_summary_with_filters"/>
+        <covered by="Tests\Unit\ReportServiceTest::test_build_csv_returns_valid_csv"/>
+        <covered by="Tests\Unit\ReportServiceTest::test_build_csv_no_data"/>
+        <covered by="Tests\Feature\ApiNewResourcesTest::test_bulk_login_audits_allowed_for_super_admin"/>
+        <covered by="Tests\Feature\ApiNewResourcesTest::test_bulk_login_audits_forbidden_for_non_admin"/>
+        <covered by="Tests\Feature\ApiNewResourcesTest::test_api_export_login_audits_csv"/>
+        <covered by="Tests\Feature\ApiNewResourcesTest::test_api_login_audit_destroy"/>
+        <covered by="Tests\Feature\AuthTest::test_login_with_valid_credentials"/>
+        <covered by="Tests\Feature\AuthTest::test_login_with_invalid_credentials"/>
+        <covered by="Tests\Feature\AuthTest::test_logout"/>
+        <covered by="Tests\Feature\AuthTest::test_login_lockout_after_5_failures"/>
+        <covered by="Tests\Feature\AuthTest::test_login_returns_token_structure"/>
+        <covered by="Tests\Feature\AuthTest::test_web_login_with_valid_credentials"/>
+        <covered by="Tests\Feature\AuthTest::test_web_login_with_remember_me"/>
+        <covered by="Tests\Feature\AuthTest::test_web_login_with_invalid_credentials"/>
+        <covered by="Tests\Feature\AuthTest::test_web_logout"/>
+        <covered by="Tests\Feature\AuthTest::test_authenticated_user_cannot_access_login_page"/>
+        <covered by="Tests\Feature\AuthTest::test_suspended_user_cannot_login"/>
+        <covered by="Tests\Feature\AuthTest::test_logout_invalidates_session"/>
+        <covered by="Tests\Feature\LoginAuditTest::test_index_lists_audits"/>
+        <covered by="Tests\Feature\LoginAuditTest::test_index_search_by_email"/>
+        <covered by="Tests\Feature\LoginAuditTest::test_index_filter_by_event"/>
+        <covered by="Tests\Feature\LoginAuditTest::test_index_filter_by_user_id"/>
+        <covered by="Tests\Feature\LoginAuditTest::test_index_filter_by_date_range"/>
+        <covered by="Tests\Feature\LoginAuditTest::test_show_audit"/>
+        <covered by="Tests\Feature\LoginAuditTest::test_show_missing_returns_404"/>
+        <covered by="Tests\Feature\LoginAuditTest::test_web_login_audit_date_filters"/>
+        <covered by="Tests\Feature\ReportTest::test_report_logins"/>
+        <covered by="Tests\Feature\ReportTest::test_report_logins_with_user_id_filter"/>
+        <covered by="Tests\Feature\ReportTest::test_web_report_page_loads"/>
+        <covered by="Tests\Feature\ReportTest::test_web_report_filters"/>
+        <covered by="Tests\Feature\ReportTest::test_web_report_export_with_data"/>
+        <covered by="Tests\Feature\ReportTest::test_api_report_export_logins"/>
+        <covered by="Tests\Feature\UsersTest::test_web_user_index_filters"/>
+        <covered by="Tests\Feature\WebCrudTest::test_users_index"/>
+        <covered by="Tests\Feature\WebCrudTest::test_users_index_searches_by_name"/>
+        <covered by="Tests\Feature\WebCrudTest::test_users_index_searches_by_email"/>
+        <covered by="Tests\Feature\WebCrudTest::test_users_index_filters_by_role"/>
+        <covered by="Tests\Feature\WebDashboardTest::test_user_can_login"/>
+        <covered by="Tests\Feature\WebDashboardTest::test_login_fails_with_wrong_credentials"/>
+        <covered by="Tests\Feature\WebDashboardTest::test_user_can_logout"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_login_audit_index_page_loads"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_login_audit_show_displays"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_reports_page_loads"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_reports_export_csv"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_login_audit_filters_work"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_export_login_audits_returns_csv"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_users_index_shows_last_login"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_reports_index_has_user_filter"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_reports_user_filter_affects_login_summary"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_login_audit_destroy_deletes"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_bulk_action_login_audits_forbidden_for_non_admin"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_bulk_action_login_audits_allowed_for_super_admin"/>
+        <covered by="Tests\Feature\WebResourcePagesTest::test_user_search_and_role_filter_work"/>
+      </line>
+      <line nr="24">
+        <covered by="Tests\Unit\BulkActionServiceTest::test_custom_type_login_audits_requires_super_admin"/>
+        <covered by="Tests\Unit\BulkActionServiceTest::test_custom_type_login_audits_super_admin"/>
+        <covered by="Tests\Unit\ModelRelationshipTest::test_login_audit_belongs_to_user"/>
+        <covered by="Tests\Unit\ReportServiceTest::test_login_summary"/>
+        <covered by="Tests\Unit\ReportServiceTest::test_login_summary_with_filters"/>
+        <covered by="Tests\Unit\ReportServiceTest::test_build_csv_returns_valid_csv"/>
+        <covered by="Tests\Unit\ReportServiceTest::test_build_csv_no_data"/>
+        <covered by="Tests\Feature\ApiNewResourcesTest::test_bulk_login_audits_allowed_for_super_admin"/>
+        <covered by="Tests\Feature\ApiNewResourcesTest::test_bulk_login_audits_forbidden_for_non_admin"/>
+        <covered by="Tests\Feature\ApiNewResourcesTest::test_api_export_login_audits_csv"/>
+        <covered by="Tests\Feature\ApiNewResourcesTest::test_api_login_audit_destroy"/>
+        <covered by="Tests\Feature\AuthTest::test_login_with_valid_credentials"/>
+        <covered by="Tests\Feature\AuthTest::test_login_with_invalid_credentials"/>
+        <covered by="Tests\Feature\AuthTest::test_logout"/>
+        <covered by="Tests\Feature\AuthTest::test_login_lockout_after_5_failures"/>
+        <covered by="Tests\Feature\AuthTest::test_login_returns_token_structure"/>
+        <covered by="Tests\Feature\AuthTest::test_web_login_with_valid_credentials"/>
+        <covered by="Tests\Feature\AuthTest::test_web_login_with_remember_me"/>
+        <covered by="Tests\Feature\AuthTest::test_web_login_with_invalid_credentials"/>
+        <covered by="Tests\Feature\AuthTest::test_web_logout"/>
+        <covered by="Tests\Feature\AuthTest::test_authenticated_user_cannot_access_login_page"/>
+        <covered by="Tests\Feature\AuthTest::test_suspended_user_cannot_login"/>
+        <covered by="Tests\Feature\AuthTest::test_logout_invalidates_session"/>
+        <covered by="Tests\Feature\LoginAuditTest::test_index_lists_audits"/>
+        <covered by="Tests\Feature\LoginAuditTest::test_index_search_by_email"/>
+        <covered by="Tests\Feature\LoginAuditTest::test_index_filter_by_event"/>
+        <covered by="Tests\Feature\LoginAuditTest::test_index_filter_by_user_id"/>
+        <covered by="Tests\Feature\LoginAuditTest::test_index_filter_by_date_range"/>
+        <covered by="Tests\Feature\LoginAuditTest::test_show_audit"/>
+        <covered by="Tests\Feature\LoginAuditTest::test_show_missing_returns_404"/>
+        <covered by="Tests\Feature\LoginAuditTest::test_web_login_audit_date_filters"/>
+        <covered by="Tests\Feature\ReportTest::test_report_logins"/>
+        <covered by="Tests\Feature\ReportTest::test_report_logins_with_user_id_filter"/>
+        <covered by="Tests\Feature\ReportTest::test_web_report_page_loads"/>
+        <covered by="Tests\Feature\ReportTest::test_web_report_filters"/>
+        <covered by="Tests\Feature\ReportTest::test_web_report_export_with_data"/>
+        <covered by="Tests\Feature\ReportTest::test_api_report_export_logins"/>
+        <covered by="Tests\Feature\UsersTest::test_web_user_index_filters"/>
+        <covered by="Tests\Feature\WebCrudTest::test_users_index"/>
+        <covered by="Tests\Feature\WebCrudTest::test_users_index_searches_by_name"/>
+        <covered by="Tests\Feature\WebCrudTest::test_users_index_searches_by_email"/>
+        <covered by="Tests\Feature\WebCrudTest::test_users_index_filters_by_role"/>
+        <covered by="Tests\Feature\WebDashboardTest::test_user_can_login"/>
+        <covered by="Tests\Feature\WebDashboardTest::test_login_fails_with_wrong_credentials"/>
+        <covered by="Tests\Feature\WebDashboardTest::test_user_can_logout"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_login_audit_index_page_loads"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_login_audit_show_displays"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_reports_page_loads"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_reports_export_csv"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_login_audit_filters_work"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_export_login_audits_returns_csv"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_users_index_shows_last_login"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_reports_index_has_user_filter"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_reports_user_filter_affects_login_summary"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_login_audit_destroy_deletes"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_bulk_action_login_audits_forbidden_for_non_admin"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_bulk_action_login_audits_allowed_for_super_admin"/>
+        <covered by="Tests\Feature\WebResourcePagesTest::test_user_search_and_role_filter_work"/>
+      </line>
+      <line nr="25">
+        <covered by="Tests\Unit\BulkActionServiceTest::test_custom_type_login_audits_requires_super_admin"/>
+        <covered by="Tests\Unit\BulkActionServiceTest::test_custom_type_login_audits_super_admin"/>
+        <covered by="Tests\Unit\ModelRelationshipTest::test_login_audit_belongs_to_user"/>
+        <covered by="Tests\Unit\ReportServiceTest::test_login_summary"/>
+        <covered by="Tests\Unit\ReportServiceTest::test_login_summary_with_filters"/>
+        <covered by="Tests\Unit\ReportServiceTest::test_build_csv_returns_valid_csv"/>
+        <covered by="Tests\Unit\ReportServiceTest::test_build_csv_no_data"/>
+        <covered by="Tests\Feature\ApiNewResourcesTest::test_bulk_login_audits_allowed_for_super_admin"/>
+        <covered by="Tests\Feature\ApiNewResourcesTest::test_bulk_login_audits_forbidden_for_non_admin"/>
+        <covered by="Tests\Feature\ApiNewResourcesTest::test_api_export_login_audits_csv"/>
+        <covered by="Tests\Feature\ApiNewResourcesTest::test_api_login_audit_destroy"/>
+        <covered by="Tests\Feature\AuthTest::test_login_with_valid_credentials"/>
+        <covered by="Tests\Feature\AuthTest::test_login_with_invalid_credentials"/>
+        <covered by="Tests\Feature\AuthTest::test_logout"/>
+        <covered by="Tests\Feature\AuthTest::test_login_lockout_after_5_failures"/>
+        <covered by="Tests\Feature\AuthTest::test_login_returns_token_structure"/>
+        <covered by="Tests\Feature\AuthTest::test_web_login_with_valid_credentials"/>
+        <covered by="Tests\Feature\AuthTest::test_web_login_with_remember_me"/>
+        <covered by="Tests\Feature\AuthTest::test_web_login_with_invalid_credentials"/>
+        <covered by="Tests\Feature\AuthTest::test_web_logout"/>
+        <covered by="Tests\Feature\AuthTest::test_authenticated_user_cannot_access_login_page"/>
+        <covered by="Tests\Feature\AuthTest::test_suspended_user_cannot_login"/>
+        <covered by="Tests\Feature\AuthTest::test_logout_invalidates_session"/>
+        <covered by="Tests\Feature\LoginAuditTest::test_index_lists_audits"/>
+        <covered by="Tests\Feature\LoginAuditTest::test_index_search_by_email"/>
+        <covered by="Tests\Feature\LoginAuditTest::test_index_filter_by_event"/>
+        <covered by="Tests\Feature\LoginAuditTest::test_index_filter_by_user_id"/>
+        <covered by="Tests\Feature\LoginAuditTest::test_index_filter_by_date_range"/>
+        <covered by="Tests\Feature\LoginAuditTest::test_show_audit"/>
+        <covered by="Tests\Feature\LoginAuditTest::test_show_missing_returns_404"/>
+        <covered by="Tests\Feature\LoginAuditTest::test_web_login_audit_date_filters"/>
+        <covered by="Tests\Feature\ReportTest::test_report_logins"/>
+        <covered by="Tests\Feature\ReportTest::test_report_logins_with_user_id_filter"/>
+        <covered by="Tests\Feature\ReportTest::test_web_report_page_loads"/>
+        <covered by="Tests\Feature\ReportTest::test_web_report_filters"/>
+        <covered by="Tests\Feature\ReportTest::test_web_report_export_with_data"/>
+        <covered by="Tests\Feature\ReportTest::test_api_report_export_logins"/>
+        <covered by="Tests\Feature\UsersTest::test_web_user_index_filters"/>
+        <covered by="Tests\Feature\WebCrudTest::test_users_index"/>
+        <covered by="Tests\Feature\WebCrudTest::test_users_index_searches_by_name"/>
+        <covered by="Tests\Feature\WebCrudTest::test_users_index_searches_by_email"/>
+        <covered by="Tests\Feature\WebCrudTest::test_users_index_filters_by_role"/>
+        <covered by="Tests\Feature\WebDashboardTest::test_user_can_login"/>
+        <covered by="Tests\Feature\WebDashboardTest::test_login_fails_with_wrong_credentials"/>
+        <covered by="Tests\Feature\WebDashboardTest::test_user_can_logout"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_login_audit_index_page_loads"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_login_audit_show_displays"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_reports_page_loads"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_reports_export_csv"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_login_audit_filters_work"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_export_login_audits_returns_csv"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_users_index_shows_last_login"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_reports_index_has_user_filter"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_reports_user_filter_affects_login_summary"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_login_audit_destroy_deletes"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_bulk_action_login_audits_forbidden_for_non_admin"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_bulk_action_login_audits_allowed_for_super_admin"/>
+        <covered by="Tests\Feature\WebResourcePagesTest::test_user_search_and_role_filter_work"/>
+      </line>
+    </coverage>
+    <source>
+      <line no="1">
+        <token name="T_OPEN_TAG">&lt;?php</token>
+      </line>
+      <line no="2"/>
+      <line no="3">
+        <token name="T_NAMESPACE">namespace</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_NAME_QUALIFIED">App\Models</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="4"/>
+      <line no="5">
+        <token name="T_USE">use</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_NAME_QUALIFIED">Illuminate\Database\Eloquent\Factories\HasFactory</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="6">
+        <token name="T_USE">use</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_NAME_QUALIFIED">Illuminate\Database\Eloquent\Model</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="7">
+        <token name="T_USE">use</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_NAME_QUALIFIED">Illuminate\Database\Eloquent\Relations\BelongsTo</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="8"/>
+      <line no="9">
+        <token name="T_CLASS">class</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">LoginAudit</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_EXTENDS">extends</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">Model</token>
+      </line>
+      <line no="10">
+        <token name="T_OPEN_CURLY">{</token>
+      </line>
+      <line no="11">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_USE">use</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">HasFactory</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="12">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_PROTECTED">protected</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$fillable</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_EQUAL">=</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_SQUARE">[</token>
+      </line>
+      <line no="13">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'user_id'</token>
+        <token name="T_COMMA">,</token>
+      </line>
+      <line no="14">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'email'</token>
+        <token name="T_COMMA">,</token>
+      </line>
+      <line no="15">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'ip_address'</token>
+        <token name="T_COMMA">,</token>
+      </line>
+      <line no="16">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'user_agent'</token>
+        <token name="T_COMMA">,</token>
+      </line>
+      <line no="17">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'event'</token>
+        <token name="T_COMMA">,</token>
+      </line>
+      <line no="18">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_CLOSE_SQUARE">]</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="19"/>
+      <line no="20">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_PROTECTED">protected</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_FUNCTION">function</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">casts</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_COLON">:</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_ARRAY">array</token>
+      </line>
+      <line no="21">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_OPEN_CURLY">{</token>
+      </line>
+      <line no="22">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_RETURN">return</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_SQUARE">[</token>
+      </line>
+      <line no="23">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'created_at'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'datetime'</token>
+        <token name="T_COMMA">,</token>
+      </line>
+      <line no="24">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'updated_at'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'datetime'</token>
+        <token name="T_COMMA">,</token>
+      </line>
+      <line no="25">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_CLOSE_SQUARE">]</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="26">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_CLOSE_CURLY">}</token>
+      </line>
+      <line no="27"/>
+      <line no="28">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_DOC_COMMENT">/** @return BelongsTo&lt;User, $this&gt; */</token>
+      </line>
+      <line no="29">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_PUBLIC">public</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_FUNCTION">function</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">user</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_COLON">:</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">BelongsTo</token>
+      </line>
+      <line no="30">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_OPEN_CURLY">{</token>
+      </line>
+      <line no="31">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_RETURN">return</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$this</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">belongsTo</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_STRING">User</token>
+        <token name="T_DOUBLE_COLON">::</token>
+        <token name="T_CLASS">class</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="32">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_CLOSE_CURLY">}</token>
+      </line>
+      <line no="33">
+        <token name="T_CLOSE_CURLY">}</token>
+      </line>
+      <line no="34"/>
+    </source>
+  </file>
+</phpunit>

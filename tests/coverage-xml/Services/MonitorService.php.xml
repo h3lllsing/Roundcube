@@ -1,0 +1,1455 @@
+<?xml version="1.0"?>
+<phpunit xmlns="https://schema.phpunit.de/coverage/1.0">
+  <file name="MonitorService.php" path="\Services">
+    <totals>
+      <lines total="95" comments="4" code="91" executable="52" executed="52" percent="100.00"/>
+      <methods count="4" tested="4" percent="100.00"/>
+      <functions count="0" tested="0" percent="0"/>
+      <classes count="1" tested="1" percent="100.00"/>
+      <traits count="0" tested="0" percent="0"/>
+    </totals>
+    <class name="App\Services\MonitorService" start="7" executable="52" executed="52" crap="9">
+      <namespace name="App\Services"/>
+      <method name="ping" signature="ping(string $url): array" start="10" end="31" crap="2" executable="16" executed="16" coverage="100"/>
+      <method name="checkSsl" signature="checkSsl(string $url): array" start="34" end="76" crap="5" executable="29" executed="29" coverage="100"/>
+      <method name="parseSslCert" signature="parseSslCert(mixed $cert): array|false" start="79" end="82" crap="1" executable="1" executed="1" coverage="100"/>
+      <method name="check" signature="check(string $url): array" start="85" end="93" crap="1" executable="6" executed="6" coverage="100"/>
+    </class>
+    <coverage>
+      <line nr="12">
+        <covered by="Tests\Unit\MonitorServiceTest::test_ping_returns_success"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_ping_returns_failure_on_exception"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_ping_returns_failure_on_500"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_check_returns_combined_result"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_ssl_handles_cert_parse_failure"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_ssl_handles_exception_during_cert_parse"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_checks_all_model_types_with_monitoring_url"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_reports_failed_pings"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_handles_http_exception"/>
+        <covered by="Tests\Feature\MonitorTest::test_ping_valid_url"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_monitor_check_pings_resource"/>
+      </line>
+      <line nr="14">
+        <covered by="Tests\Unit\MonitorServiceTest::test_ping_returns_success"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_ping_returns_failure_on_exception"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_ping_returns_failure_on_500"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_check_returns_combined_result"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_ssl_handles_cert_parse_failure"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_ssl_handles_exception_during_cert_parse"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_checks_all_model_types_with_monitoring_url"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_reports_failed_pings"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_handles_http_exception"/>
+        <covered by="Tests\Feature\MonitorTest::test_ping_valid_url"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_monitor_check_pings_resource"/>
+      </line>
+      <line nr="15">
+        <covered by="Tests\Unit\MonitorServiceTest::test_ping_returns_success"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_ping_returns_failure_on_500"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_check_returns_combined_result"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_ssl_handles_cert_parse_failure"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_ssl_handles_exception_during_cert_parse"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_checks_all_model_types_with_monitoring_url"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_reports_failed_pings"/>
+        <covered by="Tests\Feature\MonitorTest::test_ping_valid_url"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_monitor_check_pings_resource"/>
+      </line>
+      <line nr="18">
+        <covered by="Tests\Unit\MonitorServiceTest::test_ping_returns_success"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_ping_returns_failure_on_500"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_check_returns_combined_result"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_ssl_handles_cert_parse_failure"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_ssl_handles_exception_during_cert_parse"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_checks_all_model_types_with_monitoring_url"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_reports_failed_pings"/>
+        <covered by="Tests\Feature\MonitorTest::test_ping_valid_url"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_monitor_check_pings_resource"/>
+      </line>
+      <line nr="19">
+        <covered by="Tests\Unit\MonitorServiceTest::test_ping_returns_success"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_ping_returns_failure_on_500"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_check_returns_combined_result"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_ssl_handles_cert_parse_failure"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_ssl_handles_exception_during_cert_parse"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_checks_all_model_types_with_monitoring_url"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_reports_failed_pings"/>
+        <covered by="Tests\Feature\MonitorTest::test_ping_valid_url"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_monitor_check_pings_resource"/>
+      </line>
+      <line nr="20">
+        <covered by="Tests\Unit\MonitorServiceTest::test_ping_returns_success"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_ping_returns_failure_on_500"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_check_returns_combined_result"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_ssl_handles_cert_parse_failure"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_ssl_handles_exception_during_cert_parse"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_checks_all_model_types_with_monitoring_url"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_reports_failed_pings"/>
+        <covered by="Tests\Feature\MonitorTest::test_ping_valid_url"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_monitor_check_pings_resource"/>
+      </line>
+      <line nr="23">
+        <covered by="Tests\Unit\MonitorServiceTest::test_ping_returns_failure_on_exception"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_handles_http_exception"/>
+      </line>
+      <line nr="25">
+        <covered by="Tests\Unit\MonitorServiceTest::test_ping_returns_failure_on_exception"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_handles_http_exception"/>
+      </line>
+      <line nr="28">
+        <covered by="Tests\Unit\MonitorServiceTest::test_ping_returns_failure_on_exception"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_handles_http_exception"/>
+      </line>
+      <line nr="36">
+        <covered by="Tests\Unit\MonitorServiceTest::test_ssl_invalid_url"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_check_returns_combined_result"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_ssl_with_real_url_returns_cert_info"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_ssl_with_unreachable_host_returns_error"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_ssl_handles_cert_parse_failure"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_ssl_handles_exception_during_cert_parse"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_checks_all_model_types_with_monitoring_url"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_reports_failed_pings"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_handles_http_exception"/>
+        <covered by="Tests\Feature\MonitorTest::test_ping_valid_url"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_monitor_check_pings_resource"/>
+      </line>
+      <line nr="37">
+        <covered by="Tests\Unit\MonitorServiceTest::test_ssl_invalid_url"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_check_returns_combined_result"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_ssl_with_real_url_returns_cert_info"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_ssl_with_unreachable_host_returns_error"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_ssl_handles_cert_parse_failure"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_ssl_handles_exception_during_cert_parse"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_checks_all_model_types_with_monitoring_url"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_reports_failed_pings"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_handles_http_exception"/>
+        <covered by="Tests\Feature\MonitorTest::test_ping_valid_url"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_monitor_check_pings_resource"/>
+      </line>
+      <line nr="38">
+        <covered by="Tests\Unit\MonitorServiceTest::test_ssl_invalid_url"/>
+      </line>
+      <line nr="42">
+        <covered by="Tests\Unit\MonitorServiceTest::test_check_returns_combined_result"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_ssl_with_real_url_returns_cert_info"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_ssl_with_unreachable_host_returns_error"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_ssl_handles_cert_parse_failure"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_ssl_handles_exception_during_cert_parse"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_checks_all_model_types_with_monitoring_url"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_reports_failed_pings"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_handles_http_exception"/>
+        <covered by="Tests\Feature\MonitorTest::test_ping_valid_url"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_monitor_check_pings_resource"/>
+      </line>
+      <line nr="43">
+        <covered by="Tests\Unit\MonitorServiceTest::test_check_returns_combined_result"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_ssl_with_real_url_returns_cert_info"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_ssl_with_unreachable_host_returns_error"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_ssl_handles_cert_parse_failure"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_ssl_handles_exception_during_cert_parse"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_checks_all_model_types_with_monitoring_url"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_reports_failed_pings"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_handles_http_exception"/>
+        <covered by="Tests\Feature\MonitorTest::test_ping_valid_url"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_monitor_check_pings_resource"/>
+      </line>
+      <line nr="45">
+        <covered by="Tests\Unit\MonitorServiceTest::test_check_returns_combined_result"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_ssl_with_real_url_returns_cert_info"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_ssl_with_unreachable_host_returns_error"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_ssl_handles_cert_parse_failure"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_ssl_handles_exception_during_cert_parse"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_checks_all_model_types_with_monitoring_url"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_reports_failed_pings"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_handles_http_exception"/>
+        <covered by="Tests\Feature\MonitorTest::test_ping_valid_url"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_monitor_check_pings_resource"/>
+      </line>
+      <line nr="46">
+        <covered by="Tests\Unit\MonitorServiceTest::test_ssl_with_unreachable_host_returns_error"/>
+      </line>
+      <line nr="49">
+        <covered by="Tests\Unit\MonitorServiceTest::test_check_returns_combined_result"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_ssl_with_real_url_returns_cert_info"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_ssl_handles_cert_parse_failure"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_ssl_handles_exception_during_cert_parse"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_checks_all_model_types_with_monitoring_url"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_reports_failed_pings"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_handles_http_exception"/>
+        <covered by="Tests\Feature\MonitorTest::test_ping_valid_url"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_monitor_check_pings_resource"/>
+      </line>
+      <line nr="50">
+        <covered by="Tests\Unit\MonitorServiceTest::test_check_returns_combined_result"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_ssl_with_real_url_returns_cert_info"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_ssl_handles_cert_parse_failure"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_ssl_handles_exception_during_cert_parse"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_checks_all_model_types_with_monitoring_url"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_reports_failed_pings"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_handles_http_exception"/>
+        <covered by="Tests\Feature\MonitorTest::test_ping_valid_url"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_monitor_check_pings_resource"/>
+      </line>
+      <line nr="51">
+        <covered by="Tests\Unit\MonitorServiceTest::test_check_returns_combined_result"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_ssl_with_real_url_returns_cert_info"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_ssl_handles_cert_parse_failure"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_ssl_handles_exception_during_cert_parse"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_checks_all_model_types_with_monitoring_url"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_reports_failed_pings"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_handles_http_exception"/>
+        <covered by="Tests\Feature\MonitorTest::test_ping_valid_url"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_monitor_check_pings_resource"/>
+      </line>
+      <line nr="52">
+        <covered by="Tests\Unit\MonitorServiceTest::test_check_returns_combined_result"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_ssl_with_real_url_returns_cert_info"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_ssl_handles_cert_parse_failure"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_checks_all_model_types_with_monitoring_url"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_reports_failed_pings"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_handles_http_exception"/>
+        <covered by="Tests\Feature\MonitorTest::test_ping_valid_url"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_monitor_check_pings_resource"/>
+      </line>
+      <line nr="54">
+        <covered by="Tests\Unit\MonitorServiceTest::test_check_returns_combined_result"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_ssl_with_real_url_returns_cert_info"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_ssl_handles_cert_parse_failure"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_checks_all_model_types_with_monitoring_url"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_reports_failed_pings"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_handles_http_exception"/>
+        <covered by="Tests\Feature\MonitorTest::test_ping_valid_url"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_monitor_check_pings_resource"/>
+      </line>
+      <line nr="55">
+        <covered by="Tests\Unit\MonitorServiceTest::test_ssl_handles_cert_parse_failure"/>
+      </line>
+      <line nr="58">
+        <covered by="Tests\Unit\MonitorServiceTest::test_check_returns_combined_result"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_ssl_with_real_url_returns_cert_info"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_checks_all_model_types_with_monitoring_url"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_reports_failed_pings"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_handles_http_exception"/>
+        <covered by="Tests\Feature\MonitorTest::test_ping_valid_url"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_monitor_check_pings_resource"/>
+      </line>
+      <line nr="59">
+        <covered by="Tests\Unit\MonitorServiceTest::test_check_returns_combined_result"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_ssl_with_real_url_returns_cert_info"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_checks_all_model_types_with_monitoring_url"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_reports_failed_pings"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_handles_http_exception"/>
+        <covered by="Tests\Feature\MonitorTest::test_ping_valid_url"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_monitor_check_pings_resource"/>
+      </line>
+      <line nr="60">
+        <covered by="Tests\Unit\MonitorServiceTest::test_check_returns_combined_result"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_ssl_with_real_url_returns_cert_info"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_checks_all_model_types_with_monitoring_url"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_reports_failed_pings"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_handles_http_exception"/>
+        <covered by="Tests\Feature\MonitorTest::test_ping_valid_url"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_monitor_check_pings_resource"/>
+      </line>
+      <line nr="61">
+        <covered by="Tests\Unit\MonitorServiceTest::test_check_returns_combined_result"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_ssl_with_real_url_returns_cert_info"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_checks_all_model_types_with_monitoring_url"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_reports_failed_pings"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_handles_http_exception"/>
+        <covered by="Tests\Feature\MonitorTest::test_ping_valid_url"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_monitor_check_pings_resource"/>
+      </line>
+      <line nr="62">
+        <covered by="Tests\Unit\MonitorServiceTest::test_check_returns_combined_result"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_ssl_with_real_url_returns_cert_info"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_checks_all_model_types_with_monitoring_url"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_reports_failed_pings"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_handles_http_exception"/>
+        <covered by="Tests\Feature\MonitorTest::test_ping_valid_url"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_monitor_check_pings_resource"/>
+      </line>
+      <line nr="65">
+        <covered by="Tests\Unit\MonitorServiceTest::test_check_returns_combined_result"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_ssl_with_real_url_returns_cert_info"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_checks_all_model_types_with_monitoring_url"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_reports_failed_pings"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_handles_http_exception"/>
+        <covered by="Tests\Feature\MonitorTest::test_ping_valid_url"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_monitor_check_pings_resource"/>
+      </line>
+      <line nr="67">
+        <covered by="Tests\Unit\MonitorServiceTest::test_check_returns_combined_result"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_ssl_with_real_url_returns_cert_info"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_checks_all_model_types_with_monitoring_url"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_reports_failed_pings"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_handles_http_exception"/>
+        <covered by="Tests\Feature\MonitorTest::test_ping_valid_url"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_monitor_check_pings_resource"/>
+      </line>
+      <line nr="68">
+        <covered by="Tests\Unit\MonitorServiceTest::test_check_returns_combined_result"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_ssl_with_real_url_returns_cert_info"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_checks_all_model_types_with_monitoring_url"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_reports_failed_pings"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_handles_http_exception"/>
+        <covered by="Tests\Feature\MonitorTest::test_ping_valid_url"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_monitor_check_pings_resource"/>
+      </line>
+      <line nr="69">
+        <covered by="Tests\Unit\MonitorServiceTest::test_check_returns_combined_result"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_ssl_with_real_url_returns_cert_info"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_checks_all_model_types_with_monitoring_url"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_reports_failed_pings"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_handles_http_exception"/>
+        <covered by="Tests\Feature\MonitorTest::test_ping_valid_url"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_monitor_check_pings_resource"/>
+      </line>
+      <line nr="70">
+        <covered by="Tests\Unit\MonitorServiceTest::test_check_returns_combined_result"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_ssl_with_real_url_returns_cert_info"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_checks_all_model_types_with_monitoring_url"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_reports_failed_pings"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_handles_http_exception"/>
+        <covered by="Tests\Feature\MonitorTest::test_ping_valid_url"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_monitor_check_pings_resource"/>
+      </line>
+      <line nr="71">
+        <covered by="Tests\Unit\MonitorServiceTest::test_check_returns_combined_result"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_ssl_with_real_url_returns_cert_info"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_checks_all_model_types_with_monitoring_url"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_reports_failed_pings"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_handles_http_exception"/>
+        <covered by="Tests\Feature\MonitorTest::test_ping_valid_url"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_monitor_check_pings_resource"/>
+      </line>
+      <line nr="73">
+        <covered by="Tests\Unit\MonitorServiceTest::test_ssl_handles_exception_during_cert_parse"/>
+      </line>
+      <line nr="74">
+        <covered by="Tests\Unit\MonitorServiceTest::test_ssl_handles_exception_during_cert_parse"/>
+      </line>
+      <line nr="81">
+        <covered by="Tests\Unit\MonitorServiceTest::test_check_returns_combined_result"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_ssl_with_real_url_returns_cert_info"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_checks_all_model_types_with_monitoring_url"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_reports_failed_pings"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_handles_http_exception"/>
+        <covered by="Tests\Feature\MonitorTest::test_ping_valid_url"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_monitor_check_pings_resource"/>
+      </line>
+      <line nr="88">
+        <covered by="Tests\Unit\MonitorServiceTest::test_check_returns_combined_result"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_ssl_handles_cert_parse_failure"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_ssl_handles_exception_during_cert_parse"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_checks_all_model_types_with_monitoring_url"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_reports_failed_pings"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_handles_http_exception"/>
+        <covered by="Tests\Feature\MonitorTest::test_ping_valid_url"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_monitor_check_pings_resource"/>
+      </line>
+      <line nr="89">
+        <covered by="Tests\Unit\MonitorServiceTest::test_check_returns_combined_result"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_ssl_handles_cert_parse_failure"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_ssl_handles_exception_during_cert_parse"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_checks_all_model_types_with_monitoring_url"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_reports_failed_pings"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_handles_http_exception"/>
+        <covered by="Tests\Feature\MonitorTest::test_ping_valid_url"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_monitor_check_pings_resource"/>
+      </line>
+      <line nr="90">
+        <covered by="Tests\Unit\MonitorServiceTest::test_check_returns_combined_result"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_ssl_handles_cert_parse_failure"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_ssl_handles_exception_during_cert_parse"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_checks_all_model_types_with_monitoring_url"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_reports_failed_pings"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_handles_http_exception"/>
+        <covered by="Tests\Feature\MonitorTest::test_ping_valid_url"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_monitor_check_pings_resource"/>
+      </line>
+      <line nr="91">
+        <covered by="Tests\Unit\MonitorServiceTest::test_check_returns_combined_result"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_ssl_handles_cert_parse_failure"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_ssl_handles_exception_during_cert_parse"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_checks_all_model_types_with_monitoring_url"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_reports_failed_pings"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_handles_http_exception"/>
+        <covered by="Tests\Feature\MonitorTest::test_ping_valid_url"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_monitor_check_pings_resource"/>
+      </line>
+      <line nr="17">
+        <covered by="Tests\Unit\MonitorServiceTest::test_ping_returns_success"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_ping_returns_failure_on_500"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_check_returns_combined_result"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_ssl_handles_cert_parse_failure"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_ssl_handles_exception_during_cert_parse"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_checks_all_model_types_with_monitoring_url"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_reports_failed_pings"/>
+        <covered by="Tests\Feature\MonitorTest::test_ping_valid_url"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_monitor_check_pings_resource"/>
+      </line>
+      <line nr="21">
+        <covered by="Tests\Unit\MonitorServiceTest::test_ping_returns_success"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_ping_returns_failure_on_500"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_check_returns_combined_result"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_ssl_handles_cert_parse_failure"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_ssl_handles_exception_during_cert_parse"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_checks_all_model_types_with_monitoring_url"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_reports_failed_pings"/>
+        <covered by="Tests\Feature\MonitorTest::test_ping_valid_url"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_monitor_check_pings_resource"/>
+      </line>
+      <line nr="22">
+        <covered by="Tests\Unit\MonitorServiceTest::test_ping_returns_success"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_ping_returns_failure_on_500"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_check_returns_combined_result"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_ssl_handles_cert_parse_failure"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_ssl_handles_exception_during_cert_parse"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_checks_all_model_types_with_monitoring_url"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_reports_failed_pings"/>
+        <covered by="Tests\Feature\MonitorTest::test_ping_valid_url"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_monitor_check_pings_resource"/>
+      </line>
+      <line nr="24">
+        <covered by="Tests\Unit\MonitorServiceTest::test_ping_returns_failure_on_exception"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_handles_http_exception"/>
+      </line>
+      <line nr="26">
+        <covered by="Tests\Unit\MonitorServiceTest::test_ping_returns_failure_on_exception"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_handles_http_exception"/>
+      </line>
+      <line nr="27">
+        <covered by="Tests\Unit\MonitorServiceTest::test_ping_returns_failure_on_exception"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_handles_http_exception"/>
+      </line>
+      <line nr="29">
+        <covered by="Tests\Unit\MonitorServiceTest::test_ping_returns_failure_on_exception"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_handles_http_exception"/>
+      </line>
+      <line nr="64">
+        <covered by="Tests\Unit\MonitorServiceTest::test_check_returns_combined_result"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_ssl_with_real_url_returns_cert_info"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_checks_all_model_types_with_monitoring_url"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_reports_failed_pings"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_handles_http_exception"/>
+        <covered by="Tests\Feature\MonitorTest::test_ping_valid_url"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_monitor_check_pings_resource"/>
+      </line>
+      <line nr="66">
+        <covered by="Tests\Unit\MonitorServiceTest::test_check_returns_combined_result"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_ssl_with_real_url_returns_cert_info"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_checks_all_model_types_with_monitoring_url"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_reports_failed_pings"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_handles_http_exception"/>
+        <covered by="Tests\Feature\MonitorTest::test_ping_valid_url"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_monitor_check_pings_resource"/>
+      </line>
+      <line nr="72">
+        <covered by="Tests\Unit\MonitorServiceTest::test_check_returns_combined_result"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_ssl_with_real_url_returns_cert_info"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_checks_all_model_types_with_monitoring_url"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_reports_failed_pings"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_handles_http_exception"/>
+        <covered by="Tests\Feature\MonitorTest::test_ping_valid_url"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_monitor_check_pings_resource"/>
+      </line>
+      <line nr="87">
+        <covered by="Tests\Unit\MonitorServiceTest::test_check_returns_combined_result"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_ssl_handles_cert_parse_failure"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_ssl_handles_exception_during_cert_parse"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_checks_all_model_types_with_monitoring_url"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_reports_failed_pings"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_handles_http_exception"/>
+        <covered by="Tests\Feature\MonitorTest::test_ping_valid_url"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_monitor_check_pings_resource"/>
+      </line>
+      <line nr="92">
+        <covered by="Tests\Unit\MonitorServiceTest::test_check_returns_combined_result"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_ssl_handles_cert_parse_failure"/>
+        <covered by="Tests\Unit\MonitorServiceTest::test_ssl_handles_exception_during_cert_parse"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_checks_all_model_types_with_monitoring_url"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_reports_failed_pings"/>
+        <covered by="Tests\Feature\MonitorCheckCommandTest::test_handles_http_exception"/>
+        <covered by="Tests\Feature\MonitorTest::test_ping_valid_url"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_monitor_check_pings_resource"/>
+      </line>
+    </coverage>
+    <source>
+      <line no="1">
+        <token name="T_OPEN_TAG">&lt;?php</token>
+      </line>
+      <line no="2"/>
+      <line no="3">
+        <token name="T_NAMESPACE">namespace</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_NAME_QUALIFIED">App\Services</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="4"/>
+      <line no="5">
+        <token name="T_USE">use</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_NAME_QUALIFIED">Illuminate\Support\Facades\Http</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="6"/>
+      <line no="7">
+        <token name="T_CLASS">class</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">MonitorService</token>
+      </line>
+      <line no="8">
+        <token name="T_OPEN_CURLY">{</token>
+      </line>
+      <line no="9">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_DOC_COMMENT">/** @return array{success: bool, status_code: int|null, response_time_ms: float|null, error: string|null} */</token>
+      </line>
+      <line no="10">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_PUBLIC">public</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_FUNCTION">function</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">ping</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_STRING">string</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$url</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_COLON">:</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_ARRAY">array</token>
+      </line>
+      <line no="11">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_OPEN_CURLY">{</token>
+      </line>
+      <line no="12">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_VARIABLE">$start</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_EQUAL">=</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">microtime</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_STRING">true</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="13">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_TRY">try</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_CURLY">{</token>
+      </line>
+      <line no="14">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_VARIABLE">$response</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_EQUAL">=</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">Http</token>
+        <token name="T_DOUBLE_COLON">::</token>
+        <token name="T_STRING">timeout</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_LNUMBER">10</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">get</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_VARIABLE">$url</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="15">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_VARIABLE">$elapsed</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_EQUAL">=</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">round</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_STRING">microtime</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_STRING">true</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_MINUS">-</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$start</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_MULT">*</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_LNUMBER">1000</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="16"/>
+      <line no="17">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_RETURN">return</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_SQUARE">[</token>
+      </line>
+      <line no="18">
+        <token name="T_WHITESPACE">                </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'success'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$response</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">successful</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_COMMA">,</token>
+      </line>
+      <line no="19">
+        <token name="T_WHITESPACE">                </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'status_code'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$response</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">status</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_COMMA">,</token>
+      </line>
+      <line no="20">
+        <token name="T_WHITESPACE">                </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'response_time_ms'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$elapsed</token>
+        <token name="T_COMMA">,</token>
+      </line>
+      <line no="21">
+        <token name="T_WHITESPACE">                </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'error'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">null</token>
+        <token name="T_COMMA">,</token>
+      </line>
+      <line no="22">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_CLOSE_SQUARE">]</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="23">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_CLOSE_CURLY">}</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_CATCH">catch</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_NAME_FULLY_QUALIFIED">\Exception</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$e</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_CURLY">{</token>
+      </line>
+      <line no="24">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_RETURN">return</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_SQUARE">[</token>
+      </line>
+      <line no="25">
+        <token name="T_WHITESPACE">                </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'success'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">false</token>
+        <token name="T_COMMA">,</token>
+      </line>
+      <line no="26">
+        <token name="T_WHITESPACE">                </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'status_code'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">null</token>
+        <token name="T_COMMA">,</token>
+      </line>
+      <line no="27">
+        <token name="T_WHITESPACE">                </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'response_time_ms'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">null</token>
+        <token name="T_COMMA">,</token>
+      </line>
+      <line no="28">
+        <token name="T_WHITESPACE">                </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'error'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$e</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">getMessage</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_COMMA">,</token>
+      </line>
+      <line no="29">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_CLOSE_SQUARE">]</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="30">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_CLOSE_CURLY">}</token>
+      </line>
+      <line no="31">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_CLOSE_CURLY">}</token>
+      </line>
+      <line no="32"/>
+      <line no="33">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_DOC_COMMENT">/** @return array{success: bool, error: string|null, valid: bool, days_remaining: int|null, issuer: string|null, valid_from?: string, valid_to?: string} */</token>
+      </line>
+      <line no="34">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_PUBLIC">public</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_FUNCTION">function</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">checkSsl</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_STRING">string</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$url</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_COLON">:</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_ARRAY">array</token>
+      </line>
+      <line no="35">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_OPEN_CURLY">{</token>
+      </line>
+      <line no="36">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_VARIABLE">$host</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_EQUAL">=</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">parse_url</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_VARIABLE">$url</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">PHP_URL_HOST</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="37">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_IF">if</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_EXCLAMATION_MARK">!</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$host</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_CURLY">{</token>
+      </line>
+      <line no="38">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_RETURN">return</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_SQUARE">[</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'success'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">false</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'error'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'Invalid URL'</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'valid'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">false</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'days_remaining'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">null</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'issuer'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">null</token>
+        <token name="T_CLOSE_SQUARE">]</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="39">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_CLOSE_CURLY">}</token>
+      </line>
+      <line no="40"/>
+      <line no="41">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_TRY">try</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_CURLY">{</token>
+      </line>
+      <line no="42">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_VARIABLE">$context</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_EQUAL">=</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">stream_context_create</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_OPEN_SQUARE">[</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'ssl'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_SQUARE">[</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'capture_peer_cert'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">true</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'verify_peer'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">false</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'verify_peer_name'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">false</token>
+        <token name="T_CLOSE_SQUARE">]</token>
+        <token name="T_CLOSE_SQUARE">]</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="43">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_VARIABLE">$client</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_EQUAL">=</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_AT">@</token>
+        <token name="T_STRING">stream_socket_client</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'ssl://'</token>
+        <token name="T_DOT">.</token>
+        <token name="T_VARIABLE">$host</token>
+        <token name="T_DOT">.</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">':443'</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$errno</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$errstr</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_LNUMBER">10</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">STREAM_CLIENT_CONNECT</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$context</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="44"/>
+      <line no="45">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_IF">if</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_EXCLAMATION_MARK">!</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$client</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_CURLY">{</token>
+      </line>
+      <line no="46">
+        <token name="T_WHITESPACE">                </token>
+        <token name="T_RETURN">return</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_SQUARE">[</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'success'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">false</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'error'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$errstr</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'valid'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">false</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'days_remaining'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">null</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'issuer'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">null</token>
+        <token name="T_CLOSE_SQUARE">]</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="47">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_CLOSE_CURLY">}</token>
+      </line>
+      <line no="48"/>
+      <line no="49">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_VARIABLE">$params</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_EQUAL">=</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">stream_context_get_params</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_VARIABLE">$client</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="50">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_VARIABLE">$cert</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_EQUAL">=</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$params</token>
+        <token name="T_OPEN_SQUARE">[</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'options'</token>
+        <token name="T_CLOSE_SQUARE">]</token>
+        <token name="T_OPEN_SQUARE">[</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'ssl'</token>
+        <token name="T_CLOSE_SQUARE">]</token>
+        <token name="T_OPEN_SQUARE">[</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'peer_certificate'</token>
+        <token name="T_CLOSE_SQUARE">]</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="51">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_VARIABLE">$certInfo</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_EQUAL">=</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$this</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">parseSslCert</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_VARIABLE">$cert</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="52">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_STRING">fclose</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_VARIABLE">$client</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="53"/>
+      <line no="54">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_IF">if</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_EXCLAMATION_MARK">!</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$certInfo</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_CURLY">{</token>
+      </line>
+      <line no="55">
+        <token name="T_WHITESPACE">                </token>
+        <token name="T_RETURN">return</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_SQUARE">[</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'success'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">false</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'error'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'Failed to parse certificate'</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'valid'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">false</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'days_remaining'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">null</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'issuer'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">null</token>
+        <token name="T_CLOSE_SQUARE">]</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="56">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_CLOSE_CURLY">}</token>
+      </line>
+      <line no="57"/>
+      <line no="58">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_VARIABLE">$validFrom</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_EQUAL">=</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$certInfo</token>
+        <token name="T_OPEN_SQUARE">[</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'validFrom_time_t'</token>
+        <token name="T_CLOSE_SQUARE">]</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_COALESCE">??</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_LNUMBER">0</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="59">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_VARIABLE">$validTo</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_EQUAL">=</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$certInfo</token>
+        <token name="T_OPEN_SQUARE">[</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'validTo_time_t'</token>
+        <token name="T_CLOSE_SQUARE">]</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_COALESCE">??</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_LNUMBER">0</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="60">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_VARIABLE">$now</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_EQUAL">=</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">time</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="61">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_VARIABLE">$daysRemaining</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_EQUAL">=</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_INT_CAST">(int)</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">ceil</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_VARIABLE">$validTo</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_MINUS">-</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$now</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DIV">/</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_LNUMBER">86400</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="62">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_VARIABLE">$issuer</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_EQUAL">=</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$certInfo</token>
+        <token name="T_OPEN_SQUARE">[</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'issuer'</token>
+        <token name="T_CLOSE_SQUARE">]</token>
+        <token name="T_OPEN_SQUARE">[</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'O'</token>
+        <token name="T_CLOSE_SQUARE">]</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_COALESCE">??</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$certInfo</token>
+        <token name="T_OPEN_SQUARE">[</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'issuer'</token>
+        <token name="T_CLOSE_SQUARE">]</token>
+        <token name="T_OPEN_SQUARE">[</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'CN'</token>
+        <token name="T_CLOSE_SQUARE">]</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_COALESCE">??</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'Unknown'</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="63"/>
+      <line no="64">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_RETURN">return</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_SQUARE">[</token>
+      </line>
+      <line no="65">
+        <token name="T_WHITESPACE">                </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'success'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">true</token>
+        <token name="T_COMMA">,</token>
+      </line>
+      <line no="66">
+        <token name="T_WHITESPACE">                </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'error'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">null</token>
+        <token name="T_COMMA">,</token>
+      </line>
+      <line no="67">
+        <token name="T_WHITESPACE">                </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'valid'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$validTo</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_GT">&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$now</token>
+        <token name="T_COMMA">,</token>
+      </line>
+      <line no="68">
+        <token name="T_WHITESPACE">                </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'days_remaining'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$daysRemaining</token>
+        <token name="T_COMMA">,</token>
+      </line>
+      <line no="69">
+        <token name="T_WHITESPACE">                </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'issuer'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$issuer</token>
+        <token name="T_COMMA">,</token>
+      </line>
+      <line no="70">
+        <token name="T_WHITESPACE">                </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'valid_from'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">date</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'Y-m-d'</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$validFrom</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_COMMA">,</token>
+      </line>
+      <line no="71">
+        <token name="T_WHITESPACE">                </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'valid_to'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">date</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'Y-m-d'</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$validTo</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_COMMA">,</token>
+      </line>
+      <line no="72">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_CLOSE_SQUARE">]</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="73">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_CLOSE_CURLY">}</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_CATCH">catch</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_NAME_FULLY_QUALIFIED">\Exception</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$e</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_CURLY">{</token>
+      </line>
+      <line no="74">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_RETURN">return</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_SQUARE">[</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'success'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">false</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'error'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$e</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">getMessage</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'valid'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">false</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'days_remaining'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">null</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'issuer'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">null</token>
+        <token name="T_CLOSE_SQUARE">]</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="75">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_CLOSE_CURLY">}</token>
+      </line>
+      <line no="76">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_CLOSE_CURLY">}</token>
+      </line>
+      <line no="77"/>
+      <line no="78">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_DOC_COMMENT">/** @return array&lt;string, mixed&gt;|false */</token>
+      </line>
+      <line no="79">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_PROTECTED">protected</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_FUNCTION">function</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">parseSslCert</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_STRING">mixed</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$cert</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_COLON">:</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_ARRAY">array</token>
+        <token name="T_PIPE">|</token>
+        <token name="T_STRING">false</token>
+      </line>
+      <line no="80">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_OPEN_CURLY">{</token>
+      </line>
+      <line no="81">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_RETURN">return</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">openssl_x509_parse</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_VARIABLE">$cert</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="82">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_CLOSE_CURLY">}</token>
+      </line>
+      <line no="83"/>
+      <line no="84">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_DOC_COMMENT">/** @return array&lt;string, mixed&gt; */</token>
+      </line>
+      <line no="85">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_PUBLIC">public</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_FUNCTION">function</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">check</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_STRING">string</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$url</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_COLON">:</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_ARRAY">array</token>
+      </line>
+      <line no="86">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_OPEN_CURLY">{</token>
+      </line>
+      <line no="87">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_RETURN">return</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_SQUARE">[</token>
+      </line>
+      <line no="88">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'url'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$url</token>
+        <token name="T_COMMA">,</token>
+      </line>
+      <line no="89">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'ping'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$this</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">ping</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_VARIABLE">$url</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_COMMA">,</token>
+      </line>
+      <line no="90">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'ssl'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$this</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">checkSsl</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_VARIABLE">$url</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_COMMA">,</token>
+      </line>
+      <line no="91">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'checked_at'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">now</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">toIso8601String</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_COMMA">,</token>
+      </line>
+      <line no="92">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_CLOSE_SQUARE">]</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="93">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_CLOSE_CURLY">}</token>
+      </line>
+      <line no="94">
+        <token name="T_CLOSE_CURLY">}</token>
+      </line>
+      <line no="95"/>
+    </source>
+  </file>
+</phpunit>

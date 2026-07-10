@@ -11,9 +11,10 @@ class SendTaskAssignedNotification
 {
     public function handle(TaskCreated|TaskUpdated $event): void
     {
+        $task = $event->task->loadMissing('creator', 'module');
         $users = User::whereIn('id', $event->assigneeIds)->get();
         foreach ($users as $user) {
-            $user->notify(new TaskAssigned($event->task));
+            $user->notify(new TaskAssigned($task));
         }
     }
 }

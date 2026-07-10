@@ -7,7 +7,7 @@ use App\Events\TaskUpdated;
 use App\Models\Task;
 use App\Models\User;
 use App\Notifications\TaskAssigned;
-use HasinHayder\Tyro\Models\Role;
+use HasinHayder\Tyro\Database\Seeders\TyroSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
@@ -19,7 +19,7 @@ class SendTaskAssignedNotificationTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->seed(\HasinHayder\Tyro\Database\Seeders\TyroSeeder::class);
+        $this->seed(TyroSeeder::class);
     }
 
     public function test_notifies_assignees_when_task_created(): void
@@ -72,7 +72,8 @@ class SendTaskAssignedNotificationTest extends TestCase
         TaskCreated::dispatch($task, [$assignee->id]);
 
         Notification::assertSentTo($assignee, TaskAssigned::class, function ($notification) {
-            $data = $notification->toArray(new User());
+            $data = $notification->toArray(new User);
+
             return $data['type'] === 'task_assigned'
                 && $data['title'] === 'Test Task'
                 && $data['status'] === 'pending'

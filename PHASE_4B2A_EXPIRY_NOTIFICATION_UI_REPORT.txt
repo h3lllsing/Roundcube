@@ -1,0 +1,116 @@
+PHASE 4B-2A — EXPIRY TRACKER EMAIL NOTIFICATION UI REPORT
+================================================================================
+Date: 2026-06-26
+Status: COMPLETE
+
+Scope: UI/settings only. No scheduler. No cron command. No real email sending.
+       No notification history implementation (table/model/view already existed).
+       No RenewalNotificationService changes. No RBAC changes. No SMTP Profile
+       logic changes. No Hosting/Domains/VPS/VoIP notification changes.
+
+================================================================================
+FILES MODIFIED
+================================================================================
+
+1. app/Http/Requests/StoreExpiryTrackerRequest.php
+   - Added smtp_profile_id rule: `exists:smtp_profiles,id,is_active,1`
+     (inactive profiles cannot be selected)
+   - Added `withValidator()`: requires at least one recipient type
+     (notify_assigned_user, notify_admins, or notify_custom_emails) when
+     email_notifications_enabled is true
+
+2. app/Http/Requests/UpdateExpiryTrackerRequest.php
+   - Same smtp_profile_id active-check rule added
+   - Same `withValidator()` recipient-required logic added
+   - disable_reason validation kept (Manual/Migrated/Cancelled/Duplicate/Other)
+
+3. app/Http/Controllers/Web/ExpiryTrackerController.php
+   - show(): Eager-loads smtpProfile + disabledByUser relations
+
+4. resources/views/expiry-trackers/_notification-form.blade.php
+   - Added disable_reason dropdown (shown when email_notifications_enabled
+     unchecked, toggled via JS)
+   - Updated JavaScript to toggle both settings div and disable-reason div
+
+5. resources/views/expiry-trackers/show.blade.php
+   - Notification section split into enabled/disabled states
+   - When enabled: shows Enable badge, SMTP Profile, Last Notification, Next Due
+   - When disabled: shows Disabled badge, Disabled By, Disabled At, Reason
+   - Uses color-coded badges (emerald for enabled, red for disabled)
+
+================================================================================
+FILES CREATED
+================================================================================
+
+1. tests/Feature/ExpiryTrackerNotificationTest.php
+   - 12 tests covering all notification UI scenarios (see below)
+
+================================================================================
+ALREADY EXISTING (not modified by Phase 4B-2A)
+================================================================================
+
+- Migrations: both already existed and were run
+  - 2026_06_25_100001_add_notification_columns_to_expiry_trackers.php
+  - 2026_06_25_100002_create_expiry_tracker_notifications_table.php
+- App\Models\ExpiryTracker: already had fillable, casts, relations
+- App\Models\ExpiryTrackerNotification: already existed
+- App\Models\SmtpProfile: consumerTables() registry already registers ExpiryTracker
+- ExpiryTrackerController: create/edit/store/update methods already handled
+  notification fields, disable-reason audit trail, SMTP profile passing
+- _notification-form.blade.php partial already existed with all form fields
+- show.blade.php already displayed basic notification status
+- notifications.blade.php history view already existed
+- RbacScope: unchanged
+
+================================================================================
+TEST RESULTS (12 new tests, all passing)
+================================================================================
+
+  ✓ create page shows notification section          — asserts Enable checkbox, SMTP
+                                                      Profile select, Notify Before,
+                                                      and Recipients sections present
+  ✓ edit page shows notification section            — same assertions on edit page
+  ✓ show page shows notification status             — asserts "Email Notifications"
+                                                      and "Enabled" text visible
+  ✓ can save enabled notification settings          — creates tracker with enabled
+                                                      notifications, verifies DB
+  ✓ can save custom emails                          — stores and retrieves custom
+                                                      email array correctly
+  ✓ invalid custom email fails                      — non-email string in custom_emails
+                                                      triggers validation error
+  ✓ inactive smtp profile cannot be selected        — selecting an inactive SMTP profile
+                                                      triggers validation error
+  ✓ disabling notifications stores disabled         — verifies disabled_by, disabled_at,
+    audit fields                                      disable_reason are saved
+  ✓ enabling notifications clears disabled          — verifies disabled_by/at/reason
+    audit fields                                     are nullified on re-enable
+  ✓ read only user cannot update settings           — non-super-admin without can_update
+                                                      gets 403 on edit/update
+  ✓ show page shows disabled info when disabled     — asserts "Disabled" text and
+                                                      disable_reason appear on show page
+  ✓ recipient required when enabled                 — enabling notifications without any
+                                                      recipient triggers validation error
+
+================================================================================
+FULL SUITE REGRESSION CHECK
+================================================================================
+
+  Tests:    1668 passed (4228 assertions)
+  Failures:  0
+  Errors:    0
+  Duration:  438s
+
+  All existing tests unaffected. No regressions.
+
+================================================================================
+CONFIRMATION OF STRICT RULES
+================================================================================
+
+  ✅ UI/settings only
+  ✅ No email sending implemented
+  ✅ No scheduler or cron command
+  ✅ No notification history implementation (was already present)
+  ✅ No RenewalNotificationService changes
+  ✅ No RBAC logic changes
+  ✅ No SMTP Profile logic changes
+  ✅ No Hosting/Domains/VPS/VoIP notification changes

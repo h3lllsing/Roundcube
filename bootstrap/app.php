@@ -1,8 +1,16 @@
 <?php
 
+use App\Http\Middleware\LogApiRequests;
+use App\Providers\MorphMapServiceProvider;
+use App\Providers\RateLimiterServiceProvider;
+use App\Providers\ViewServiceProvider;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -11,13 +19,24 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )
+    ->withProviders([
+        MorphMapServiceProvider::class,
+        RateLimiterServiceProvider::class,
+        ViewServiceProvider::class,
+    ])
     ->withEvents(discover: [
         __DIR__.'/../app/Listeners',
     ])
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
-            'log.api' => \App\Http\Middleware\LogApiRequests::class,
+            'log.api' => LogApiRequests::class,
+            'suspended' => \App\Http\Middleware\CheckSuspended::class,
+            'security.headers' => \App\Http\Middleware\AddSecurityHeaders::class,
+            // Re-registered from vendor/hasinhayder/tyro for visibility
+            'role' => \HasinHayder\Tyro\Http\Middleware\EnsureTyroRole::class,
         ]);
+
+        $middleware->append(\App\Http\Middleware\AddSecurityHeaders::class);
 
         $middleware->validateCsrfTokens(except: ['api/login']);
     })
@@ -33,22 +52,22 @@ return Application::configure(basePath: dirname(__DIR__))
                 $status = 500;
                 $message = 'Server Error';
 
-                if ($e instanceof \Illuminate\Validation\ValidationException) {
+                if ($e instanceof ValidationException) {
                     return response()->json([
                         'message' => $e->getMessage(),
                         'errors' => $e->errors(),
                     ], 422);
                 }
 
-                if ($e instanceof \Illuminate\Auth\AuthenticationException) {
+                if ($e instanceof AuthenticationException) {
                     return response()->json(['message' => 'Unauthenticated'], 401);
                 }
 
-                if ($e instanceof \Illuminate\Auth\Access\AuthorizationException) {
+                if ($e instanceof AuthorizationException) {
                     return response()->json(['message' => 'Forbidden'], 403);
                 }
 
-                if ($e instanceof \Symfony\Component\HttpKernel\Exception\HttpExceptionInterface) {
+                if ($e instanceof HttpExceptionInterface) {
                     $status = $e->getStatusCode();
                     $message = match ($status) {
                         403 => 'Forbidden',
@@ -61,7 +80,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
                 $payload = ['message' => $message];
 
-                if ($status === 500 && config('app.debug')) {
+                if ($status === 500 && in_array(config('app.env'), ['local', 'development'])) {
                     $payload['exception'] = $e->getMessage();
                     $payload['file'] = $e->getFile();
                     $payload['line'] = $e->getLine();

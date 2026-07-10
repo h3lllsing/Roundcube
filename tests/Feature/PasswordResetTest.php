@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use HasinHayder\Tyro\Database\Seeders\TyroSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
@@ -16,7 +17,7 @@ class PasswordResetTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->seed(\HasinHayder\Tyro\Database\Seeders\TyroSeeder::class);
+        $this->seed(TyroSeeder::class);
     }
 
     public function test_send_reset_link_valid_email()
@@ -57,14 +58,14 @@ class PasswordResetTest extends TestCase
         $response = $this->postJson('/api/reset-password', [
             'email' => 'resetme@example.com',
             'token' => $token,
-            'password' => 'newpassword123',
-            'password_confirmation' => 'newpassword123',
+            'password' => 'NewPass123',
+            'password_confirmation' => 'NewPass123',
         ]);
 
         $response->assertOk()
             ->assertJsonPath('message', 'Your password has been reset.');
 
-        $this->assertTrue(Hash::check('newpassword123', $user->fresh()->password));
+        $this->assertTrue(Hash::check('NewPass123', $user->fresh()->password));
     }
 
     public function test_reset_password_with_invalid_token()
@@ -74,8 +75,8 @@ class PasswordResetTest extends TestCase
         $response = $this->postJson('/api/reset-password', [
             'email' => 'fail@example.com',
             'token' => 'invalid-token',
-            'password' => 'newpassword123',
-            'password_confirmation' => 'newpassword123',
+            'password' => 'NewPass123',
+            'password_confirmation' => 'NewPass123',
         ]);
 
         $response->assertStatus(422);

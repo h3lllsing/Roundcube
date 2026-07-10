@@ -1,0 +1,93 @@
+PHASE 8B — Enterprise Reporting Center: Implementation Report
+=============================================================
+Date: 2026-06-27
+Test Suite: 1826 passed, 0 failures, 0 errors (4608 assertions)
+
+Overview
+--------
+Phase 8B delivers a provider-based Enterprise Reporting Center with 15 MVP
+reports across 7 categories, readable URLs, CSV export, dashboard widget
+deep-links, and Global Search integration — all without new database tables,
+new Composer packages, or background workers.
+
+Architecture
+------------
+/app/Reports/
+  ReportProvider.php          — Abstract base class (slug, label, description, icon, reports)
+  DomainReports.php           — 3 reports: active, expiring (30d), expired
+  HostingReports.php          — 2 reports: active, expiring (30d)
+  VpsReports.php              — 1 report: active
+  RenewalReports.php          — 3 reports: today, next-30-days, overdue
+  AssetReports.php            — 3 reports: assigned, available, by-department
+  TaskReports.php             — 2 reports: pending, overdue
+  UserReports.php             — 1 report: active
+
+/app/Services/ReportService.php
+  - Retains all original methods (totalMonthlyCost, costByType, topCosts,
+    taskSummary, loginSummary, buildCsv) for backward compatibility
+  - New methods: allCategories(), categoryReports(), getProvider(),
+    getReportDef(), run(), exportCsv(), widgetData()
+  - Providers registered explicitly in $providerClasses array
+  - Each provider's reports() returns a closure-based query with ownership
+    scoping and filter support
+
+/app/Http/Controllers/Web/ReportController.php
+  - index(): Category listing + legacy cost overview (kept for continuity)
+  - category(): Lists reports within a category
+  - show(): Displays a specific report's data in a styled table
+  - export(): Streams CSV export for a specific report
+
+Routes (web.php)
+  GET  /reports                          → index   (category listing + cost overview)
+  GET  /reports/{category}               → category (reports in a category)
+  GET  /reports/{category}/{report}       → show    (report data)
+  GET  /reports/{category}/{report}/export → export  (CSV download)
+
+Views
+  resources/views/reports/index.blade.php     — Enhanced with category grid + cost section
+  resources/views/reports/category.blade.php  — Report list for a category
+  resources/views/reports/show.blade.php      — Report data table with styled badges, dates, costs
+  resources/views/components/report-filter-bar.blade.php — Shared filter component
+
+Dashboard Widget Deep-Links
+  OperationsWidget — "View Full Report →" linking to /reports/domains
+  RenewalsWidget   — "View Full Report →" linking to /reports/renewals
+  AssetsWidget     — "View Full Report →" linking to /reports/assets
+  TasksWidget      — "View Full Report →" linking to /reports/tasks
+
+GlobalSearchService Updates
+  - Added 'reports' module with model => null sentinel
+  - New searchNullModel() method handles report category/report name/description
+    matching, linking to route('reports.category') and route('reports.show')
+  - Only visible to super-admin users
+
+Test Coverage (36 tests in ReportTest + updates to existing tests)
+  - Provider registration and category listing
+  - All 7 categories return correct reports
+  - Specific report data display (domains active/expiring/expired, hosting active,
+    vps active, renewals today, assets assigned, tasks pending, users active)
+  - 404 for missing category/report
+  - Auth and role gating (403 for non-super-admin, 302 for unauthenticated)
+  - CSV export with correct headers and filename
+  - Dashboard home page shows all category names
+  - Updated WebNewResourcesTest for new route params
+  - Updated NavigationTest for dashboard widget link visibility
+
+Key Design Decisions
+  1. No new DB tables — queries use existing model tables with SQLite-safe
+     Laravel Query Builder
+  2. No new packages — CSV only (streamed response with fputcsv)
+  3. Provider pattern — 7 classes in app/Reports/ registered explicitly in
+     ReportService; easy to add/remove reports without touching other code
+  4. Backward compatible — all original ReportService methods preserved;
+     old /reports/ route still returns cost overview
+  5. Dashboard widgets unchanged — only the blade views were edited to add
+     deep-link footers; no PHP logic changes needed
+
+Future (Phase 8B+)
+  - 25+ deferred reports (VoIP, Other Services, Service Providers, cost
+    projections, etc.)
+  - XLSX export (requires PhpSpreadsheet)
+  - PDF export (requires DomPDF/BrowserShot)
+  - Report scheduling (requires background worker)
+  - Chart visualizations on report pages

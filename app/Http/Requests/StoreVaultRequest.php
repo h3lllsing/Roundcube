@@ -15,7 +15,6 @@ class StoreVaultRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'user_id' => 'nullable|exists:users,id',
             'service_name' => 'required|string|max:255',
             'service_url' => 'nullable|string|max:255',
             'username' => 'nullable|string|max:255',

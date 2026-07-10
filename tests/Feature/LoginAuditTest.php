@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\LoginAudit;
 use App\Models\User;
+use HasinHayder\Tyro\Database\Seeders\TyroSeeder;
 use HasinHayder\Tyro\Models\Role;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -17,7 +18,7 @@ class LoginAuditTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->seed(\HasinHayder\Tyro\Database\Seeders\TyroSeeder::class);
+        $this->seed(TyroSeeder::class);
         $adminRole = Role::where('slug', 'super-admin')->firstOrFail();
         $this->admin = User::factory()->create();
         $this->admin->assignRole($adminRole);
@@ -80,7 +81,7 @@ class LoginAuditTest extends TestCase
         LoginAudit::create(['user_id' => $this->admin->id, 'email' => 'b@test.com', 'ip_address' => '5.6.7.8', 'event' => 'login_success', 'created_at' => now()]);
 
         $response = $this->actingAs($this->admin)
-            ->getJson('/api/login-audits?date_from=' . now()->subDays(5)->toDateString() . '&date_to=' . now()->addDay()->toDateString());
+            ->getJson('/api/login-audits?date_from='.now()->subDays(5)->toDateString().'&date_to='.now()->addDay()->toDateString());
 
         $response->assertOk();
         $this->assertGreaterThanOrEqual(1, $response->json('total'));
@@ -117,5 +118,15 @@ class LoginAuditTest extends TestCase
     public function test_requires_authentication()
     {
         $this->getJson('/api/login-audits')->assertUnauthorized();
+    }
+
+    public function test_web_login_audit_date_filters(): void
+    {
+        LoginAudit::create(['user_id' => $this->admin->id, 'email' => 'a@test.com', 'ip_address' => '1.2.3.4', 'event' => 'login_success']);
+
+        $today = now()->format('Y-m-d');
+        $this->actingAs($this->admin);
+        $this->get(route('login-audits.index', ['date_from' => $today]))->assertStatus(200);
+        $this->get(route('login-audits.index', ['date_to' => $today]))->assertStatus(200);
     }
 }

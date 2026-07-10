@@ -4,10 +4,10 @@ namespace Tests\Unit;
 
 use App\Http\Middleware\LogApiRequests;
 use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Mockery;
 use Tests\TestCase;
 
@@ -38,7 +38,7 @@ class LogApiRequestsMiddlewareTest extends TestCase
 
         $request = Request::create('_test/path', 'GET');
         $middleware = new LogApiRequests;
-        $response = $middleware->handle($request, fn($req) => new Response('ok'));
+        $response = $middleware->handle($request, fn ($req) => new Response('ok'));
 
         $this->assertEquals(200, $response->getStatusCode());
     }
@@ -49,7 +49,7 @@ class LogApiRequestsMiddlewareTest extends TestCase
         $logger = Mockery::mock();
         $logger->shouldReceive('info')
             ->once()
-            ->with('API Request', Mockery::on(fn($ctx) => $ctx['user_id'] === $user->id));
+            ->with('API Request', Mockery::on(fn ($ctx) => $ctx['user_id'] === $user->id));
 
         Log::shouldReceive('channel')
             ->once()
@@ -57,9 +57,9 @@ class LogApiRequestsMiddlewareTest extends TestCase
             ->andReturn($logger);
 
         $request = Request::create('_test/path', 'GET');
-        $request->setUserResolver(fn() => $user);
+        $request->setUserResolver(fn () => $user);
         $middleware = new LogApiRequests;
-        $response = $middleware->handle($request, fn($req) => new Response('ok'));
+        $response = $middleware->handle($request, fn ($req) => new Response('ok'));
 
         $this->assertEquals(200, $response->getStatusCode());
     }

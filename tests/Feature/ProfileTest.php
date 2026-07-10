@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use HasinHayder\Tyro\Database\Seeders\TyroSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
@@ -12,12 +13,13 @@ class ProfileTest extends TestCase
     use RefreshDatabase;
 
     private User $user;
+
     private string $token;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->seed(\HasinHayder\Tyro\Database\Seeders\TyroSeeder::class);
+        $this->seed(TyroSeeder::class);
         $this->user = User::factory()->create();
         $this->token = $this->user->createToken('test')->plainTextToken;
     }
@@ -49,20 +51,20 @@ class ProfileTest extends TestCase
 
     public function test_update_profile_password()
     {
-        $this->user->password = Hash::make('currentpassword');
+        $this->user->password = Hash::make('CurrentPass1');
         $this->user->save();
 
         $response = $this->withHeader('Authorization', "Bearer {$this->token}")
             ->putJson('/api/profile', [
                 'name' => $this->user->name,
                 'email' => $this->user->email,
-                'current_password' => 'currentpassword',
-                'password' => 'newpassword123',
-                'password_confirmation' => 'newpassword123',
+                'current_password' => 'CurrentPass1',
+                'password' => 'NewPass123',
+                'password_confirmation' => 'NewPass123',
             ]);
 
         $response->assertOk();
-        $this->assertTrue(Hash::check('newpassword123', $this->user->fresh()->password));
+        $this->assertTrue(Hash::check('NewPass123', $this->user->fresh()->password));
     }
 
     public function test_update_validation()

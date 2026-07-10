@@ -3,8 +3,8 @@
 namespace Tests\Unit;
 
 use App\Models\Feature;
-use App\Models\User;
 use App\Services\FeatureService;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Tests\TestCase;
@@ -105,7 +105,7 @@ class FeatureServiceTest extends TestCase
 
     public function test_find_throws_when_not_found(): void
     {
-        $this->expectException(\Illuminate\Database\Eloquent\ModelNotFoundException::class);
+        $this->expectException(ModelNotFoundException::class);
         $this->service->find(99999);
     }
 
@@ -147,5 +147,15 @@ class FeatureServiceTest extends TestCase
         $result = $this->service->list(['per_page' => 200]);
 
         $this->assertEquals(100, $result->perPage());
+    }
+
+    public function test_list_invalid_sort_order_falls_back_to_asc(): void
+    {
+        Feature::create(['name' => 'Z Feature', 'slug' => 'z']);
+        Feature::create(['name' => 'A Feature', 'slug' => 'a']);
+
+        $result = $this->service->list(['sort_order' => 'invalid']);
+
+        $this->assertCount(2, $result->items());
     }
 }

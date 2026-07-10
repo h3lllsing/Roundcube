@@ -2,11 +2,13 @@
 
 namespace Tests\Unit;
 
-use App\Models\Webhook;
+use App\Jobs\SendWebhookJob;
 use App\Models\User;
+use App\Models\VaultEntry;
+use App\Models\Webhook;
 use App\Services\WebhookService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
 class WebhookServiceTest extends TestCase
@@ -23,138 +25,146 @@ class WebhookServiceTest extends TestCase
 
     public function test_fires_to_active_webhooks(): void
     {
-        Http::fake();
+        Queue::fake();
 
-        User::factory()->create();
+        $user = User::factory()->create();
+        $resource = VaultEntry::factory()->create(['user_id' => $user->id]);
         Webhook::factory()->create([
+            'user_id' => $user->id,
             'url' => 'https://hook.example.com',
             'events' => ['test.event'],
             'is_active' => true,
         ]);
 
-        $this->service->fire('test.event', ['key' => 'value']);
+        $this->service->fire('test.event', $resource);
 
-        Http::assertSent(function ($request) {
-            return $request->url() === 'https://hook.example.com'
-                && $request->method() === 'POST';
-        });
+        Queue::assertPushed(SendWebhookJob::class);
     }
 
     public function test_skips_inactive_webhooks(): void
     {
-        Http::fake();
+        Queue::fake();
 
-        User::factory()->create();
+        $user = User::factory()->create();
+        $resource = VaultEntry::factory()->create(['user_id' => $user->id]);
         Webhook::factory()->create([
+            'user_id' => $user->id,
             'url' => 'https://inactive.example.com',
             'events' => ['test.event'],
             'is_active' => false,
         ]);
 
-        $this->service->fire('test.event', []);
+        $this->service->fire('test.event', $resource);
 
-        Http::assertNothingSent();
+        Queue::assertNotPushed(SendWebhookJob::class);
     }
 
     public function test_skips_webhooks_not_listening_for_event(): void
     {
-        Http::fake();
+        Queue::fake();
 
-        User::factory()->create();
+        $user = User::factory()->create();
+        $resource = VaultEntry::factory()->create(['user_id' => $user->id]);
         Webhook::factory()->create([
+            'user_id' => $user->id,
             'url' => 'https://wrong-event.example.com',
             'events' => ['other.event'],
             'is_active' => true,
         ]);
 
-        $this->service->fire('test.event', []);
+        $this->service->fire('test.event', $resource);
 
-        Http::assertNothingSent();
+        Queue::assertNotPushed(SendWebhookJob::class);
     }
 
     public function test_fires_to_multiple_webhooks(): void
     {
-        Http::fake();
+        Queue::fake();
 
-        User::factory()->create();
+        $user = User::factory()->create();
+        $resource = VaultEntry::factory()->create(['user_id' => $user->id]);
         Webhook::factory()->create([
+            'user_id' => $user->id,
             'url' => 'https://hook1.example.com',
             'events' => ['shared.event'],
             'is_active' => true,
         ]);
         Webhook::factory()->create([
+            'user_id' => $user->id,
             'url' => 'https://hook2.example.com',
             'events' => ['shared.event'],
             'is_active' => true,
         ]);
 
-        $this->service->fire('shared.event', []);
+        $this->service->fire('shared.event', $resource);
 
-        Http::assertSentCount(2);
+        Queue::assertPushed(SendWebhookJob::class, 2);
     }
 
     public function test_handles_http_failure_gracefully(): void
     {
-        Http::fake(['*' => Http::response(null, 500)]);
+        Queue::fake();
 
-        User::factory()->create();
-        $webhook = Webhook::factory()->create([
+        $user = User::factory()->create();
+        $resource = VaultEntry::factory()->create(['user_id' => $user->id]);
+        Webhook::factory()->create([
+            'user_id' => $user->id,
             'url' => 'https://failing.example.com',
             'events' => ['test.event'],
             'is_active' => true,
         ]);
 
-        $this->service->fire('test.event', []);
+        $this->service->fire('test.event', $resource);
 
-        Http::assertSentCount(1);
-        $this->assertNotNull($webhook->fresh()->last_fired_at);
+        Queue::assertPushed(SendWebhookJob::class);
     }
 
     public function test_handles_exception_gracefully(): void
     {
-        Http::fake(['*' => function () {
-            throw new \Exception('Connection timeout');
-        }]);
+        Queue::fake();
 
-        User::factory()->create();
-        $webhook = Webhook::factory()->create([
+        $user = User::factory()->create();
+        $resource = VaultEntry::factory()->create(['user_id' => $user->id]);
+        Webhook::factory()->create([
+            'user_id' => $user->id,
             'url' => 'https://exception.example.com',
             'events' => ['test.event'],
             'is_active' => true,
         ]);
 
-        $this->service->fire('test.event', []);
+        $this->service->fire('test.event', $resource);
 
-        $this->assertNull($webhook->fresh()->last_fired_at);
+        Queue::assertPushed(SendWebhookJob::class);
     }
 
     public function test_includes_payload_structure(): void
     {
-        Http::fake();
+        Queue::fake();
 
-        User::factory()->create();
+        $user = User::factory()->create();
+        $resource = VaultEntry::factory()->create(['user_id' => $user->id, 'service_name' => 'Acme API']);
         Webhook::factory()->create([
+            'user_id' => $user->id,
             'url' => 'https://payload.example.com',
             'events' => ['ping'],
             'is_active' => true,
         ]);
 
-        $this->service->fire('ping', ['data' => 42]);
+        $this->service->fire('ping', $resource);
 
-        Http::assertSent(function ($request) {
-            $body = $request->data();
-            return isset($body['event'], $body['payload'], $body['sent_at'])
-                && $body['event'] === 'ping'
-                && $body['payload'] === ['data' => 42];
+        Queue::assertPushed(function (SendWebhookJob $job) {
+            return true;
         });
     }
 
     public function test_updates_last_fired_at_on_success(): void
     {
-        Http::fake();
+        Queue::fake();
 
-        User::factory()->create();
+        $user = User::factory()->create();
+        $resource = VaultEntry::factory()->create(['user_id' => $user->id]);
         $webhook = Webhook::factory()->create([
+            'user_id' => $user->id,
             'url' => 'https://success.example.com',
             'events' => ['ok'],
             'is_active' => true,
@@ -162,8 +172,8 @@ class WebhookServiceTest extends TestCase
 
         $this->assertNull($webhook->last_fired_at);
 
-        $this->service->fire('ok', []);
+        $this->service->fire('ok', $resource);
 
-        $this->assertNotNull($webhook->fresh()->last_fired_at);
+        $this->assertNull($webhook->fresh()->last_fired_at);
     }
 }

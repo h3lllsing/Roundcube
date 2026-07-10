@@ -7,7 +7,9 @@ use App\Http\Requests\StoreModulePermissionRequest;
 use App\Models\Module;
 use App\Models\User;
 use App\Services\ModulePermissionService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use OpenApi\Attributes as OA;
 
 class ModulePermissionController extends Controller
@@ -34,15 +36,17 @@ class ModulePermissionController extends Controller
                     new OA\Property(property: 'can_read', type: 'boolean'),
                     new OA\Property(property: 'can_update', type: 'boolean'),
                     new OA\Property(property: 'can_delete', type: 'boolean'),
-                    new OA\Property(property: 'can_approve', type: 'boolean'),
                     new OA\Property(property: 'can_export', type: 'boolean'),
                 ], type: 'object')),
             ])),
         ]
     )]
-    public function index(Module $module): \Illuminate\Http\JsonResponse
+    public function index(Module $module): JsonResponse
     {
+        abort_unless(Auth::user()->hasRole('super-admin'), 403);
+
         $permissions = $this->permissionService->getForModule($module);
+
         return $this->success($permissions);
     }
 
@@ -62,7 +66,7 @@ class ModulePermissionController extends Controller
                 new OA\Property(property: 'can_read', type: 'boolean', default: false),
                 new OA\Property(property: 'can_update', type: 'boolean', default: false),
                 new OA\Property(property: 'can_delete', type: 'boolean', default: false),
-                new OA\Property(property: 'can_approve', type: 'boolean', default: false),
+        
                 new OA\Property(property: 'can_export', type: 'boolean', default: false),
             ])
         ),
@@ -81,13 +85,16 @@ class ModulePermissionController extends Controller
             ])),
         ]
     )]
-    public function store(StoreModulePermissionRequest $request, Module $module): \Illuminate\Http\JsonResponse
+    public function store(StoreModulePermissionRequest $request, Module $module): JsonResponse
     {
+        abort_unless($request->user()->hasRole('super-admin'), 403);
+
         $permission = $this->permissionService->setForRole(
             $module,
             $request->role_id,
-            $request->only(['can_create', 'can_read', 'can_update', 'can_delete', 'can_approve', 'can_export'])
+            $request->only(config('permissions.keys'))
         );
+
         return $this->success($permission, 'Permissions updated');
     }
 
@@ -106,9 +113,12 @@ class ModulePermissionController extends Controller
             ])),
         ]
     )]
-    public function destroy(Module $module, int $roleId): \Illuminate\Http\JsonResponse
+    public function destroy(Module $module, int $roleId): JsonResponse
     {
+        abort_unless(Auth::user()->hasRole('super-admin'), 403);
+
         $this->permissionService->removeForRole($module, $roleId);
+
         return $this->message('Role permissions removed');
     }
 
@@ -127,16 +137,16 @@ class ModulePermissionController extends Controller
                     new OA\Property(property: 'can_read', type: 'boolean'),
                     new OA\Property(property: 'can_update', type: 'boolean'),
                     new OA\Property(property: 'can_delete', type: 'boolean'),
-                    new OA\Property(property: 'can_approve', type: 'boolean'),
                     new OA\Property(property: 'can_export', type: 'boolean'),
                 ], type: 'object'),
             ])),
         ]
     )]
-    public function userPermissions(Request $request, Module $module): \Illuminate\Http\JsonResponse
+    public function userPermissions(Request $request, Module $module): JsonResponse
     {
         $user = $request->user();
         $perms = $this->permissionService->getUserPermissionsForModule($module, $user);
+
         return $this->success($perms);
     }
 
@@ -161,13 +171,15 @@ class ModulePermissionController extends Controller
             new OA\Response(response: 200, description: 'All module permissions for specified user'),
         ]
     )]
-    public function userAllPermissions(Request $request, ?User $user = null): \Illuminate\Http\JsonResponse
+    public function userAllPermissions(Request $request, ?User $user = null): JsonResponse
     {
+        abort_unless($request->user()->hasRole('super-admin'), 403);
+
         $user = $user ?? $request->user();
         $roleIds = $user->roles()->pluck('roles.id');
         $allPermissions = [];
 
-        $modules = \App\Models\Module::whereHas('rolePermissions', function ($q) use ($roleIds) {
+        $modules = Module::whereHas('rolePermissions', function ($q) use ($roleIds) {
             $q->whereIn('role_id', $roleIds);
         })->with(['feature', 'rolePermissions' => function ($q) use ($roleIds) {
             $q->whereIn('role_id', $roleIds);
@@ -176,11 +188,13 @@ class ModulePermissionController extends Controller
         foreach ($modules as $module) {
             $merged = [
                 'can_create' => false, 'can_read' => false, 'can_update' => false,
-                'can_delete' => false, 'can_approve' => false, 'can_export' => false,
+                'can_delete' => false, 'can_export' => false,
             ];
             foreach ($module->rolePermissions as $rp) {
                 foreach ($merged as $key => &$val) {
-                    if ($rp->$key) $val = true;
+                    if ($rp->$key) {
+                        $val = true;
+                    }
                 }
             }
             $allPermissions[] = [

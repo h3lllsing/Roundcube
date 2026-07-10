@@ -1,0 +1,297 @@
+===============================================================================
+RBAC PHASE 2B-3 IMPLEMENTATION REPORT
+===============================================================================
+Date: 2026-06-25
+Project: unknwn (Laravel RBAC)
+===============================================================================
+
+1. SUMMARY
+--------------------------------------------------------------------------------
+
+What was implemented:
+
+  - Server-side can_reveal permission guards across all 8 password reveal
+    endpoints (7 controllers).
+  - Guard placed AFTER userOwnedFilter() + findOrFail() but BEFORE activity
+    logging, ensuring denied reveals never create audit log entries.
+  - Super-admin bypass: hasRole('super-admin') short-circuits the check.
+  - Module check: $record->module must exist for non-super-admin; otherwise
+    403. (Records with module_id = null are already caught by RbacScope in
+    Phase 1, returning 404 for non-super-admin.)
+  - User permission overrides (UserModulePermission.can_reveal) are
+    naturally respected through canOnModule().
+  - 17 tests covering all enforcement patterns: super-admin bypass, admin
+    with/without can_reveal on each category, user override true/false,
+    audit logging preservation, no-module edge cases.
+
+Overall objective:
+
+  Deliver Phase 2B Stage 3: add can_reveal server-side guards to all 8
+  password reveal endpoints across 7 web resource controllers, with proper
+  super-admin bypass and user override support, without modifying CRUD
+  methods, import, export, API controllers, routes, migrations, or UI.
+
+===============================================================================
+2. ENDPOINTS MODIFIED
+--------------------------------------------------------------------------------
+
+  All 8 password reveal endpoints across 7 controllers received the same
+  guard pattern:
+
+  1. app/Http/Controllers/Web/HostingController.php
+     → getPassword(int $id): JsonResponse
+
+  2. app/Http/Controllers/Web/VpsController.php
+     → getPassword(int $id): JsonResponse
+
+  3. app/Http/Controllers/Web/VoipController.php
+     → getPassword(int $id): JsonResponse
+
+  4. app/Http/Controllers/Web/VoipController.php
+     → getExtensionPassword(int $id): JsonResponse
+
+  5. app/Http/Controllers/Web/ServiceProviderController.php
+     → getPassword(int $id): JsonResponse
+
+  6. app/Http/Controllers/Web/DomainEmailController.php
+     → getPassword(int $id): JsonResponse
+
+  7. app/Http/Controllers/Web/OtherServiceController.php
+     → getPassword(int $id): JsonResponse
+
+  8. app/Http/Controllers/Web/VaultController.php
+     → reveal(int $id, VaultService $vaultService): RedirectResponse
+
+  Total lines of code added: ~24 lines (~3 lines per method).
+
+===============================================================================
+3. GUARD PATTERN
+--------------------------------------------------------------------------------
+
+  Each reveal method received the identical 2-line guard inserted after
+  userOwnedFilter() + findOrFail() and before any activity logging:
+
+    $user = Auth::user();
+    abort_unless($user->hasRole('super-admin') || ($record->module && $user->canOnModule($record->module, 'reveal')), 403);
+
+  Where $record is the model instance (hosting, vps, voip, etc.).
+
+  Flow:
+
+    1. userOwnedFilter() — Phase 1 RbacScope query filter.
+       - Super-admin: no scope. All records visible.
+       - Non-super-admin: scoped to modules where user has can_read.
+         Records with module_id = null are excluded → 404 for non-super-admin.
+    2. findOrFail($id) — 404 if not found (or scoped out).
+    3. Guard — abort_unless(super-admin or can_reveal), 403.
+    4. Activity log — only reached if guard passes.
+    5. Response — JSON (password/json) or Redirect (Vault).
+
+  VaultController.reveal():
+    Same guard pattern, but returns a redirect response with a session
+    flash variable ('revealed_password') instead of JSON.
+
+===============================================================================
+4. PERMISSION RESOLUTION
+--------------------------------------------------------------------------------
+
+  All guards use the existing canOnModule() method from the
+  HasModulePermissions trait, which resolves the effective permission:
+
+    1. If a UserModulePermission override exists with a non-null value for
+       can_reveal, return that value.
+    2. Otherwise, return true if any of the user's roles have can_reveal
+       set to true in module_role_permissions.
+
+  Super-admin bypass: all guards check hasRole('super-admin') first, which
+  short-circuits the permission check.
+
+  No-module edge case:
+    - $record->module is null → ($record->module && ...) evaluates to
+      false → abort 403 for non-super-admin.
+    - In practice, records with module_id = null are caught earlier by
+      Phase 1 RbacScope (returning 404), so this is defense-in-depth.
+
+===============================================================================
+5. NOT MODIFIED
+--------------------------------------------------------------------------------
+
+  The following were explicitly NOT modified:
+
+  - CRUD methods (create, store, edit, update, destroy, restore,
+    forceDelete): untouched (Phase 2B-2 already complete).
+  - ImportController: untouched, still super-admin only via route
+    middleware.
+  - ExportController: untouched (Phase 2B-1 already complete).
+  - API controllers: untouched.
+  - Routes: no route changes.
+  - Migrations: no new migrations (can_reveal column from Phase 2B-1).
+  - UI button visibility: not changed (server-side enforcement only).
+  - Views: none modified.
+  - Models/Traits: none modified (reuse existing canOnModule(),
+    hasRole()).
+  - RolePermissionSeeder: not changed (can_reveal already seeded in
+    Phase 2B-1).
+
+===============================================================================
+6. TESTS
+--------------------------------------------------------------------------------
+
+  Test file:  tests/Feature/RbacPhase2B3Test.php (NEW, ~278 lines)
+
+  Test classes: 1 (RbacPhase2B3Test)
+  Uses: RefreshDatabase, TyroSeeder, FeatureModuleSeeder
+
+  Setup:
+    - Seeds TyroSeeder (roles) and FeatureModuleSeeder (modules).
+    - Creates 3 users: superAdmin (super-admin), admin (admin), normalUser
+      (user).
+    - Admin role: can_reveal=true + can_read=true on 7 reveal-enabled
+      modules (hostings, vps, voip, service-providers, domain-emails,
+      other-services, vault). can_reveal=false on a denied-module (tasks).
+    - User role: can_reveal=false + can_read=true on all 8 modules
+      (including the denied-module).
+
+  17 test methods, grouped as follows:
+
+  Super-admin bypass (1 test):
+    - test_super_admin_can_reveal_hosting_password
+      Record in a denied module (no can_reveal for role), super-admin
+      bypasses and gets 200.
+
+  Admin with can_reveal (7 tests — one per endpoint):
+    - test_admin_with_can_reveal_can_reveal_hosting_password
+    - test_admin_with_can_reveal_can_reveal_vps_password
+    - test_admin_with_can_reveal_can_reveal_voip_password
+    - test_admin_with_can_reveal_can_reveal_voip_extension_password
+    - test_admin_with_can_reveal_can_reveal_service_provider_password
+    - test_admin_with_can_reveal_can_reveal_domain_email_password
+    - test_admin_with_can_reveal_can_reveal_other_service_password
+    All assert 200 + correct password JSON key.
+    - test_admin_with_can_reveal_can_reveal_vault
+      Asserts redirect + session has 'revealed_password'.
+
+  Without can_reveal (2 tests):
+    - test_admin_without_can_reveal_denied_hosting_password
+      Admin on a denied-module (can_reveal=false) → 403.
+    - test_user_without_can_reveal_denied
+      Normal user (role can_reveal=false, no override) → 403.
+
+  User overrides (2 tests):
+    - test_override_true_grants_reveal_when_role_denies
+      Override=true on denied-module → 200.
+    - test_override_false_denies_reveal_when_role_allows
+      Override=false on allowed module → 403.
+
+  Audit logging (2 tests):
+    - test_successful_reveal_logs_activity
+      Asserts 'revealed' event in activity_log table.
+    - test_denied_reveal_does_not_log_activity
+      Asserts no 'revealed' event when guard returns 403.
+
+  No-module edge cases (2 tests):
+    - test_reveal_without_module_denied_for_non_super_admin
+      module_id=null → 404 (RbacScope, not guard).
+    - test_reveal_without_module_allowed_for_super_admin
+      module_id=null → 200 (super-admin bypasses RbacScope).
+
+  Test result:
+
+    Tests:  17 passed
+    Assertions: 20
+    Duration: ~6s
+
+===============================================================================
+7. COMPATIBILITY
+--------------------------------------------------------------------------------
+
+  ✔ Existing RBAC unchanged
+      Phase 1 RbacScope query scoping, Phase 2A UserModulePermission
+      merge logic, Phase 2B-1 can_reveal/export fix, Phase 2B-2 CRUD
+      guards all unaffected.
+
+  ✔ Existing role permissions preserved
+      All existing permission columns and seeder values unchanged.
+
+  ✔ Existing user overrides preserved
+      UserModulePermission structure unchanged; all override logic
+      reused through canOnModule().
+
+  ✔ Existing controller behaviour preserved for super-admin
+      All guards check hasRole('super-admin') first — super-admin
+      bypasses every permission gate.
+
+  ✔ Existing audit logging preserved
+      Activity log entries for successful reveals unchanged. Denied
+      reveals never create log entries (guard fires before activity()
+      call).
+
+  ✔ CRUD endpoints untouched
+      No changes to create(), store(), edit(), update(), destroy(),
+      restore(), or forceDelete() methods.
+
+  ✔ Import / Export untouched
+      ImportController and ExportController unchanged.
+
+  ✔ API controllers untouched
+      No API controller files modified.
+
+  ✔ Routes unchanged
+      No route definitions modified.
+
+  ✔ Migrations unchanged
+      No new migrations (can_reveal column from Phase 2B-1).
+
+  ✔ Views unchanged
+      No Blade files modified.
+
+===============================================================================
+8. SECURITY
+--------------------------------------------------------------------------------
+
+  - No privilege escalation introduced
+      Guards only restrict, never grant. Users without can_reveal are
+      blocked with 403.
+
+  - User overrides are correctly handled
+      Override=true can grant reveal even when role denies.
+      Override=false can deny reveal even when role grants.
+
+  - Denied reveals never create audit log entries
+      Guard placed before activity() call, so denied requests never
+      leave an audit trail. This prevents information leakage through
+      log inspection.
+
+  - Super-admin always bypasses
+      No permission restriction applies to super-admin users.
+
+  - Records without a module are inaccessible to non-super-admin
+      Phase 1 RbacScope returns 404 before the guard fires.
+      The guard's $record->module check is defense-in-depth.
+
+  - No route changes
+      All routes and URL structures unchanged.
+
+  - No database changes
+      All required columns already exist from Phase 2A/2B-1 migrations.
+
+  - Backward compatible
+      Users with appropriate can_reveal permission continue to reveal
+      passwords as before. The new guards only add restrictions for
+      users who lack the required permission.
+
+===============================================================================
+9. REMAINING WORK
+--------------------------------------------------------------------------------
+
+  RBAC Phase 2B-4:
+    Full enforcement test suite for all write guards and reveal guards
+    (if not already covered in Phase 2B-2 and Phase 2B-3 tests).
+
+  UI button visibility (Phase 2C):
+    Conditional button hiding based on effective permissions
+    (create button, edit button, delete button, reveal button).
+
+===============================================================================
+END OF REPORT
+===============================================================================

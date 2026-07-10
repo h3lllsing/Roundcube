@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\LoginAudit;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use OpenApi\Attributes as OA;
 
 class LoginAuditController extends Controller
@@ -28,15 +30,17 @@ class LoginAuditController extends Controller
             new OA\Response(response: 200, description: 'Paginated list of login audits'),
         ]
     )]
-    public function index(Request $request): \Illuminate\Http\JsonResponse
+    public function index(Request $request): JsonResponse
     {
+        abort_unless($request->user()->hasRole('super-admin'), 403);
+
         $query = LoginAudit::query()->with('user:id,name,email');
 
         $search = $request->get('search');
         if ($search) {
             $query->where(function ($q) use ($search) {
                 $q->where('email', 'like', "%{$search}%")
-                  ->orWhere('ip_address', 'like', "%{$search}%");
+                    ->orWhere('ip_address', 'like', "%{$search}%");
             });
         }
 
@@ -78,9 +82,21 @@ class LoginAuditController extends Controller
             new OA\Response(response: 404, description: 'Not found'),
         ]
     )]
-    public function show(LoginAudit $loginAudit): \Illuminate\Http\JsonResponse
+    public function show(LoginAudit $loginAudit): JsonResponse
     {
+        abort_unless(Auth::user()->hasRole('super-admin'), 403);
+
         $loginAudit->load('user:id,name,email');
+
         return $this->success($loginAudit);
+    }
+
+    public function destroy(LoginAudit $loginAudit): JsonResponse
+    {
+        abort_unless(Auth::user()->hasRole('super-admin'), 403);
+
+        $loginAudit->delete();
+
+        return $this->message('Login audit deleted');
     }
 }

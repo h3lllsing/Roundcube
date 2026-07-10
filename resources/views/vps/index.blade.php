@@ -4,77 +4,97 @@
 
 @section('content')
 <div class="max-w-7xl mx-auto">
-    <div class="flex items-center justify-between mb-6">
-        <h1 class="text-2xl font-semibold">VPS</h1>
-        <a href="{{ route('vps.create') }}" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg">+ Create</a>
-    </div>
+    <x-page-header title="VPS" subtitle="Track virtual private servers.">
+        <x-slot:actions>
+            @if($canExport)
+            <x-button href="{{ route('export', 'vps') }}" variant="success" size="sm">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                Export CSV
+            </x-button>
+            @endif
+            @if($canCreate)
+            <x-button href="{{ route('vps.create') }}" variant="primary" size="sm">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                Create
+            </x-button>
+            @endif
+        </x-slot:actions>
+    </x-page-header>
 
     <form method="GET" class="flex flex-wrap gap-3 mb-6">
-        <input type="text" name="search" value="{{ request('search') }}" placeholder="Search VPS..."
-            class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
-        <select name="status"
-            class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none">
-            <option value="">All statuses</option>
-            <option value="active" @selected(request('status') === 'active')>Active</option>
-            <option value="expired" @selected(request('status') === 'expired')>Expired</option>
-            <option value="suspended" @selected(request('status') === 'suspended')>Suspended</option>
-        </select>
-        <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors">Filter</button>
+        <x-filter-input name="search" value="{{ request('search') }}" placeholder="Search VPS..." />
+        <x-filter-select name="status" placeholder="All statuses" :options="['active' => 'Active', 'expired' => 'Expired', 'suspended' => 'Suspended']" />
+        <x-button type="submit" variant="primary" size="sm">Filter</x-button>
         @if(request()->anyFilled(['search', 'status']))
-            <a href="{{ route('vps.index') }}" class="px-4 py-2 bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 text-sm rounded-lg transition-colors">Clear</a>
+            <x-button href="{{ route('vps.index') }}" variant="outline" size="sm">Clear</x-button>
         @endif
     </form>
 
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-        <table class="w-full text-sm">
-            <thead>
-                <tr class="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
-                    <th class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Name</th>
-                    <th class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Module</th>
-                    <th class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Provider</th>
-                    <th class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Plan</th>
-                    <th class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Cost</th>
-                    <th class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Expiry</th>
-                    <th class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Status</th>
-                    <th class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Actions</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-                @forelse ($vpsList as $vps)
-                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                        <td class="px-6 py-3 font-medium">{{ $vps->name }}</td>
-                        <td class="px-6 py-3 text-gray-500">{{ $vps->module->name ?? '—' }}</td>
-                        <td class="px-6 py-3 text-gray-500">{{ $vps->provider }}</td>
-                        <td class="px-6 py-3 text-gray-500">{{ $vps->plan ?? '—' }}</td>
-                        <td class="px-6 py-3 text-gray-500">{{ $vps->cost ? '$' . number_format($vps->cost, 2) : '—' }}</td>
-                        <td class="px-6 py-3 text-gray-500">{{ $vps->expiry_date?->format('Y-m-d') ?? '—' }}</td>
-                        <td class="px-6 py-3">
-                            <span @class([
-                                'inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium',
-                                'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' => $vps->status === 'active',
-                                'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' => $vps->status === 'expired',
-                                'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300' => $vps->status === 'suspended',
-                            ])>{{ $vps->status }}</span>
-                        </td>
-                        <td class="px-6 py-3 whitespace-nowrap">
-                            <a href="{{ route('vps.show', $vps->id) }}" class="text-blue-600 hover:text-blue-800 text-xs mr-2">View</a>
-                            <a href="{{ route('vps.edit', $vps->id) }}" class="text-amber-600 hover:text-amber-800 text-xs mr-2">Edit</a>
-                            <form method="POST" action="{{ route('vps.destroy', $vps->id) }}" class="inline" onsubmit="return confirm('Are you sure?')">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="text-red-600 hover:text-red-800 text-xs">Delete</button>
-                            </form>
-                        </td>
-                    </tr>
+    <form method="POST" action="{{ route('bulk-action') }}" class="mb-6" id="bulk-form">
+        @csrf
+        <input type="hidden" name="type" value="vps">
+        <x-bulk-actions type="vps" colspan="9" :actions="$bulkActions" />
+    </form>
+
+        <x-table>
+            <x-slot:head>
+                <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">VPS</th>
+                <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Vendor</th>
+                <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">VPS IP</th>
+                <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">VPS Pass</th>
+                <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Department</th>
+                <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Location</th>
+                <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Associate</th>
+                <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Actions</th>
+            </x-slot:head>
+                    @forelse ($vpsList as $vps)
+                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                            <td class="px-4 py-3"><input type="checkbox" name="ids[]" value="{{ $vps->id }}" aria-label="Select {{ $vps->name }}" class="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500 bulk-item" form="bulk-form"></td>
+                            <td class="px-6 py-3 font-medium">{{ $vps->name }}</td>
+                            <td class="px-6 py-3 text-gray-500">{{ $vps->serviceProvider->name ?? '—' }}</td>
+                            <td class="px-6 py-3">
+                                @if($vps->ip_address)
+                                    <div class="flex items-center gap-2">
+                                        <span class="font-mono text-sm">{{ $vps->ip_address }}</span>
+                                        <x-copy-button :text="$vps->ip_address" title="Copy IP" />
+                                    </div>
+                                @else
+                                    <span class="text-gray-400">—</span>
+                                @endif
+                            </td>
+                            <td class="px-6 py-3">
+                                @if($vps->password)
+                                    <div class="flex items-center gap-2">
+                                        <span class="font-mono text-sm text-gray-400">••••••••</span>
+                                        <x-permission-check :module="$vaultModule" action="reveal">
+                                        <x-copy-button password-route="{{ url('vps') }}/{{ $vps->id }}/password" title="Copy password" />
+                                        </x-permission-check>
+                                    </div>
+                                @else
+                                    <span class="text-gray-400">—</span>
+                                @endif
+                            </td>
+                            <td class="px-6 py-3 text-gray-500">{{ $vps->department ?? '—' }}</td>
+                            <td class="px-6 py-3 text-gray-500">{{ $vps->location ?? '—' }}</td>
+                            <td class="px-6 py-3 text-gray-500">{{ $vps->user->name ?? '—' }}</td>
+                            <td class="px-6 py-3 whitespace-nowrap">
+                            <x-action href="{{ route('vps.show', $vps->id) }}" color="indigo" icon="view" label="" title="View" />
+                            <x-permission-check :module="$vps->module" action="update">
+                            <x-action href="{{ route('vps.edit', $vps->id) }}" color="amber" icon="edit" label="" title="Edit" />
+                            </x-permission-check>
+                            <x-permission-check :module="$vps->module" action="delete">
+                            <x-action action="{{ route('vps.destroy', $vps->id) }}" color="red" icon="delete" label="" title="Delete" confirm="Are you sure?" method="DELETE" />
+                            </x-permission-check>
+                            </td>
+                        </tr>
                 @empty
-                    <tr>
-                        <td colspan="8" class="px-6 py-8 text-center text-gray-400">No VPS found.</td>
-                    </tr>
+                    <tr><x-empty-state :colspan="9" icon="server" title="No VPS found." message="Add VPS servers to monitor them." /></tr>
                 @endforelse
             </tbody>
-        </table>
-    </div>
+        </x-table>
 
-    <div class="mt-4">{{ $vpsList->links() }}</div>
+        <div class="mt-4">{{ $vpsList->links() }}</div>
 </div>
+
+
 @endsection

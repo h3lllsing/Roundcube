@@ -1,0 +1,333 @@
+================================================================================
+RBAC PHASE 2B-1 IMPLEMENTATION REPORT
+================================================================================
+Date: 2026-06-25
+Project: unknwn (Laravel RBAC)
+================================================================================
+
+1. SUMMARY
+--------------------------------------------------------------------------------
+
+What was implemented:
+
+  - Added `can_reveal` column to `module_role_permissions` table (role-level
+    password reveal permission).
+  - Updated `RolePermissionSeeder` to seed `can_reveal => false` for all
+    non-super-admin roles.
+  - Updated `ModuleRolePermission` model fillable + casts to include
+    `can_reveal`.
+  - Fixed ExportController data scoping bug: Admin users with `can_export`
+    now export module-scoped records (all records belonging to modules the
+    admin has `can_export` on), instead of only their own records.
+  - Added 13 tests covering `can_reveal` role-level, user overrides,
+    inheritance, super-admin bypass, and all export scenarios.
+
+Overall objective:
+
+  Deliver Phase 2B Stage 1 (safest-first items): add the `can_reveal`
+  permission infrastructure and fix the ExportController bug where admin
+  exports were incorrectly scoped to `user_id` instead of module-level
+  accessible module IDs.
+
+================================================================================
+2. MIGRATION
+--------------------------------------------------------------------------------
+
+  Migration file name:
+    2026_06_25_000006_add_can_reveal_to_module_role_permissions.php
+
+  Table modified:
+    module_role_permissions
+
+  Column added:
+    can_reveal (boolean, tinyint(1))
+
+  Default value:
+    false (0)
+
+  Rollback method:
+    `php artisan migrate:rollback` -- or manually:
+      ALTER TABLE module_role_permissions DROP COLUMN can_reveal;
+
+  Note:
+    The `user_module_permissions` table already contained `can_reveal`
+    (nullable boolean) from Phase 2A (migration
+    2026_06_25_000005_create_user_module_permissions_table.php).
+    No migration was needed on that table.
+
+================================================================================
+3. FILES MODIFIED
+--------------------------------------------------------------------------------
+
+Migrations:
+  - database/migrations/2026_06_25_000006_add_can_reveal_to_module_role_permissions.php
+    (NEW) Add can_reveal column to module_role_permissions.
+
+Models:
+  - app/Models/ModuleRolePermission.php
+    Added 'can_reveal' to $fillable array and to casts() (boolean cast).
+
+Traits:
+  - (No changes needed)
+    The HasModulePermissions trait already handled can_reveal generically
+    through canOnModule(), getAccessibleModuleIds(), and
+    getEffectiveModulePermissions() since all these methods derive the
+    column name from the action parameter ("reveal" -> "can_reveal").
+
+Controllers:
+  - app/Http/Controllers/Web/ExportController.php
+    Fixed data scoping logic in export() method.
+
+Seeders:
+  - database/seeders/RolePermissionSeeder.php
+    Added 'can_reveal' => false to all four non-super-admin role
+    permission arrays (admin, customer, editor, user).
+
+Tests:
+  - tests/Feature/RbacPhase2B1Test.php (NEW)
+    13 test methods covering can_reveal and export enforcement.
+
+Views:
+  - (None)
+
+================================================================================
+4. EXPORTCONTROLLER
+--------------------------------------------------------------------------------
+
+Previous behaviour:
+
+  All non-super-admin users were scoped to `where('user_id', $user->id)`.
+  This meant an admin with `can_export` on a module could only export
+  records they personally owned, rather than all records belonging to
+  modules they had export permission on.
+
+  The permission check was correct (canOnModule), but the data scope was
+  wrong for admin users.
+
+New behaviour:
+
+  The data scoping is now role-aware:
+
+  Super Admin:
+    No scope applied. Exports ALL records of the requested type.
+
+  Admin:
+    If the export type has a `module_slug`, admin's records are scoped by
+    `getAccessibleModuleIds('export')` — i.e., the union of all modules
+    where the admin's role has `can_export` = true (respecting per-user
+    overrides). Admin exports records owned by any user as long as those
+    records belong to an accessible module.
+
+    If the accessible module ID list is empty (should not happen when the
+    permission check passes, but serves as defense-in-depth), returns
+    redirect with "Forbidden."
+
+  Normal User:
+    Behaviour unchanged. Scoped to `where('user_id', $user->id)` — exports
+    only their own records.
+
+  Admin-only types (features, modules, webhooks, activity-logs, login-audits,
+  attachments, users, roles, privileges, tokens):
+    Still guarded by `$cfg['admin']` check — non-super-admin gets a redirect
+    with "Forbidden." This is unchanged.
+
+Per-user override behaviour:
+
+  Already handled by `canOnModule()` and `getAccessibleModuleIds()` in the
+  HasModulePermissions trait. If a user has a `user_module_permissions` row
+  with `can_export` set (non-null), that value overrides the role-level
+  permission. The export controller calls these methods and naturally
+  inherits the override behaviour without any additional changes.
+
+Module-scoped export logic:
+
+  After passing the permission gate check, the query for admin users is:
+    $query->whereIn('module_id', $accessibleIds);
+  where $accessibleIds is computed by:
+    $user->getAccessibleModuleIds('export');
+
+  This method resolves:
+    1. All modules where any of the user's roles have can_export = true.
+    2. Then applies user overrides (adds modules where override grants,
+       removes modules where override denies).
+    3. Returns unique array of module IDs.
+
+================================================================================
+5. CAN_REVEAL PERMISSION
+--------------------------------------------------------------------------------
+
+Role permission:
+
+  Stored in `module_role_permissions.can_reveal` (boolean, default false).
+  Set to `false` for all non-super-admin roles in the seeder. Super Admin
+  bypasses all permission checks and always returns true from canOnModule.
+
+User override:
+
+  Stored in `user_module_permissions.can_reveal` (nullable boolean).
+  When non-null, it overrides the role-level value.
+
+Effective permission resolution:
+
+  The `canOnModule(Module $module, 'reveal')` method in the
+  HasModulePermissions trait resolves the effective permission:
+    1. If a user override exists AND the override column is non-null,
+       return the override value.
+    2. Otherwise, return true if ANY of the user's roles have the
+       column set to true in module_role_permissions.
+
+  Pseudo-code:
+    if (userOverride exists && userOverride.can_reveal !== null)
+        return userOverride.can_reveal
+    return ModuleRolePermission.where(role_id IN userRoles)
+        ->where(module_id, $module->id)
+        ->where(can_reveal, true)
+        ->exists()
+
+Inheritance behaviour:
+
+  - User override = null (or no override row): inherits the role-level
+    value. If the role grants can_reveal, the user has it. If the role
+    denies it, the user does not.
+  - User override = true: grants can_reveal even if the role denies it.
+  - User override = false: denies can_reveal even if the role grants it.
+  - Super Admin: always has can_reveal regardless of role or override
+    settings (bypass check in canOnModule is not needed because super-admin
+    never hits the module permission check in export/password-reveal;
+    the trait methods return true for super-admin context).
+
+================================================================================
+6. TESTS
+--------------------------------------------------------------------------------
+
+Test file:  tests/Feature/RbacPhase2B1Test.php (NEW, 266 lines)
+
+Test classes: 1 (RbacPhase2B1Test)
+Uses: RefreshDatabase, TyroSeeder, FeatureModuleSeeder
+
+Setup:
+
+  - Seeds TyroSeeder (roles, super-admin user) and FeatureModuleSeeder
+    (modules).
+  - Creates three users: superAdmin (super-admin role), admin (admin role),
+    normalUser (user role).
+  - Admin role: can_read + can_export + can_reveal on moduleA; nothing on
+    moduleB.
+  - User role: can_read + can_export + can_reveal on moduleA; nothing on
+    moduleB.
+
+13 test methods, 30 assertions:
+
+  can_reveal tests (5 tests, 9 assertions):
+    1. test_role_level_can_reveal_works_through_canOnModule
+       Assertions: 2 (admin can reveal on moduleA, cannot on moduleB)
+    2. test_user_override_false_denies_role_level_can_reveal
+       Assertions: 2 (role grants, override=false denies)
+    3. test_user_override_true_grants_can_reveal_when_role_denies
+       Assertions: 2 (role denies on moduleB, override=true grants)
+    4. test_user_override_null_inherits_role_can_reveal
+       Assertions: 1 (override=null inherits role grant)
+    5. test_super_admin_bypasses_can_reveal
+       Assertions: 2 (moduleA and moduleB both return true)
+
+  Export tests (8 tests, 21 assertions):
+    6. test_super_admin_exports_all_records
+       Assertions: 3 (200, Content-Disposition header, both records appear)
+    7. test_admin_with_can_export_exports_module_records_owned_by_other_users
+       Assertions: 3 (200, other-user record appears, non-module record absent)
+    8. test_admin_without_can_export_is_blocked
+       Assertions: 2 (redirect, session error "Forbidden.")
+    9. test_export_user_override_false_blocks_export
+       Assertions: 2 (redirect, session error "Forbidden.")
+    10. test_export_user_override_true_grants_when_role_denies
+        Assertions: 2 (200, override record appears)
+    11. test_normal_user_export_is_own_record_scoped
+        Assertions: 3 (200, own record appears, other's record absent)
+    12. test_admin_only_export_types_blocked_for_non_super_admin
+        Assertions: 2 (redirect, session error "Forbidden.")
+    13. test_non_module_models_stay_ownership_scoped
+        Assertions: 3 (200, own note appears, other's note absent)
+
+php artisan test result:
+
+  Tests:    13 passed
+  Assertions: 30
+  Duration: ~4.6s
+
+================================================================================
+7. COMPATIBILITY
+--------------------------------------------------------------------------------
+
+  ✔ Existing RBAC unchanged
+      Phase 1 RbacScope query scoping is untouched.
+      Phase 2A UserModulePermission table and merge logic are untouched.
+
+  ✔ Existing role permissions preserved
+      All existing columns (can_create, can_read, can_update, can_delete,
+      can_approve, can_export) and their seeder values are unchanged.
+      can_reveal defaults to false and is explicitly set false for all
+      non-super-admin roles, so no existing behaviour changes.
+
+  ✔ Existing user overrides preserved
+      UserModulePermission table structure unchanged. Existing overrides
+      unaffected. can_reveal override was already nullable from Phase 2A.
+
+  ✔ Import still Super Admin only
+      ImportController unchanged. Route-level role:super-admin middleware
+      still in place.
+
+  ✔ CRUD controllers untouched
+      No changes to any web resource controller (Domain, Hosting, Vps,
+      Voip, ServiceProvider, DomainEmail, OtherService, ExpiryTracker,
+      Vault).
+
+  ✔ Password reveal endpoints untouched
+      No changes to any getPassword() or reveal() methods across all
+      8 password reveal endpoints.
+
+================================================================================
+8. SECURITY
+--------------------------------------------------------------------------------
+
+  - No privilege escalation introduced
+      can_reveal is seeded false for all non-super-admin roles. Only a
+      super-admin or a user explicitly granted can_reveal (via role or
+      override) can reveal passwords.
+
+  - No route changes
+      All export routes and password-reveal routes unchanged.
+
+  - No API changes
+      Export response format unchanged (CSV with Content-Disposition
+      attachment). All endpoints return the same response types.
+
+  - No database breaking changes
+      Additive column only. Existing data unchanged. Rollback is a simple
+      ALTER TABLE DROP COLUMN.
+
+  - Backward compatible
+      - Users without can_reveal: behaviour unchanged (no reveal
+        permission existed previously — the permission check was absent,
+        so this adds a new restriction, not a breaking change).
+      - Export behaviour change only affects admin users (they now export
+        more records than before, which is the intended fix).
+      - Normal user export behaviour 100% unchanged.
+
+================================================================================
+9. REMAINING WORK
+--------------------------------------------------------------------------------
+
+  RBAC Phase 2B-2:
+    Write guard enforcement on all 9 web resource controllers
+    (can_create, can_update, can_delete).
+
+  RBAC Phase 2B-3:
+    Password reveal enforcement (can_reveal checks on all 8 reveal
+    endpoints) + VaultController reveal guard.
+
+  RBAC Phase 2B-4:
+    Full enforcement test suite for all write guards and reveal guards.
+
+================================================================================
+END OF REPORT
+================================================================================

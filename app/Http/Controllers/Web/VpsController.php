@@ -2,80 +2,169 @@
 
 namespace App\Http\Controllers\Web;
 
-use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreVpsRequest;
 use App\Http\Requests\UpdateVpsRequest;
 use App\Models\Module;
+use App\Models\ServiceProvider;
 use App\Models\User;
 use App\Models\Vps;
+use App\Services\RenewalSyncService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use App\Http\Controllers\Concerns\CleansPasswords;
 use Illuminate\View\View;
 
-class VpsController extends Controller
+class VpsController extends BaseResourceController
 {
-    public function index(Request $request): View
+    use CleansPasswords;
+    protected function modelClass(): string
     {
-        $query = Vps::with('module');
-
-        if ($request->filled('status')) {
-            $query->where('status', $request->status);
-        }
-        if ($request->filled('search')) {
-            $query->where('name', 'like', '%' . $request->search . '%');
-        }
-
-        $vpsList = $query->latest()->paginate(20);
-
-        return view('vps.index', compact('vpsList'));
+        return Vps::class;
     }
 
-    public function create(): View
+    protected function moduleSlug(): string
     {
-        $modules = Module::orderBy('name')->pluck('name', 'id');
-        $users = User::orderBy('name')->pluck('name', 'id');
-        return view('vps.create', compact('modules', 'users'));
+        return 'vps';
+    }
+
+    protected function viewPrefix(): string
+    {
+        return 'vps';
+    }
+
+    protected function indexSelect(): array
+    {
+        return ['id', 'module_id', 'name', 'ip_address', 'plan', 'cost', 'expiry_date', 'status', 'department', 'location', 'user_id', 'service_provider_id'];
+    }
+
+    protected function indexVariable(): string
+    {
+        return 'vpsList';
+    }
+
+    protected function recordVariable(): string
+    {
+        return 'vps';
+    }
+
+    protected function indexWith(): array
+    {
+        return ['module', 'serviceProvider', 'user'];
+    }
+
+    protected function showWith(): array
+    {
+        return ['module', 'serviceProvider', 'user'];
+    }
+
+    protected function showExtraData($model): array
+    {
+        return [
+            'vaultModule' => \App\Helpers\ModuleCache::findBySlug('vault'),
+            'renewals' => \App\Models\ExpiryTracker::where('trackable_type', Vps::class)
+                ->where('trackable_id', $model->id)
+                ->get(),
+        ];
+    }
+
+    protected function createExtraData(): array
+    {
+        return [
+            'serviceProviders' => ServiceProvider::orderBy('name')->pluck('name', 'id'),
+        ];
+    }
+
+    protected function prepareStoreData(array $validated, Request $request): array
+    {
+        foreach (['login_ids', 'additional_ips'] as $field) {
+            if (isset($validated[$field]) && is_string($validated[$field])) {
+                $validated[$field] = json_decode($validated[$field], true);
+            }
+        }
+
+        return $validated;
+    }
+
+    protected function prepareUpdateData(array $validated, Request $request, $model): array
+    {
+        $this->cleanPasswordField($validated);
+        foreach (['login_ids', 'additional_ips'] as $field) {
+            if (isset($validated[$field]) && is_string($validated[$field])) {
+                $validated[$field] = json_decode($validated[$field], true);
+            }
+        }
+
+        return $validated;
     }
 
     public function store(StoreVpsRequest $request): RedirectResponse
     {
         $validated = $request->validated();
-        $validated['user_id'] = $validated['user_id'] ?? Auth::id();
-
-        Vps::create($validated);
+        $user = Auth::user();
+        $module = \App\Helpers\ModuleCache::findBySlug($this->moduleSlug());
+        if (! $user->hasRole('super-admin')) {
+            abort_unless($module && $user->canOnModule($module, 'create'), 403);
+        }
+        if ($module) {
+            $validated['module_id'] = $module->id;
+        }
+        $validated['user_id'] = Auth::id();
+        $validated = $this->prepareStoreData($validated, $request);
+        $vps = Vps::create($validated);
+        app(RenewalSyncService::class)->sync($vps);
 
         return redirect()->route('vps.index')->with('success', 'VPS created successfully.');
     }
 
-    public function show(int $id): View
-    {
-        $vps = Vps::with('module')->findOrFail($id);
-        return view('vps.show', compact('vps'));
-    }
-
-    public function edit(int $id): View
-    {
-        $vps = Vps::findOrFail($id);
-        $modules = Module::orderBy('name')->pluck('name', 'id');
-        $users = User::orderBy('name')->pluck('name', 'id');
-        return view('vps.edit', compact('vps', 'modules', 'users'));
-    }
-
     public function update(UpdateVpsRequest $request, int $id): RedirectResponse
     {
+        $this->userOwnedFilter();
         $vps = Vps::findOrFail($id);
-
-        $vps->update($request->validated());
+        $user = Auth::user();
+        abort_unless($user->hasRole('super-admin') || ($vps->module && $user->canOnModule($vps->module, 'update')), 403);
+        $this->checkOptimisticLock($vps, $request);
+        $data = $request->validated();
+        unset($data['module_id']);
+        $data = $this->prepareUpdateData($data, $request, $vps);
+        $vps->update($data);
+        if ($vps->wasChanged($this->renewalFields())) {
+            app(RenewalSyncService::class)->sync($vps);
+        }
 
         return redirect()->route('vps.index')->with('success', 'VPS updated successfully.');
     }
 
-    public function destroy(int $id): RedirectResponse
+    public function getPassword(int $id): JsonResponse
     {
+        $this->userOwnedFilter();
         $vps = Vps::findOrFail($id);
-        $vps->delete();
+        $user = Auth::user();
+        $vaultModule = \App\Helpers\ModuleCache::findBySlug('vault');
+        abort_unless($user->hasRole('super-admin') || ($vaultModule && $user->canOnModule($vaultModule, 'reveal')), 403);
+        activity()->event('revealed')
+            ->performedOn($vps)
+            ->causedBy($user)
+            ->withProperties(['type' => 'vps_password'])
+            ->log('Password revealed for VPS: '.$vps->name);
 
-        return redirect()->route('vps.index')->with('success', 'VPS deleted successfully.');
+        return response()->json(['password' => $vps->password]);
+    }
+
+    public function logPasswordCopy(int $id): JsonResponse
+    {
+        $this->userOwnedFilter();
+        $vps = Vps::findOrFail($id);
+        $user = Auth::user();
+        $vaultModule = \App\Helpers\ModuleCache::findBySlug('vault');
+        abort_unless($user->hasRole('super-admin') || ($vaultModule && $user->canOnModule($vaultModule, 'reveal')), 403);
+        activity()->event('copied')
+            ->performedOn($vps)
+            ->causedBy($user)
+            ->withProperties(['type' => 'vps_password'])
+            ->log('Password copied for VPS: '.$vps->name);
+
+        return response()->json(['status' => 'logged']);
     }
 }

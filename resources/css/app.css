@@ -1,7 +1,8 @@
 @import 'tailwindcss';
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
-@source '../../storage/framework/views/*.php';
 @source '../**/*.blade.php';
 @source '../**/*.js';
 
@@ -9,3 +10,188 @@
     --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
 }
+
+html.dark .sidebar-header {
+    background: #000000;
+}
+
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+.dark ::-webkit-scrollbar-thumb { background: #334155; }
+.dark ::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+::selection { background: #6366f1; color: #fff; }
+html { scroll-behavior: smooth; scrollbar-width: thin; }
+
+@keyframes toast-in {
+    from { transform: translateX(100%) scale(0.95); opacity: 0; }
+    to { transform: translateX(0) scale(1); opacity: 1; }
+}
+@keyframes toast-out {
+    from { transform: translateX(0) scale(1); opacity: 1; }
+    to { transform: translateX(100%) scale(0.95); opacity: 0; }
+}
+@keyframes fade-in {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fade-in-up {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+@keyframes scale-in {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+}
+@keyframes count-up {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+@keyframes ripple {
+    to { transform: scale(4); opacity: 0; }
+}
+
+.toast { animation: toast-in 0.35s cubic-bezier(0.16, 1, 0.3, 1); }
+.toast.hiding { animation: toast-out 0.25s ease-in forwards; }
+.fade-in { animation: fade-in 0.4s ease-out; }
+.fade-in-up { animation: fade-in-up 0.5s cubic-bezier(0.16, 1, 0.3, 1); }
+.scale-in { animation: scale-in 0.25s cubic-bezier(0.16, 1, 0.3, 1); }
+.glass {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.8);
+}
+.dark .glass {
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(99, 102, 241, 0.08);
+}
+
+.glass-card {
+    background: rgba(255, 255, 255, 0.75);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.9);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.04);
+}
+.dark .glass-card {
+    background: rgba(0, 0, 0, 0.88);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(99, 102, 241, 0.07);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+}
+
+.card-hover { transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+.card-hover:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 20px 40px -12px rgba(99, 102, 241, 0.12);
+}
+.dark .card-hover:hover {
+    box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.5);
+}
+
+.nav-link { position: relative; transition: all 0.2s ease; }
+.nav-link::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%) scaleY(0);
+    width: 3px;
+    height: 60%;
+    border-radius: 0 3px 3px 0;
+    background: linear-gradient(to bottom, #6366f1, #4f46e5);
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.nav-link-active::before { transform: translateY(-50%) scaleY(1); }
+
+.row-hover { transition: all 0.15s ease; }
+.row-hover:hover { background: rgba(99, 102, 241, 0.04); }
+.dark .row-hover:hover { background: rgba(99, 102, 241, 0.08); }
+
+.bg-grid {
+    background-image:
+        linear-gradient(rgba(99, 102, 241, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(99, 102, 241, 0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+}
+.dark .bg-grid {
+    background-image:
+        linear-gradient(rgba(255, 255, 255, 0.012) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.012) 1px, transparent 1px);
+    background-size: 40px 40px;
+}
+
+.stat-card { transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1); position: relative; overflow: hidden; }
+.stat-card::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    transform: translate(40px, -40px);
+    opacity: 0.06;
+    transition: opacity 0.3s ease;
+}
+.stat-card:hover::after { opacity: 0.12; }
+.stat-card:hover { transform: translateY(-2px); }
+
+thead th {
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #64748b;
+    padding: 0.75rem 1rem;
+    white-space: nowrap;
+    border-bottom: 1px solid #e2e8f0;
+}
+.dark thead th {
+    background: #000000;
+    color: #94a3b8;
+    border-bottom-color: rgba(99, 102, 241, 0.08);
+}
+
+.input-focus {
+    transition: all 0.2s ease;
+}
+.input-focus:focus {
+    border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+.dark .input-focus:focus {
+    border-color: #818cf8;
+    box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.15);
+}
+
+.dark body {
+    background: #000000;
+}
+
+[class*="overflow-x-auto"] { -webkit-overflow-scrolling: touch; scrollbar-width: thin; }
+[class*="overflow-x-auto"] > table { min-width: max-content; }
+[class*="overflow-x-auto"]::-webkit-scrollbar { height: 4px; }
+[class*="overflow-x-auto"]::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+.dark [class*="overflow-x-auto"]::-webkit-scrollbar-thumb { background: #334155; }
+
+.number-pulse {
+    animation: count-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.cmdk-overlay { animation: fade-in 0.15s ease-out; }
+.cmdk-modal { animation: scale-in 0.2s cubic-bezier(0.16, 1, 0.3, 1); }
+
+@media (prefers-reduced-motion: reduce) {
+    *, ::before, ::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
+
+/* Alpine cloak */
+[x-cloak] { display: none !important; }

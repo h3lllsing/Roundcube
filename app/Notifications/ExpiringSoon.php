@@ -2,10 +2,10 @@
 
 namespace App\Notifications;
 
-use Illuminate\Bus\Queueable;
 use App\Models\User;
-use Illuminate\Notifications\Notification;
+use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Notifications\Notification;
 
 class ExpiringSoon extends Notification
 {
@@ -39,7 +39,7 @@ class ExpiringSoon extends Notification
         ];
 
         if ($this->daysRemaining < 0) {
-            $lines[] = "This item expired **" . abs($this->daysRemaining) . " day(s) ago** on {$this->expiryDate}.";
+            $lines[] = 'This item expired **'.abs($this->daysRemaining)." day(s) ago** on {$this->expiryDate}.";
         } elseif ($this->daysRemaining === 0) {
             $lines[] = "This item **expires today** ({$this->expiryDate}).";
         } else {
@@ -50,7 +50,7 @@ class ExpiringSoon extends Notification
 
         $mail = (new MailMessage)
             ->subject($subject)
-            ->greeting('Hello ' . $notifiable->name . ',');
+            ->greeting('Hello '.$notifiable->name.',');
 
         foreach ($lines as $line) {
             $mail->line($line);

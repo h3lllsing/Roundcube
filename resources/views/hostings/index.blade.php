@@ -4,77 +4,108 @@
 
 @section('content')
 <div class="max-w-7xl mx-auto">
-    <div class="flex items-center justify-between mb-6">
-        <h1 class="text-2xl font-semibold">Hostings</h1>
-        <a href="{{ route('hostings.create') }}" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg">+ Create</a>
-    </div>
+    <x-page-header title="Hostings" subtitle="Manage hosting plans and accounts.">
+        <x-slot:actions>
+            @if($canExport)
+            <x-button href="{{ route('export', 'hostings') }}" variant="success" size="sm">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                Export CSV
+            </x-button>
+            @endif
+            @if($canCreate)
+            <x-button href="{{ route('hostings.create') }}" variant="primary" size="sm">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                Create
+            </x-button>
+            @endif
+        </x-slot:actions>
+    </x-page-header>
 
     <form method="GET" class="flex flex-wrap gap-3 mb-6">
-        <input type="text" name="search" value="{{ request('search') }}" placeholder="Search hostings..."
-            class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
-        <select name="status"
-            class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none">
-            <option value="">All statuses</option>
-            <option value="active" @selected(request('status') === 'active')>Active</option>
-            <option value="expired" @selected(request('status') === 'expired')>Expired</option>
-            <option value="suspended" @selected(request('status') === 'suspended')>Suspended</option>
-        </select>
-        <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors">Filter</button>
+        <x-filter-input name="search" value="{{ request('search') }}" placeholder="Search hostings..." />
+        <x-filter-select name="status" placeholder="All statuses" :options="['active' => 'Active', 'inactive' => 'Inactive', 'expired' => 'Expired', 'suspended' => 'Suspended', 'pending_transfer' => 'Pending Transfer', 'cancelled' => 'Cancelled']" />
+        <x-button type="submit" variant="primary" size="sm">Filter</x-button>
         @if(request()->anyFilled(['search', 'status']))
-            <a href="{{ route('hostings.index') }}" class="px-4 py-2 bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 text-sm rounded-lg transition-colors">Clear</a>
+            <x-button href="{{ route('hostings.index') }}" variant="outline" size="sm">Clear</x-button>
         @endif
     </form>
 
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-        <table class="w-full text-sm">
-            <thead>
-                <tr class="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
-                    <th class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Name</th>
-                    <th class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Module</th>
-                    <th class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Provider</th>
-                    <th class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Plan</th>
-                    <th class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Cost</th>
-                    <th class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Expiry</th>
-                    <th class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Status</th>
-                    <th class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Actions</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-                @forelse ($hostings as $hosting)
-                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                        <td class="px-6 py-3 font-medium">{{ $hosting->name }}</td>
-                        <td class="px-6 py-3 text-gray-500">{{ $hosting->module->name ?? '—' }}</td>
-                        <td class="px-6 py-3 text-gray-500">{{ $hosting->provider }}</td>
-                        <td class="px-6 py-3 text-gray-500">{{ $hosting->plan ?? '—' }}</td>
-                        <td class="px-6 py-3 text-gray-500">{{ $hosting->cost ? '$' . number_format($hosting->cost, 2) : '—' }}</td>
-                        <td class="px-6 py-3 text-gray-500">{{ $hosting->expiry_date?->format('Y-m-d') ?? '—' }}</td>
-                        <td class="px-6 py-3">
-                            <span @class([
-                                'inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium',
-                                'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' => $hosting->status === 'active',
-                                'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' => $hosting->status === 'expired',
-                                'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300' => $hosting->status === 'suspended',
-                            ])>{{ $hosting->status }}</span>
-                        </td>
-                        <td class="px-6 py-3 whitespace-nowrap">
-                            <a href="{{ route('hostings.show', $hosting->id) }}" class="text-blue-600 hover:text-blue-800 text-xs mr-2">View</a>
-                            <a href="{{ route('hostings.edit', $hosting->id) }}" class="text-amber-600 hover:text-amber-800 text-xs mr-2">Edit</a>
-                            <form method="POST" action="{{ route('hostings.destroy', $hosting->id) }}" class="inline" onsubmit="return confirm('Are you sure?')">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="text-red-600 hover:text-red-800 text-xs">Delete</button>
-                            </form>
-                        </td>
-                    </tr>
+    <form method="POST" action="{{ route('bulk-action') }}" class="mb-6" id="bulk-form">
+        @csrf
+        <input type="hidden" name="type" value="hostings">
+        <x-bulk-actions type="hostings" colspan="10" :actions="$bulkActions" />
+    </form>
+
+        <x-table>
+            <x-slot:head>
+                <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Serial</th>
+                <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Domain</th>
+                <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Domain IP</th>
+                <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Mail Domain IP</th>
+                <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Cpanel Link</th>
+                <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Cpanel ID</th>
+                <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Cpanel PW</th>
+                <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Cpanel IP</th>
+                <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Actions</th>
+            </x-slot:head>
+                    @forelse ($hostings as $hosting)
+                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                            <td class="px-4 py-3"><input type="checkbox" name="ids[]" value="{{ $hosting->id }}" aria-label="Select {{ $hosting->name }}" class="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500 bulk-item" form="bulk-form"></td>
+                            <td class="px-6 py-3 text-gray-500">{{ $hosting->id }}</td>
+                            <td class="px-6 py-3 font-medium">{{ $hosting->name }}</td>
+                            <td class="px-6 py-3 text-gray-500 font-mono">{{ $hosting->domain_ip ?? '—' }}</td>
+                            <td class="px-6 py-3 text-gray-500 font-mono">{{ $hosting->mail_domain_ip ?? '—' }}</td>
+                            <td class="px-6 py-3">
+                                @if($hosting->cpanel_url && Str::startsWith($hosting->cpanel_url, ['http://', 'https://']))
+                                    <div class="flex items-center gap-2">
+                                        <a href="{{ $hosting->cpanel_url }}" target="_blank" class="text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 underline text-xs">{{ $hosting->cpanel_url }}</a>
+                                        <x-copy-button :text="$hosting->cpanel_url" title="Copy URL" />
+                                    </div>
+                                @else
+                                    <span class="text-gray-500">—</span>
+                                @endif
+                            </td>
+                            <td class="px-6 py-3">
+                                @if($hosting->username)
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-sm max-w-[120px] truncate" title="{{ $hosting->username }}">{{ $hosting->username }}</span>
+                                        <x-copy-button :text="$hosting->username" title="Copy username" />
+                                    </div>
+                                @else
+                                    <span class="text-gray-400">—</span>
+                                @endif
+                            </td>
+                            <td class="px-6 py-3">
+                                @if($hosting->password)
+                                    <div class="flex items-center gap-2">
+                                        <span class="font-mono text-sm text-gray-400">••••••••</span>
+                                        <x-permission-check :module="$vaultModule" action="reveal">
+                                        <x-copy-button password-route="{{ url('hostings') }}/{{ $hosting->id }}/password" title="Copy password" />
+                                        </x-permission-check>
+                                    </div>
+                                @else
+                                    <span class="text-gray-400">—</span>
+                                @endif
+                            </td>
+                            <td class="px-6 py-3 text-gray-500 font-mono">{{ $hosting->cpanel_ip ?? '—' }}</td>
+                            <td class="px-6 py-3 whitespace-nowrap">
+                            <x-action href="{{ route('hostings.show', $hosting->id) }}" color="indigo" icon="view" label="" title="View" />
+                            <x-permission-check :module="$hosting->module" action="update">
+                            <x-action href="{{ route('hostings.edit', $hosting->id) }}" color="amber" icon="edit" label="" title="Edit" />
+                            </x-permission-check>
+                            <x-permission-check :module="$hosting->module" action="delete">
+                            <x-action action="{{ route('hostings.destroy', $hosting->id) }}" color="red" icon="delete" label="" title="Delete" confirm="Are you sure?" method="DELETE" />
+                            </x-permission-check>
+                            </td>
+                        </tr>
                 @empty
-                    <tr>
-                        <td colspan="8" class="px-6 py-8 text-center text-gray-400">No hostings found.</td>
-                    </tr>
+                    <tr><x-empty-state :colspan="10" icon="server" title="No hostings found." message="Add hosting accounts to manage them." /></tr>
                 @endforelse
             </tbody>
-        </table>
-    </div>
+        </x-table>
 
-    <div class="mt-4">{{ $hostings->links() }}</div>
+        <div class="mt-4">{{ $hostings->links() }}</div>
 </div>
+
+
 @endsection

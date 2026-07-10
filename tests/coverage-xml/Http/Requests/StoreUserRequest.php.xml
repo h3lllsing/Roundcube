@@ -1,0 +1,247 @@
+<?xml version="1.0"?>
+<phpunit xmlns="https://schema.phpunit.de/coverage/1.0">
+  <file name="StoreUserRequest.php" path="\Http\Requests">
+    <totals>
+      <lines total="26" comments="1" code="25" executable="8" executed="8" percent="100.00"/>
+      <methods count="2" tested="2" percent="100.00"/>
+      <functions count="0" tested="0" percent="0"/>
+      <classes count="1" tested="1" percent="100.00"/>
+      <traits count="0" tested="0" percent="0"/>
+    </totals>
+    <class name="App\Http\Requests\StoreUserRequest" start="7" executable="8" executed="8" crap="2">
+      <namespace name="App\Http\Requests"/>
+      <method name="authorize" signature="authorize(): bool" start="9" end="12" crap="1" executable="1" executed="1" coverage="100"/>
+      <method name="rules" signature="rules(): array" start="15" end="24" crap="1" executable="7" executed="7" coverage="100"/>
+    </class>
+    <coverage>
+      <line nr="11">
+        <covered by="Tests\Feature\UsersTest::test_store_creates_user"/>
+        <covered by="Tests\Feature\UsersTest::test_store_validation"/>
+        <covered by="Tests\Feature\UsersTest::test_store_creates_user_with_roles"/>
+      </line>
+      <line nr="18">
+        <covered by="Tests\Unit\FormRequestTest::test_store_user_request_requires_name_email_password"/>
+        <covered by="Tests\Unit\FormRequestTest::test_store_user_request_requires_unique_email"/>
+        <covered by="Tests\Unit\FormRequestTest::test_store_user_request_passes_with_valid_data"/>
+        <covered by="Tests\Unit\FormRequestTest::test_store_user_request_requires_password_min_8"/>
+        <covered by="Tests\Unit\FormRequestTest::test_store_user_request_requires_password_confirmed"/>
+        <covered by="Tests\Unit\FormRequestTest::test_store_user_request_validates_role_ids_exist"/>
+        <covered by="Tests\Feature\UsersTest::test_store_creates_user"/>
+        <covered by="Tests\Feature\UsersTest::test_store_validation"/>
+        <covered by="Tests\Feature\UsersTest::test_store_creates_user_with_roles"/>
+      </line>
+      <line nr="17">
+        <covered by="Tests\Unit\FormRequestTest::test_store_user_request_requires_name_email_password"/>
+        <covered by="Tests\Unit\FormRequestTest::test_store_user_request_requires_unique_email"/>
+        <covered by="Tests\Unit\FormRequestTest::test_store_user_request_passes_with_valid_data"/>
+        <covered by="Tests\Unit\FormRequestTest::test_store_user_request_requires_password_min_8"/>
+        <covered by="Tests\Unit\FormRequestTest::test_store_user_request_requires_password_confirmed"/>
+        <covered by="Tests\Unit\FormRequestTest::test_store_user_request_validates_role_ids_exist"/>
+        <covered by="Tests\Feature\UsersTest::test_store_creates_user"/>
+        <covered by="Tests\Feature\UsersTest::test_store_validation"/>
+        <covered by="Tests\Feature\UsersTest::test_store_creates_user_with_roles"/>
+      </line>
+      <line nr="19">
+        <covered by="Tests\Unit\FormRequestTest::test_store_user_request_requires_name_email_password"/>
+        <covered by="Tests\Unit\FormRequestTest::test_store_user_request_requires_unique_email"/>
+        <covered by="Tests\Unit\FormRequestTest::test_store_user_request_passes_with_valid_data"/>
+        <covered by="Tests\Unit\FormRequestTest::test_store_user_request_requires_password_min_8"/>
+        <covered by="Tests\Unit\FormRequestTest::test_store_user_request_requires_password_confirmed"/>
+        <covered by="Tests\Unit\FormRequestTest::test_store_user_request_validates_role_ids_exist"/>
+        <covered by="Tests\Feature\UsersTest::test_store_creates_user"/>
+        <covered by="Tests\Feature\UsersTest::test_store_validation"/>
+        <covered by="Tests\Feature\UsersTest::test_store_creates_user_with_roles"/>
+      </line>
+      <line nr="20">
+        <covered by="Tests\Unit\FormRequestTest::test_store_user_request_requires_name_email_password"/>
+        <covered by="Tests\Unit\FormRequestTest::test_store_user_request_requires_unique_email"/>
+        <covered by="Tests\Unit\FormRequestTest::test_store_user_request_passes_with_valid_data"/>
+        <covered by="Tests\Unit\FormRequestTest::test_store_user_request_requires_password_min_8"/>
+        <covered by="Tests\Unit\FormRequestTest::test_store_user_request_requires_password_confirmed"/>
+        <covered by="Tests\Unit\FormRequestTest::test_store_user_request_validates_role_ids_exist"/>
+        <covered by="Tests\Feature\UsersTest::test_store_creates_user"/>
+        <covered by="Tests\Feature\UsersTest::test_store_validation"/>
+        <covered by="Tests\Feature\UsersTest::test_store_creates_user_with_roles"/>
+      </line>
+      <line nr="21">
+        <covered by="Tests\Unit\FormRequestTest::test_store_user_request_requires_name_email_password"/>
+        <covered by="Tests\Unit\FormRequestTest::test_store_user_request_requires_unique_email"/>
+        <covered by="Tests\Unit\FormRequestTest::test_store_user_request_passes_with_valid_data"/>
+        <covered by="Tests\Unit\FormRequestTest::test_store_user_request_requires_password_min_8"/>
+        <covered by="Tests\Unit\FormRequestTest::test_store_user_request_requires_password_confirmed"/>
+        <covered by="Tests\Unit\FormRequestTest::test_store_user_request_validates_role_ids_exist"/>
+        <covered by="Tests\Feature\UsersTest::test_store_creates_user"/>
+        <covered by="Tests\Feature\UsersTest::test_store_validation"/>
+        <covered by="Tests\Feature\UsersTest::test_store_creates_user_with_roles"/>
+      </line>
+      <line nr="22">
+        <covered by="Tests\Unit\FormRequestTest::test_store_user_request_requires_name_email_password"/>
+        <covered by="Tests\Unit\FormRequestTest::test_store_user_request_requires_unique_email"/>
+        <covered by="Tests\Unit\FormRequestTest::test_store_user_request_passes_with_valid_data"/>
+        <covered by="Tests\Unit\FormRequestTest::test_store_user_request_requires_password_min_8"/>
+        <covered by="Tests\Unit\FormRequestTest::test_store_user_request_requires_password_confirmed"/>
+        <covered by="Tests\Unit\FormRequestTest::test_store_user_request_validates_role_ids_exist"/>
+        <covered by="Tests\Feature\UsersTest::test_store_creates_user"/>
+        <covered by="Tests\Feature\UsersTest::test_store_validation"/>
+        <covered by="Tests\Feature\UsersTest::test_store_creates_user_with_roles"/>
+      </line>
+      <line nr="23">
+        <covered by="Tests\Unit\FormRequestTest::test_store_user_request_requires_name_email_password"/>
+        <covered by="Tests\Unit\FormRequestTest::test_store_user_request_requires_unique_email"/>
+        <covered by="Tests\Unit\FormRequestTest::test_store_user_request_passes_with_valid_data"/>
+        <covered by="Tests\Unit\FormRequestTest::test_store_user_request_requires_password_min_8"/>
+        <covered by="Tests\Unit\FormRequestTest::test_store_user_request_requires_password_confirmed"/>
+        <covered by="Tests\Unit\FormRequestTest::test_store_user_request_validates_role_ids_exist"/>
+        <covered by="Tests\Feature\UsersTest::test_store_creates_user"/>
+        <covered by="Tests\Feature\UsersTest::test_store_validation"/>
+        <covered by="Tests\Feature\UsersTest::test_store_creates_user_with_roles"/>
+      </line>
+    </coverage>
+    <source>
+      <line no="1">
+        <token name="T_OPEN_TAG">&lt;?php</token>
+      </line>
+      <line no="2"/>
+      <line no="3">
+        <token name="T_NAMESPACE">namespace</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_NAME_QUALIFIED">App\Http\Requests</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="4"/>
+      <line no="5">
+        <token name="T_USE">use</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_NAME_QUALIFIED">Illuminate\Foundation\Http\FormRequest</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="6"/>
+      <line no="7">
+        <token name="T_CLASS">class</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">StoreUserRequest</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_EXTENDS">extends</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">FormRequest</token>
+      </line>
+      <line no="8">
+        <token name="T_OPEN_CURLY">{</token>
+      </line>
+      <line no="9">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_PUBLIC">public</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_FUNCTION">function</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">authorize</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_COLON">:</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">bool</token>
+      </line>
+      <line no="10">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_OPEN_CURLY">{</token>
+      </line>
+      <line no="11">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_RETURN">return</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">true</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="12">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_CLOSE_CURLY">}</token>
+      </line>
+      <line no="13"/>
+      <line no="14">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_DOC_COMMENT">/** @return array&lt;string, mixed&gt; */</token>
+      </line>
+      <line no="15">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_PUBLIC">public</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_FUNCTION">function</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">rules</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_COLON">:</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_ARRAY">array</token>
+      </line>
+      <line no="16">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_OPEN_CURLY">{</token>
+      </line>
+      <line no="17">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_RETURN">return</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_SQUARE">[</token>
+      </line>
+      <line no="18">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'name'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'required|string|max:255'</token>
+        <token name="T_COMMA">,</token>
+      </line>
+      <line no="19">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'email'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'required|email|unique:users,email'</token>
+        <token name="T_COMMA">,</token>
+      </line>
+      <line no="20">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'password'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'required|string|min:8|confirmed'</token>
+        <token name="T_COMMA">,</token>
+      </line>
+      <line no="21">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'roles'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'sometimes|array'</token>
+        <token name="T_COMMA">,</token>
+      </line>
+      <line no="22">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'roles.*'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'exists:roles,id'</token>
+        <token name="T_COMMA">,</token>
+      </line>
+      <line no="23">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_CLOSE_SQUARE">]</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="24">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_CLOSE_CURLY">}</token>
+      </line>
+      <line no="25">
+        <token name="T_CLOSE_CURLY">}</token>
+      </line>
+      <line no="26"/>
+    </source>
+  </file>
+</phpunit>

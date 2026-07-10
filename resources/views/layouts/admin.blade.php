@@ -3,68 +3,82 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="@yield('meta_description', config('app.name') . ' - Admin Dashboard')">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="base-url" content="{{ url('') }}">
     <title>@yield('title', config('app.name', 'Laravel'))</title>
-    <link rel="preconnect" href="https://fonts.bunny.net">
-    <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600" rel="stylesheet" />
+    <script>
+        (function() {
+            var dm = localStorage.getItem('darkMode');
+            if (dm === '1' || (dm !== '0' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+            }
+        })();
+    </script>
+    <x-fonts />
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @stack('styles')
 </head>
-<body class="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+<body class="min-h-screen bg-gray-50 text-gray-900 dark:text-gray-100">
+    <a href="#main-content" class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[300] focus:px-4 focus:py-2 focus:bg-white dark:focus:bg-gray-800 focus:text-indigo-600 focus:rounded-xl focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">Skip to main content</a>
+
     <div class="flex h-screen overflow-hidden">
-        <aside class="w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col shrink-0">
-            <div class="h-14 flex items-center px-5 border-b border-gray-200 dark:border-gray-700">
-                <a href="{{ route('dashboard') }}" class="text-lg font-semibold tracking-tight">{{ config('app.name', 'Dashboard') }}</a>
-            </div>
-            <nav class="flex-1 overflow-y-auto p-3 space-y-1">
-                <x-nav-link href="{{ route('dashboard') }}" :active="request()->routeIs('dashboard')">Dashboard</x-nav-link>
-                <x-nav-link href="{{ route('features.index') }}" :active="request()->routeIs('features.*')">Features</x-nav-link>
-                <x-nav-link href="{{ route('modules.index') }}" :active="request()->routeIs('modules.*')">Modules</x-nav-link>
-                <x-nav-link href="{{ route('tasks.index') }}" :active="request()->routeIs('tasks.*')">Tasks</x-nav-link>
-                <x-nav-link href="{{ route('domains.index') }}" :active="request()->routeIs('domains.*')">Domains</x-nav-link>
-                <x-nav-link href="{{ route('hostings.index') }}" :active="request()->routeIs('hostings.*')">Hostings</x-nav-link>
-                <x-nav-link href="{{ route('vps.index') }}" :active="request()->routeIs('vps.*')">VPS</x-nav-link>
-                <x-nav-link href="{{ route('voip.index') }}" :active="request()->routeIs('voip.*')">VoIP</x-nav-link>
-                <x-nav-link href="{{ route('vault.index') }}" :active="request()->routeIs('vault.*')">Vault</x-nav-link>
-                <x-nav-link href="{{ route('notes.index') }}" :active="request()->routeIs('notes.*')">Notes</x-nav-link>
-                <x-nav-link href="{{ route('service-providers.index') }}" :active="request()->routeIs('service-providers.*')">Providers</x-nav-link>
-                <x-nav-link href="{{ route('activity-logs.index') }}" :active="request()->routeIs('activity-logs.*')">Activity</x-nav-link>
-                <x-nav-link href="{{ route('users.index') }}" :active="request()->routeIs('users.*')">Users</x-nav-link>
-            </nav>
-            <div class="p-3 border-t border-gray-200 dark:border-gray-700">
-                <div class="flex items-center gap-3 px-3 py-2">
-                    <div class="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white text-sm font-medium shrink-0">
-                        {{ strtoupper(substr(Auth::user()->name, 0, 1)) }}
-                    </div>
-                    <div class="min-w-0 flex-1">
-                        <p class="text-sm font-medium truncate">{{ Auth::user()->name }}</p>
-                        <p class="text-xs text-gray-500 dark:text-gray-400 truncate">{{ Auth::user()->email }}</p>
-                    </div>
-                    <form method="POST" action="{{ route('logout') }}">
-                        @csrf
-                        <button type="submit" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" title="Sign out">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
-                            </svg>
-                        </button>
-                    </form>
-                </div>
+        <aside id="sidebar" class="w-64 glass border-r border-gray-200/50 dark:border-gray-800/50 flex flex-col shrink-0 transition-all duration-300 max-lg:-translate-x-full max-lg:fixed max-lg:z-50 max-lg:h-full overflow-hidden">
+            <x-sidebar-header />
+            <div id="sidebarContents" class="flex flex-col flex-1 min-h-0 overflow-y-auto">
+            <x-sidebar-search />
+            <x-sidebar-nav-groups
+                :show-providers="$showProviders"
+                :show-hostings="$showHostings"
+                :show-domains="$showDomains"
+                :show-emails="$showEmails"
+                :show-vps="$showVps"
+                :show-voip="$showVoip"
+                :show-other-services="$showOtherServices"
+                :show-expiry-trackers="$showExpiryTrackers"
+                :show-assets="$showAssets"
+                :show-g-mails="$showGMails"
+                :show-monitoring="$showMonitoring"
+                :show-vault="$showVault"
+                :show-my-vault="$showMyVault"
+            />
+            <x-user-card />
             </div>
         </aside>
+        <div id="sidebarOverlay" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-40 max-lg:block lg:hidden"></div>
 
-        <main class="flex-1 overflow-y-auto">
-            <div class="p-6 lg:p-8">
-                @if (session('success'))
-                    <div class="mb-4 px-4 py-3 rounded-lg bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-700 text-sm text-green-700 dark:text-green-300">
-                        {{ session('success') }}
-                    </div>
-                @endif
-                @if (session('error'))
-                    <div class="mb-4 px-4 py-3 rounded-lg bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-700 text-sm text-red-700 dark:text-red-300">
-                        {{ session('error') }}
-                    </div>
-                @endif
+        <main id="main-content" class="flex-1 overflow-y-auto min-w-0 bg-grid">
+            <div class="sticky top-0 z-30 lg:hidden flex items-center gap-3 px-4 h-12 bg-white/80 dark:bg-black/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-800">
+                <button type="button" id="mobileMenuBtn" class="p-1.5 text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500/40" aria-label="Open sidebar menu" title="Open menu">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                    </svg>
+                </button>
+                <span class="text-sm font-semibold text-gray-700 dark:text-gray-200 truncate">@yield('title', config('app.name', 'Dashboard'))</span>
+            </div>
+            <div class="p-6 lg:p-8 fade-in">
+                <div id="toastContainer" class="fixed top-4 right-4 z-[100] space-y-2.5 max-w-sm w-full pointer-events-none">
+                    @if(session('success'))
+                    <x-toast message="{{ session('success') }}" type="success" />
+                    @endif
+                    @if(session('error'))
+                    <x-toast message="{{ session('error') }}" type="error" />
+                    @endif
+                </div>
+                <x-breadcrumbs :title="trim($__env->yieldContent('breadcrumbTitle'))" />
                 @yield('content')
             </div>
         </main>
     </div>
+
+    <x-loading-overlay />
+
+    <x-confirm-dialog />
+
+    <x-command-palette />
+
+
+    @vite('resources/js/help-center.js')
+    @stack('scripts')
 </body>
 </html>

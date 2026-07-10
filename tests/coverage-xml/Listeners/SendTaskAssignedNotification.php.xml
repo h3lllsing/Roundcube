@@ -1,0 +1,229 @@
+<?xml version="1.0"?>
+<phpunit xmlns="https://schema.phpunit.de/coverage/1.0">
+  <file name="SendTaskAssignedNotification.php" path="\Listeners">
+    <totals>
+      <lines total="21" comments="0" code="21" executable="4" executed="4" percent="100.00"/>
+      <methods count="1" tested="1" percent="100.00"/>
+      <functions count="0" tested="0" percent="0"/>
+      <classes count="1" tested="1" percent="100.00"/>
+      <traits count="0" tested="0" percent="0"/>
+    </totals>
+    <class name="App\Listeners\SendTaskAssignedNotification" start="10" executable="4" executed="4" crap="2">
+      <namespace name="App\Listeners"/>
+      <method name="handle" signature="handle(\App\Events\TaskCreated|\App\Events\TaskUpdated $event): void" start="12" end="19" crap="2" executable="4" executed="4" coverage="100"/>
+    </class>
+    <coverage>
+      <line nr="14">
+        <covered by="Tests\Unit\TaskServiceTest::test_creates_task"/>
+        <covered by="Tests\Unit\TaskServiceTest::test_creates_task_with_assignees"/>
+        <covered by="Tests\Unit\TaskServiceTest::test_update_with_assignees_sync"/>
+        <covered by="Tests\Unit\TaskServiceTest::test_create_increments_dashboard_cache_version"/>
+        <covered by="Tests\Feature\SendTaskAssignedNotificationTest::test_notifies_assignees_when_task_created"/>
+        <covered by="Tests\Feature\SendTaskAssignedNotificationTest::test_notifies_assignees_when_task_updated"/>
+        <covered by="Tests\Feature\SendTaskAssignedNotificationTest::test_skips_nonexistent_users"/>
+        <covered by="Tests\Feature\SendTaskAssignedNotificationTest::test_notification_contains_task_details"/>
+        <covered by="Tests\Feature\TaskTest::test_super_admin_can_create_task"/>
+        <covered by="Tests\Feature\TaskTest::test_create_task_without_module"/>
+        <covered by="Tests\Feature\TaskTest::test_create_task_with_all_optional_fields"/>
+        <covered by="Tests\Feature\TaskTest::test_non_super_admin_can_create_task_with_module_permission"/>
+        <covered by="Tests\Feature\TaskTest::test_assignee_can_update_task_without_module_permission"/>
+        <covered by="Tests\Feature\TaskTest::test_task_status_change_logs_activity"/>
+        <covered by="Tests\Feature\TaskTest::test_task_complete_updates_dashboard_incrementally"/>
+      </line>
+      <line nr="15">
+        <covered by="Tests\Unit\TaskServiceTest::test_creates_task"/>
+        <covered by="Tests\Unit\TaskServiceTest::test_creates_task_with_assignees"/>
+        <covered by="Tests\Unit\TaskServiceTest::test_update_with_assignees_sync"/>
+        <covered by="Tests\Unit\TaskServiceTest::test_create_increments_dashboard_cache_version"/>
+        <covered by="Tests\Feature\SendTaskAssignedNotificationTest::test_notifies_assignees_when_task_created"/>
+        <covered by="Tests\Feature\SendTaskAssignedNotificationTest::test_notifies_assignees_when_task_updated"/>
+        <covered by="Tests\Feature\SendTaskAssignedNotificationTest::test_skips_nonexistent_users"/>
+        <covered by="Tests\Feature\SendTaskAssignedNotificationTest::test_notification_contains_task_details"/>
+        <covered by="Tests\Feature\TaskTest::test_super_admin_can_create_task"/>
+        <covered by="Tests\Feature\TaskTest::test_create_task_without_module"/>
+        <covered by="Tests\Feature\TaskTest::test_create_task_with_all_optional_fields"/>
+        <covered by="Tests\Feature\TaskTest::test_non_super_admin_can_create_task_with_module_permission"/>
+        <covered by="Tests\Feature\TaskTest::test_assignee_can_update_task_without_module_permission"/>
+        <covered by="Tests\Feature\TaskTest::test_task_status_change_logs_activity"/>
+        <covered by="Tests\Feature\TaskTest::test_task_complete_updates_dashboard_incrementally"/>
+      </line>
+      <line nr="16">
+        <covered by="Tests\Unit\TaskServiceTest::test_creates_task"/>
+        <covered by="Tests\Unit\TaskServiceTest::test_creates_task_with_assignees"/>
+        <covered by="Tests\Unit\TaskServiceTest::test_update_with_assignees_sync"/>
+        <covered by="Tests\Unit\TaskServiceTest::test_create_increments_dashboard_cache_version"/>
+        <covered by="Tests\Feature\SendTaskAssignedNotificationTest::test_notifies_assignees_when_task_created"/>
+        <covered by="Tests\Feature\SendTaskAssignedNotificationTest::test_notifies_assignees_when_task_updated"/>
+        <covered by="Tests\Feature\SendTaskAssignedNotificationTest::test_skips_nonexistent_users"/>
+        <covered by="Tests\Feature\SendTaskAssignedNotificationTest::test_notification_contains_task_details"/>
+        <covered by="Tests\Feature\TaskTest::test_super_admin_can_create_task"/>
+        <covered by="Tests\Feature\TaskTest::test_create_task_without_module"/>
+        <covered by="Tests\Feature\TaskTest::test_create_task_with_all_optional_fields"/>
+        <covered by="Tests\Feature\TaskTest::test_non_super_admin_can_create_task_with_module_permission"/>
+        <covered by="Tests\Feature\TaskTest::test_assignee_can_update_task_without_module_permission"/>
+        <covered by="Tests\Feature\TaskTest::test_task_status_change_logs_activity"/>
+        <covered by="Tests\Feature\TaskTest::test_task_complete_updates_dashboard_incrementally"/>
+      </line>
+      <line nr="17">
+        <covered by="Tests\Unit\TaskServiceTest::test_creates_task_with_assignees"/>
+        <covered by="Tests\Unit\TaskServiceTest::test_update_with_assignees_sync"/>
+        <covered by="Tests\Feature\SendTaskAssignedNotificationTest::test_notifies_assignees_when_task_created"/>
+        <covered by="Tests\Feature\SendTaskAssignedNotificationTest::test_notifies_assignees_when_task_updated"/>
+        <covered by="Tests\Feature\SendTaskAssignedNotificationTest::test_skips_nonexistent_users"/>
+        <covered by="Tests\Feature\SendTaskAssignedNotificationTest::test_notification_contains_task_details"/>
+        <covered by="Tests\Feature\TaskTest::test_assignee_can_update_task_without_module_permission"/>
+      </line>
+    </coverage>
+    <source>
+      <line no="1">
+        <token name="T_OPEN_TAG">&lt;?php</token>
+      </line>
+      <line no="2"/>
+      <line no="3">
+        <token name="T_NAMESPACE">namespace</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_NAME_QUALIFIED">App\Listeners</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="4"/>
+      <line no="5">
+        <token name="T_USE">use</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_NAME_QUALIFIED">App\Events\TaskCreated</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="6">
+        <token name="T_USE">use</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_NAME_QUALIFIED">App\Events\TaskUpdated</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="7">
+        <token name="T_USE">use</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_NAME_QUALIFIED">App\Models\User</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="8">
+        <token name="T_USE">use</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_NAME_QUALIFIED">App\Notifications\TaskAssigned</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="9"/>
+      <line no="10">
+        <token name="T_CLASS">class</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">SendTaskAssignedNotification</token>
+      </line>
+      <line no="11">
+        <token name="T_OPEN_CURLY">{</token>
+      </line>
+      <line no="12">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_PUBLIC">public</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_FUNCTION">function</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">handle</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_STRING">TaskCreated</token>
+        <token name="T_PIPE">|</token>
+        <token name="T_STRING">TaskUpdated</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$event</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_COLON">:</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">void</token>
+      </line>
+      <line no="13">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_OPEN_CURLY">{</token>
+      </line>
+      <line no="14">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_VARIABLE">$task</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_EQUAL">=</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$event</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">task</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">loadMissing</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'creator'</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'module'</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="15">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_VARIABLE">$users</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_EQUAL">=</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">User</token>
+        <token name="T_DOUBLE_COLON">::</token>
+        <token name="T_STRING">whereIn</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'id'</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$event</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">assigneeIds</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">get</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="16">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_FOREACH">foreach</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_VARIABLE">$users</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_AS">as</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$user</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_CURLY">{</token>
+      </line>
+      <line no="17">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_VARIABLE">$user</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">notify</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_NEW">new</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">TaskAssigned</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_VARIABLE">$task</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="18">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_CLOSE_CURLY">}</token>
+      </line>
+      <line no="19">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_CLOSE_CURLY">}</token>
+      </line>
+      <line no="20">
+        <token name="T_CLOSE_CURLY">}</token>
+      </line>
+      <line no="21"/>
+    </source>
+  </file>
+</phpunit>

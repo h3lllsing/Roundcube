@@ -1,0 +1,539 @@
+PHASE 4B — EXPIRY TRACKER EMAIL NOTIFICATIONS PLAN
+====================================================
+Date: 2026-06-25
+Status: PLAN ONLY — no code, migration, or implementation
+
+================================================================================
+PROJECT CONTEXT
+================================================================================
+
+Existing infrastructure discovered via codebase audit:
+
+  Notification system:
+    - App\Notifications\ExpiringSoon: uses database + mail channels via MailMessage
+    - App\Services\ExpiryNotificationService: checks ALL models (ExpiryTracker,
+      Domain, Hosting, VPS, VoIP, ServiceProvider, DomainEmail, OtherService)
+      using fixed thresholds (30d/14d/7d/3d/1d/overdue), writes to notifications
+      table, fires ExpiryWarningTriggered event, calls webhook
+    - Dedup currently via DatabaseNotification lookup on (user_id, item_type, item_id, threshold)
+    - No dedicated email queue table exists
+
+  Queue:
+    - QUEUE_CONNECTION defaults to 'database'
+    - jobs, job_batches, failed_jobs tables exist (standard Laravel)
+    - ExpiringSoon uses Queueable trait
+    - No queue worker is required to be running (shared-hosting compatible)
+
+  Console/Schedule:
+    - routes/console.php defines: expiry:check (daily 08:00), monitor:check,
+      sanctum:prune-expired, tasks:check-overdue
+    - CheckExpiries command calls ExpiryNotificationService->check()
+
+  Expiry Tracker table (expiry_trackers):
+    - Columns: id, user_id, module_id, service_provider_id, name, username,
+      login_url, expiry_date, renewal_date, cost, status, notes,
+      monitoring_url, last_ping_at, timestamps, soft_deletes
+    - NO notification-related columns yet
+
+  Existing form components:
+    - <x-form.input>, <x-form.select>, <x-form.textarea>, <x-form.checkbox>
+    - <x-button>, <x-page-header>
+
+================================================================================
+DESIGN DECISION 1: SEPARATE NOTIFICATION SYSTEM
+================================================================================
+
+The existing ExpiryNotificationService is a generic cross-model checker with
+fixed thresholds. Phase 4B is Expiry Tracker ONLY with USER-CONFIGURABLE
+settings, recipients, and dedicated email history.
+
+Decision: Build a separate, Expiry-Tracker-specific notification system rather
+than extending the generic one. Rationale:
+
+  1. Configurable days per tracker (existing system uses fixed thresholds)
+  2. Multiple recipient types (existing system notifies only assigned user)
+  3. Dedicated email history table (existing system uses polymorphic notifications)
+  4. Manual send/test buttons (existing system is cron-only)
+  5. No webhook/slack/teams in Phase 4B
+
+The existing ExpiringSoon notification and expiry:check command remain
+untouched for the other 7 model types. Phase 4B is additive only.
+
+================================================================================
+1. EXPIRY TRACKER NEW COLUMNS (normative — migration to add)
+================================================================================
+
+Add to expiry_trackers table:
+
+  Column                       | Type                   | Default        | Notes
+  -----------------------------|------------------------|----------------|-------------------------------------------
+  email_notifications_enabled  | boolean                | false          | Master toggle for this tracker
+  notify_days_before           | json                   | [30,15,7,1]    | Array of integers (day values)
+  notify_on_expiry_day         | boolean                | false          | Separate toggle for expiry day itself
+  notify_assigned_user         | boolean                | true           | Recipient: assigned user (user_id FK)
+  notify_admins                | boolean                | false          | Recipient: all users with super-admin/admin roles
+  notify_custom_emails         | json, nullable         | null           | Array of email strings
+  last_notification_sent_at    | timestamp, nullable    | null           | Most recent notification sent time
+  next_notification_due_at     | date, nullable         | null           | Next date a notification should fire
+
+NOT added (deferred):
+  - notify_assigned_user: use existing user_id FK
+  - notify_admins: uses role lookup at runtime
+  - notify_custom_emails: stored as JSON array
+  - No expiry_date change detection column (future phase)
+
+================================================================================
+2. NOTIFICATION HISTORY TABLE (normative — new migration)
+================================================================================
+
+Table: expiry_tracker_notifications
+
+  Column              | Type                           | Constraints
+  --------------------|--------------------------------|---------------------------------------------------
+  id                  | bigIncrements()                | PK
+  expiry_tracker_id   | foreignId()                    | constrained()->cascadeOnDelete()
+  reminder_day        | integer                        | The day value that triggered (30, 15, 7, 1, or 0 for expiry day)
+  recipient_email     | string(255)                    | The actual To: address used
+  recipient_type      | string(50)                     | 'assigned_user', 'admin', 'custom'
+  status              | string(20)                     | 'queued', 'sent', 'failed' — default 'queued'
+  sent_at             | timestamp, nullable            | When successfully sent
+  error_message       | text, nullable                 | Error text if failed
+  created_at          | timestamp                      |
+  updated_at          | timestamp                      |
+
+Indexes:
+  - (expiry_tracker_id, reminder_day, recipient_email)
+  - (status)
+
+================================================================================
+3. UI CHANGES — CREATE / EDIT FORM
+================================================================================
+
+Add a new card/section after the existing fields (after `notes` textarea, before
+the Save/Cancel buttons) in both create.blade.php and edit.blade.php:
+
+=== SECTION: Email Notifications (reusable sub-view) ===
+
+  -- Enable Email Notifications --
+
+  <x-form.checkbox
+      name="email_notifications_enabled"
+      label="Enable Email Notifications"
+      :checked="old('email_notifications_enabled', $tracker->email_notifications_enabled ?? false)"
+  />
+
+  (Visibility: toggled by checkbox via JS — only visible when checked)
+
+  -- Notify Before Days --
+
+  <fieldset>
+      <legend class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          Notify Before
+      </legend>
+      <div class="space-y-1">
+          <x-form.checkbox name="notify_days[]" value="30" label="30 days before"  ... />
+          <x-form.checkbox name="notify_days[]" value="15" label="15 days before"  ... />
+          <x-form.checkbox name="notify_days[]" value="7"  label="7 days before"   ... />
+          <x-form.checkbox name="notify_days[]" value="1"  label="1 day before"    ... />
+          <x-form.checkbox name="notify_on_expiry_day"     label="On expiry day"   ... />
+      </div>
+  </fieldset>
+
+  -- Recipients --
+
+  <fieldset>
+      <legend class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          Notify Recipients
+      </legend>
+      <div class="space-y-1">
+          <x-form.checkbox name="notify_assigned_user" label="Assigned User" ... />
+          <x-form.checkbox name="notify_admins" label="All Administrators" ... />
+      </div>
+  </fieldset>
+
+  -- Custom Email Recipients --
+
+  <div id="custom-emails-section">
+      <label class="text-sm font-medium text-gray-700 dark:text-gray-300">
+          Custom Email Recipients
+      </label>
+      <div id="custom-email-list">
+          @foreach(old('custom_emails', $tracker->notify_custom_emails ?? []) as $i => $email)
+              <div class="flex gap-2 mt-1">
+                  <x-form.input type="email" name="custom_emails[]" :value="$email" placeholder="email@example.com" />
+                  <x-button type="button" variant="danger" size="sm" class="remove-email-btn">×</x-button>
+              </div>
+          @endforeach
+      </div>
+      <x-button type="button" variant="outline" size="sm" id="add-email-btn" class="mt-2">
+          + Add Email
+      </x-button>
+  </div>
+
+  (JS: add-email-btn appends a new input row; remove-email-btn removes it)
+
+  -- Send Test Email (edit only) --
+
+  <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+      <x-button type="button" variant="primary" size="sm" id="send-test-email-btn"
+                data-url="{{ route('expiry-trackers.test-email', $tracker->id) }}">
+          Send Test Email
+      </x-button>
+      <x-button type="button" variant="warning" size="sm" id="send-reminder-now-btn"
+                data-url="{{ route('expiry-trackers.send-reminder', $tracker->id) }}">
+          Send Reminder Now
+      </x-button>
+  </div>
+
+  -- Notification Status (edit only, read-only) --
+
+  <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+      <p class="text-sm text-gray-500 dark:text-gray-400">
+          Last notification sent:
+          <span class="font-medium">{{ $tracker->last_notification_sent_at?->diffForHumans() ?? 'Never' }}</span>
+      </p>
+      <p class="text-sm text-gray-500 dark:text-gray-400">
+          Next notification due:
+          <span class="font-medium">{{ $tracker->next_notification_due_at?->format('Y-m-d') ?? '—' }}</span>
+      </p>
+      <a href="{{ route('expiry-trackers.notification-history', $tracker->id) }}"
+         class="text-sm text-indigo-600 dark:text-indigo-400 hover:underline">
+          View full notification history →
+      </a>
+  </div>
+
+================================================================================
+4. SHOW VIEW ADDITIONS
+================================================================================
+
+After the existing detail grid in show.blade.php (after line 75):
+  - Add "Email Notifications" status row (Enabled/Disabled)
+  - Add "Last Notification" row
+  - Add "Next Notification Due" row
+  - Add link to notification history page
+
+================================================================================
+5. EMAIL TEMPLATE
+================================================================================
+
+Create App\Mail\ExpiryTrackerReminder (Mailable, not Notification):
+
+  Subject: "Renewal Reminder: {{ $title }} expires in {{ $daysLeft }} days"
+      - If daysLeft < 0: "Renewal Reminder: {{ $title }} expired {{ abs($daysLeft) }} days ago"
+      - If daysLeft === 0: "Renewal Reminder: {{ $title }} expires today"
+
+  Body template (single Blade view: resources/views/emails/expiry-tracker-reminder.blade.php):
+      ┌─────────────────────────────────────────────────┐
+      │  Renewal Reminder                                │
+      │                                                  │
+      │  Hello,                                          │
+      │                                                  │
+      │  This is a renewal reminder for:                 │
+      │    Title:       {{ $title }}                     │
+      │    Expires:     {{ $expiryDate }}                │
+      │    Days Left:   {{ $daysLeft }}                  │
+      │    Type:        {{ $type }}                      │
+      │    Cost:        {{ $cost }}                      │
+      │    Provider:    {{ $provider }}                  │
+      │    Assigned to: {{ $assignedUser }}              │
+      │                                                  │
+      │  Please take necessary action.                   │
+      │                                                  │
+      │  View in Portal: {{ $portalLink }}               │
+      └─────────────────────────────────────────────────┘
+
+  Variables:
+    - $title         : $tracker->name
+    - $expiryDate    : $tracker->expiry_date->format('Y-m-d')
+    - $daysLeft      : computed diff in days (negative if overdue)
+    - $type          : $tracker->module?->name ?? 'Expiry Tracker'
+    - $cost          : $tracker->cost ? '$'.number_format($tracker->cost, 2) : 'N/A'
+    - $provider      : $tracker->serviceProvider?->name ?? 'N/A'
+    - $assignedUser  : $tracker->user?->name ?? 'N/A'
+    - $portalLink    : route('expiry-trackers.show', $tracker->id)
+
+  No template editor. No per-user template customization. Single default template.
+
+================================================================================
+6. SCHEDULER COMMAND
+================================================================================
+
+Create: php artisan renewals:send-email-reminders
+
+  Signature: renewals:send-email-reminders
+  Schedule:  routes/console.php — $schedule->command('renewals:send-email-reminders')->dailyAt('06:00');
+
+  Logic:
+
+    1. Query ExpiryTracker where email_notifications_enabled = true
+       AND (status = 'active' OR status = 'pending_renewal')
+
+    2. For each tracker:
+       a. Compute $daysLeft = today()->diffInDays(expiry_date, false)
+          - Negative = overdue, 0 = expiry day, positive = days remaining
+
+       b. Build list of trigger day values from notify_days_before + notify_on_expiry_day:
+          e.g., [30, 15, 7, 1, 0(for expiry day)]
+          Match: if $daysLeft == trigger_day (or if $daysLeft < 0, trigger for the
+          smallest configured day value once — i.e., only trigger "overdue" once)
+
+       c. For each matching trigger_day:
+          - Skip if already sent (check expiry_tracker_notifications for
+            same tracker_id + reminder_day + status in ['sent'] — sent today
+            or previously for this cycle)
+          - Determine recipients:
+              * assigned_user: if $tracker->notify_assigned_user && $tracker->user?->email
+              * admins:        if $tracker->notify_admins, query users with role super-admin or admin
+              * custom:        if $tracker->notify_custom_emails, loop array
+          - For each recipient:
+              i.   Insert row in expiry_tracker_notifications (status='queued')
+              ii.  Send via Mail::to($email)->send(new ExpiryTrackerReminder(...))
+              iii. On success: update row (status='sent', sent_at=now())
+              iv.  On failure: update row (status='failed', error_message=$e->getMessage())
+
+       d. Update tracker:
+          - last_notification_sent_at = now()
+          - next_notification_due_at = compute next due date based on notify_days_before
+
+    3. Output count of reminders sent
+
+  Deduplication detail:
+    Key: (expiry_tracker_id, reminder_day, recipient_email)
+    A row with status='sent' and sent_at is today prevents re-sending.
+    A row with status='failed' is retried (replaced with new attempt).
+    This prevents duplicate emails when the command runs multiple times.
+
+  Sending strategy (shared-hosting compatible):
+    Use Mail::send() directly (synchronous) inside the command.
+    No queue worker dependency.
+    Rationale: the existing ExpiringSoon notification already sends inline
+    during the expiry:check command. This matches the existing pattern.
+
+================================================================================
+7. NEW CONTROLLER METHODS / ROUTES (ADDITIVE ONLY)
+================================================================================
+
+Add to ExpiryTrackerController (or create dedicated ExpiryNotificationController):
+
+  -- testEmail(ExpiryTracker $tracker) -> RedirectResponse
+      Route: POST /expiry-trackers/{tracker}/test-email
+      Name:  expiry-trackers.test-email
+      Middleware: auth, can:update on expiry-trackers module
+      Action: Send a single test email to the authenticated user's email
+              using the ExpiryTrackerReminder mailable with the actual tracker
+              data. Insert a history row with status='sent' for traceability.
+      Guard: can_update on expiry-trackers module (or super-admin)
+
+  -- sendReminderNow(ExpiryTracker $tracker) -> RedirectResponse
+      Route: POST /expiry-trackers/{tracker}/send-reminder
+      Name:  expiry-trackers.send-reminder
+      Middleware: auth, can:update on expiry-trackers module
+      Action: Same logic as the scheduled command but for a single tracker.
+              Sends to all configured recipients immediately.
+              Updates last_notification_sent_at.
+      Guard: can_update on expiry-trackers module (or super-admin)
+
+  -- notificationHistory(ExpiryTracker $tracker) -> View
+      Route: GET /expiry-trackers/{tracker}/notifications
+      Name:  expiry-trackers.notification-history
+      Middleware: auth
+      Action: Paginated list of expiry_tracker_notifications for this tracker,
+              ordered by created_at desc. View-only, no actions.
+      Guard: can_read on expiry-trackers module (or super-admin)
+             Read-only users can view history but not send.
+
+All three routes added in web.php after line 168 (after existing expiry-trackers
+resource + restore/force-delete):
+  Route::post('/expiry-trackers/{expiry_tracker}/test-email', ...)->name('expiry-trackers.test-email');
+  Route::post('/expiry-trackers/{expiry_tracker}/send-reminder', ...)->name('expiry-trackers.send-reminder');
+  Route::get('/expiry-trackers/{expiry_tracker}/notifications', ...)->name('expiry-trackers.notification-history');
+
+================================================================================
+8. VALIDATION RULES (normative — update Requests)
+================================================================================
+
+Add to both StoreExpiryTrackerRequest and UpdateExpiryTrackerRequest:
+
+  'email_notifications_enabled' => 'nullable|boolean',
+  'notify_days'                => 'nullable|array',
+  'notify_days.*'              => 'integer|in:1,7,15,30',
+  'notify_on_expiry_day'       => 'nullable|boolean',
+  'notify_assigned_user'       => 'nullable|boolean',
+  'notify_admins'              => 'nullable|boolean',
+  'notify_custom_emails'       => 'nullable|array',
+  'notify_custom_emails.*'     => 'nullable|email|max:255',
+
+  Conditional: when email_notifications_enabled is true, at least one recipient
+  type must be checked (assigned_user, admins, or at least one custom email).
+
+================================================================================
+9. RBAC SUMMARY
+================================================================================
+
+  Feature      | Permission Required          | Notes
+  -------------|-----------------------------|----------------------------------------------
+  View form    | can_update on expiry-trackers| Notification settings appear in create/edit
+  Change       | can_update on expiry-trackers| Save notification settings
+  Send test    | can_update on expiry-trackers| + super-admin always allowed
+  Send now     | can_update on expiry-trackers| + super-admin always allowed
+  View history | can_read on expiry-trackers  | Read-only users can view, not act
+
+  Notes:
+    - RBACScope applies to ExpiryTracker queries (existing behavior)
+    - Super-admin bypasses all module permission checks (existing behavior)
+    - The show page notification status section is visible to anyone who can view
+      the tracker (can_read)
+    - Create form shows notification fields only if user has can_create
+    - Edit form shows notification fields only if user has can_update
+    - Test/send buttons require can_update AND edit view access
+
+================================================================================
+10. MODEL CHANGES (normative)
+================================================================================
+
+  ExpiryTracker model:
+    - Add new columns to $fillable:
+        'email_notifications_enabled', 'notify_days_before', 'notify_on_expiry_day',
+        'notify_assigned_user', 'notify_admins', 'notify_custom_emails',
+        'last_notification_sent_at', 'next_notification_due_at'
+    - Add casts:
+        'email_notifications_enabled' => 'boolean',
+        'notify_days_before'          => 'array',
+        'notify_on_expiry_day'        => 'boolean',
+        'notify_assigned_user'        => 'boolean',
+        'notify_admins'              => 'boolean',
+        'notify_custom_emails'       => 'array',
+        'last_notification_sent_at'  => 'datetime',
+        'next_notification_due_at'   => 'date',
+
+  New model: ExpiryTrackerNotification (app/Models/ExpiryTrackerNotification.php)
+    - $fillable: expiry_tracker_id, reminder_day, recipient_email, recipient_type, status, sent_at, error_message
+    - $casts: sent_at => 'datetime'
+    - Relation: belongsTo(ExpiryTracker::class)
+    - ExpiryTracker gets: hasMany(ExpiryTrackerNotification::class)
+
+  New mailable: App\Mail\ExpiryTrackerReminder
+    - $tracker (ExpiryTracker), $daysLeft (int), $recipientEmail (string)
+    - build(): subject based on daysLeft, markdown view
+
+  New service: App\Services\ExpiryTrackerNotificationService
+    - sendReminders(): main scheduler logic (section 6)
+    - sendForTracker(ExpiryTracker $tracker): single-tracker manual send
+    - sendTest(ExpiryTracker $tracker, User $recipient): test email to current user
+    - getRecipients(ExpiryTracker $tracker): returns collection of [email, type]
+    - logNotification(): inserts history row
+    - hasBeenSentToday(): dedup check
+
+================================================================================
+11. TEST PLAN
+================================================================================
+
+File: tests/Feature/ExpiryEmailNotificationTest.php
+
+  1. notifications_disabled_no_email
+     - Create tracker with email_notifications_enabled=false
+     - Run sendReminders, assert no history rows created, no email sent
+
+  2. thirty_day_reminder_queues_email
+     - Create tracker with expiry_date = today+30, enabled, notify_days=[30]
+     - Run sendReminders, assert history row with reminder_day=30, status='sent'
+
+  3. duplicate_same_day_not_sent_twice
+     - Send reminder for a tracker
+     - Run sendReminders again immediately
+     - Assert only 1 history row per (tracker, day, recipient)
+
+  4. custom_recipient_gets_email
+     - Create tracker with notify_custom_emails=['custom@example.com']
+     - Run sendReminders, assert history row with recipient_email='custom@example.com'
+
+  5. invalid_email_validation
+     - POST update with notify_custom_emails=['not-an-email']
+     - Assert validation error on notify_custom_emails.0
+
+  6. manual_send_requires_permission
+     - Non-super-admin user without can_update posts send-reminder
+     - Assert 403
+
+  7. test_email_works
+     - POST test-email with can_update user
+     - Assert history row created with status='sent', recipient = user's email
+
+  8. history_row_created
+     - After sendReminders runs, assert expiry_tracker_notifications has rows
+       with correct expiry_tracker_id, reminder_day, status
+
+  9. failed_email_recorded
+     - Mock Mail::send to throw exception
+     - Assert history row created with status='failed' and error_message filled
+
+  10. notification_history_page_accessible
+      - GET notification-history route
+      - Assert 200, see history table
+
+  11. has_been_sent_today_dedup
+      - Assert that if a sent row exists for same tracker+day+recipient today,
+        duplicate is skipped
+
+  12. multiple_recipients_all_sent
+      - Enabled notify_assigned_user + notify_admins + 1 custom email
+      - Assert 3 history rows for same tracker+day
+
+  13. next_notification_due_at_updated
+      - After sending, assert next_notification_due_at is set to the next
+        upcoming trigger date
+
+================================================================================
+12. SHARED HOSTING COMPATIBILITY — CHECKLIST
+================================================================================
+
+  Requirement                    | How Phase 4B meets it
+  -------------------------------|-------------------------------------------------------
+  Laravel cron entry only        | Single cron: * * * * * php /path/to/artisan schedule:run
+  No queue worker required       | Mail::send() synchronous in command (matches existing)
+  Single database                | Only expiry_trackers + expiry_tracker_notifications
+  No external API dependencies   | Uses app's existing SMTP config
+  No node/python/ruby deps       | Pure PHP/Laravel Mail
+  Respects existing mail config  | Uses config/mail.php (default mailer)
+  No long-running processes      | Command finishes in <30s (find + send loop)
+  Batch sends avoid timeouts     | Loop with try/catch per recipient; failures logged, not fatal
+  Fallback to log mailer         | If MAIL_MAILER=log, emails go to storage/logs (existing behavior)
+  No real-time requirements      | Daily cron at 06:00 is sufficient
+
+================================================================================
+13. IMPLEMENTATION ORDER
+================================================================================
+
+  1. Migration: Add columns to expiry_trackers
+  2. Migration: Create expiry_tracker_notifications table
+  3. Model: Add casts + fillable to ExpiryTracker
+  4. Model: Create ExpiryTrackerNotification (belongsTo ExpiryTracker)
+  5. Mailable: Create ExpiryTrackerReminder (+ Blade template)
+  6. Service: Create ExpiryTrackerNotificationService
+  7. Command: Create renewals:send-email-reminders
+  8. Schedule: Add to routes/console.php (dailyAt 06:00)
+  9. Routes: Add test-email, send-reminder, notification-history
+  10. Controller: Add 3 new methods to ExpiryTrackerController
+  11. Requests: Add validation rules to Store + Update requests
+  12. Views: Update create.blade.php + edit.blade.php with notification section
+  13. Views: Update show.blade.php with notification status rows
+  14. Views: Create notification history view (expiry-trackers/notifications.blade.php)
+  15. Tests: Create ExpiryEmailNotificationTest (13 tests)
+
+================================================================================
+14. OUT OF SCOPE (explicitly excluded)
+================================================================================
+
+  - Slack notifications
+  - Teams notifications
+  - SMS / WhatsApp notifications
+  - Template editor (single hardcoded template only)
+  - Email queue worker (sends inline in command)
+  - Per-user notification preferences (uses tracker-level settings)
+  - Webhook integration
+  - Bulk email send/edit from notification history page
+  - Export notification history
+  - Dashboard widgets for notification stats
+  - Notification retry UI (retries happen on next cron run)
+  - Real-time/push notifications
+  - Extension to Domain, Hosting, VPS, VoIP, etc. (Expiry Tracker only)

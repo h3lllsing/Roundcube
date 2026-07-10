@@ -1,0 +1,563 @@
+<?xml version="1.0"?>
+<phpunit xmlns="https://schema.phpunit.de/coverage/1.0">
+  <file name="ReportController.php" path="\Http\Controllers\Web">
+    <totals>
+      <lines total="49" comments="0" code="49" executable="19" executed="19" percent="100.00"/>
+      <methods count="3" tested="3" percent="100.00"/>
+      <functions count="0" tested="0" percent="0"/>
+      <classes count="1" tested="1" percent="100.00"/>
+      <traits count="0" tested="0" percent="0"/>
+    </totals>
+    <class name="App\Http\Controllers\Web\ReportController" start="13" executable="19" executed="19" crap="3">
+      <namespace name="App\Http\Controllers\Web"/>
+      <method name="__construct" signature="__construct(App\Services\ReportService $reportService)" start="15" end="17" crap="1" executable="1" executed="1" coverage="100"/>
+      <method name="index" signature="index(Illuminate\Http\Request $request): Illuminate\View\View" start="19" end="34" crap="1" executable="11" executed="11" coverage="100"/>
+      <method name="export" signature="export(Illuminate\Http\Request $request): Illuminate\Http\Response" start="36" end="47" crap="1" executable="7" executed="7" coverage="100"/>
+    </class>
+    <coverage>
+      <line nr="17">
+        <covered by="Tests\Feature\ReportTest::test_web_report_page_loads"/>
+        <covered by="Tests\Feature\ReportTest::test_web_report_filters"/>
+        <covered by="Tests\Feature\ReportTest::test_web_report_export_with_data"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_reports_page_loads"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_reports_export_csv"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_reports_index_has_user_filter"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_reports_user_filter_affects_login_summary"/>
+      </line>
+      <line nr="21">
+        <covered by="Tests\Feature\ReportTest::test_web_report_page_loads"/>
+        <covered by="Tests\Feature\ReportTest::test_web_report_filters"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_reports_page_loads"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_reports_index_has_user_filter"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_reports_user_filter_affects_login_summary"/>
+      </line>
+      <line nr="23">
+        <covered by="Tests\Feature\ReportTest::test_web_report_page_loads"/>
+        <covered by="Tests\Feature\ReportTest::test_web_report_filters"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_reports_page_loads"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_reports_index_has_user_filter"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_reports_user_filter_affects_login_summary"/>
+      </line>
+      <line nr="24">
+        <covered by="Tests\Feature\ReportTest::test_web_report_page_loads"/>
+        <covered by="Tests\Feature\ReportTest::test_web_report_filters"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_reports_page_loads"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_reports_index_has_user_filter"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_reports_user_filter_affects_login_summary"/>
+      </line>
+      <line nr="26">
+        <covered by="Tests\Feature\ReportTest::test_web_report_page_loads"/>
+        <covered by="Tests\Feature\ReportTest::test_web_report_filters"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_reports_page_loads"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_reports_index_has_user_filter"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_reports_user_filter_affects_login_summary"/>
+      </line>
+      <line nr="27">
+        <covered by="Tests\Feature\ReportTest::test_web_report_page_loads"/>
+        <covered by="Tests\Feature\ReportTest::test_web_report_filters"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_reports_page_loads"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_reports_index_has_user_filter"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_reports_user_filter_affects_login_summary"/>
+      </line>
+      <line nr="28">
+        <covered by="Tests\Feature\ReportTest::test_web_report_page_loads"/>
+        <covered by="Tests\Feature\ReportTest::test_web_report_filters"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_reports_page_loads"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_reports_index_has_user_filter"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_reports_user_filter_affects_login_summary"/>
+      </line>
+      <line nr="29">
+        <covered by="Tests\Feature\ReportTest::test_web_report_page_loads"/>
+        <covered by="Tests\Feature\ReportTest::test_web_report_filters"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_reports_page_loads"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_reports_index_has_user_filter"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_reports_user_filter_affects_login_summary"/>
+      </line>
+      <line nr="30">
+        <covered by="Tests\Feature\ReportTest::test_web_report_page_loads"/>
+        <covered by="Tests\Feature\ReportTest::test_web_report_filters"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_reports_page_loads"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_reports_index_has_user_filter"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_reports_user_filter_affects_login_summary"/>
+      </line>
+      <line nr="31">
+        <covered by="Tests\Feature\ReportTest::test_web_report_page_loads"/>
+        <covered by="Tests\Feature\ReportTest::test_web_report_filters"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_reports_page_loads"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_reports_index_has_user_filter"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_reports_user_filter_affects_login_summary"/>
+      </line>
+      <line nr="32">
+        <covered by="Tests\Feature\ReportTest::test_web_report_page_loads"/>
+        <covered by="Tests\Feature\ReportTest::test_web_report_filters"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_reports_page_loads"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_reports_index_has_user_filter"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_reports_user_filter_affects_login_summary"/>
+      </line>
+      <line nr="38">
+        <covered by="Tests\Feature\ReportTest::test_web_report_export_with_data"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_reports_export_csv"/>
+      </line>
+      <line nr="40">
+        <covered by="Tests\Feature\ReportTest::test_web_report_export_with_data"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_reports_export_csv"/>
+      </line>
+      <line nr="41">
+        <covered by="Tests\Feature\ReportTest::test_web_report_export_with_data"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_reports_export_csv"/>
+      </line>
+      <line nr="43">
+        <covered by="Tests\Feature\ReportTest::test_web_report_export_with_data"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_reports_export_csv"/>
+      </line>
+      <line nr="44">
+        <covered by="Tests\Feature\ReportTest::test_web_report_export_with_data"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_reports_export_csv"/>
+      </line>
+      <line nr="33">
+        <covered by="Tests\Feature\ReportTest::test_web_report_page_loads"/>
+        <covered by="Tests\Feature\ReportTest::test_web_report_filters"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_reports_page_loads"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_reports_index_has_user_filter"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_reports_user_filter_affects_login_summary"/>
+      </line>
+      <line nr="45">
+        <covered by="Tests\Feature\ReportTest::test_web_report_export_with_data"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_reports_export_csv"/>
+      </line>
+      <line nr="46">
+        <covered by="Tests\Feature\ReportTest::test_web_report_export_with_data"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_reports_export_csv"/>
+      </line>
+    </coverage>
+    <source>
+      <line no="1">
+        <token name="T_OPEN_TAG">&lt;?php</token>
+      </line>
+      <line no="2"/>
+      <line no="3">
+        <token name="T_NAMESPACE">namespace</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_NAME_QUALIFIED">App\Http\Controllers\Web</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="4"/>
+      <line no="5">
+        <token name="T_USE">use</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_NAME_QUALIFIED">App\Http\Controllers\Controller</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="6">
+        <token name="T_USE">use</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_NAME_QUALIFIED">App\Models\User</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="7">
+        <token name="T_USE">use</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_NAME_QUALIFIED">App\Services\ReportService</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="8">
+        <token name="T_USE">use</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_NAME_QUALIFIED">Illuminate\Http\Request</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="9">
+        <token name="T_USE">use</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_NAME_QUALIFIED">Illuminate\Http\Response</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="10">
+        <token name="T_USE">use</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_NAME_QUALIFIED">Illuminate\Support\Facades\Auth</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="11">
+        <token name="T_USE">use</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_NAME_QUALIFIED">Illuminate\View\View</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="12"/>
+      <line no="13">
+        <token name="T_CLASS">class</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">ReportController</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_EXTENDS">extends</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">Controller</token>
+      </line>
+      <line no="14">
+        <token name="T_OPEN_CURLY">{</token>
+      </line>
+      <line no="15">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_PUBLIC">public</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_FUNCTION">function</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">__construct</token>
+        <token name="T_OPEN_BRACKET">(</token>
+      </line>
+      <line no="16">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_PRIVATE">private</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_READONLY">readonly</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">ReportService</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$reportService</token>
+      </line>
+      <line no="17">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_CURLY">{</token>
+        <token name="T_CLOSE_CURLY">}</token>
+      </line>
+      <line no="18"/>
+      <line no="19">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_PUBLIC">public</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_FUNCTION">function</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">index</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_STRING">Request</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$request</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_COLON">:</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">View</token>
+      </line>
+      <line no="20">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_OPEN_CURLY">{</token>
+      </line>
+      <line no="21">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_STRING">abort_unless</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_STRING">Auth</token>
+        <token name="T_DOUBLE_COLON">::</token>
+        <token name="T_STRING">user</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">hasRole</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'super-admin'</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_LNUMBER">403</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="22"/>
+      <line no="23">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_VARIABLE">$filters</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_EQUAL">=</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$request</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">only</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_OPEN_SQUARE">[</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'date_from'</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'date_to'</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'cost_status'</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'user_id'</token>
+        <token name="T_CLOSE_SQUARE">]</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="24">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_VARIABLE">$users</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_EQUAL">=</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">User</token>
+        <token name="T_DOUBLE_COLON">::</token>
+        <token name="T_STRING">orderBy</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'name'</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">get</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_OPEN_SQUARE">[</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'id'</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'name'</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'email'</token>
+        <token name="T_CLOSE_SQUARE">]</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="25"/>
+      <line no="26">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_RETURN">return</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">view</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'reports.index'</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_SQUARE">[</token>
+      </line>
+      <line no="27">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'totalMonthly'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$this</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">reportService</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">totalMonthlyCost</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_VARIABLE">$filters</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_COMMA">,</token>
+      </line>
+      <line no="28">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'costByType'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$this</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">reportService</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">costByType</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_VARIABLE">$filters</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_COMMA">,</token>
+      </line>
+      <line no="29">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'topCosts'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$this</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">reportService</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">topCosts</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_VARIABLE">$filters</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_COMMA">,</token>
+      </line>
+      <line no="30">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'taskSummary'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$this</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">reportService</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">taskSummary</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_VARIABLE">$filters</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_COMMA">,</token>
+      </line>
+      <line no="31">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'loginSummary'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$this</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">reportService</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">loginSummary</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_VARIABLE">$filters</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_COMMA">,</token>
+      </line>
+      <line no="32">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'users'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$users</token>
+        <token name="T_COMMA">,</token>
+      </line>
+      <line no="33">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_CLOSE_SQUARE">]</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="34">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_CLOSE_CURLY">}</token>
+      </line>
+      <line no="35"/>
+      <line no="36">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_PUBLIC">public</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_FUNCTION">function</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">export</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_STRING">Request</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$request</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_COLON">:</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">Response</token>
+      </line>
+      <line no="37">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_OPEN_CURLY">{</token>
+      </line>
+      <line no="38">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_STRING">abort_unless</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_STRING">Auth</token>
+        <token name="T_DOUBLE_COLON">::</token>
+        <token name="T_STRING">user</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">hasRole</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'super-admin'</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_LNUMBER">403</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="39"/>
+      <line no="40">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_VARIABLE">$filters</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_EQUAL">=</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$request</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">only</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_OPEN_SQUARE">[</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'date_from'</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'date_to'</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'cost_status'</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'user_id'</token>
+        <token name="T_CLOSE_SQUARE">]</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="41">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_VARIABLE">$csv</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_EQUAL">=</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$this</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">reportService</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">buildCsv</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_VARIABLE">$filters</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="42"/>
+      <line no="43">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_RETURN">return</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">response</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_VARIABLE">$csv</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_LNUMBER">200</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_SQUARE">[</token>
+      </line>
+      <line no="44">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'Content-Type'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'text/csv'</token>
+        <token name="T_COMMA">,</token>
+      </line>
+      <line no="45">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'Content-Disposition'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'attachment; filename="reports.csv"'</token>
+        <token name="T_COMMA">,</token>
+      </line>
+      <line no="46">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_CLOSE_SQUARE">]</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="47">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_CLOSE_CURLY">}</token>
+      </line>
+      <line no="48">
+        <token name="T_CLOSE_CURLY">}</token>
+      </line>
+      <line no="49"/>
+    </source>
+  </file>
+</phpunit>

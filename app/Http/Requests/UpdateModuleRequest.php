@@ -15,10 +15,12 @@ class UpdateModuleRequest extends FormRequest
     public function rules(): array
     {
         $module = $this->route('module');
+
         return [
+            'updated_at' => 'required|date',
             'feature_id' => $this->route('feature') ? 'nullable|exists:features,id' : 'sometimes|exists:features,id',
             'name' => 'sometimes|string|max:255',
-            'slug' => 'nullable|string|max:255|unique:modules,slug,' . ($module->id ?? 'NULL') . ',id,feature_id,' . ($module->feature_id ?? 'NULL'),
+            'slug' => 'nullable|string|max:255|unique:modules,slug,'.($module->id ?? 'NULL').',id,feature_id,'.($module->feature_id ?? 'NULL'),
             'description' => 'nullable|string',
             'is_active' => 'boolean',
         ];

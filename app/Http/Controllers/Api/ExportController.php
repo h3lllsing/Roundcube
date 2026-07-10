@@ -3,72 +3,66 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\Domain;
-use App\Models\DomainEmail;
-use App\Models\ExpiryTracker;
-use App\Models\Hosting;
-use App\Models\OtherService;
-use App\Models\ServiceProvider;
-use App\Models\Voip;
-use App\Models\Vps;
+use App\Support\DataTypeConfig;
+use Illuminate\Http\JsonResponse;
+use Laravel\Sanctum\PersonalAccessToken;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Response;
+use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Response as ResponseFacade;
 
 class ExportController extends Controller
 {
-    /** @var array<string, array{model: class-string, columns: string[]}> */
-    private array $types = [
-        'domains' => [
-            'model' => Domain::class, 'columns' => ['name', 'registrar', 'registration_date', 'expiry_date', 'auto_renew', 'cost', 'status', 'dns_servers', 'notes', 'created_at'],
-        ],
-        'hostings' => [
-            'model' => Hosting::class, 'columns' => ['name', 'provider', 'plan', 'domain', 'start_date', 'expiry_date', 'cost', 'status', 'notes', 'created_at'],
-        ],
-        'vps' => [
-            'model' => Vps::class, 'columns' => ['name', 'provider', 'plan', 'ip_address', 'os', 'ram_mb', 'disk_gb', 'cpu_cores', 'cost', 'start_date', 'expiry_date', 'status', 'notes', 'created_at'],
-        ],
-        'voip' => [
-            'model' => Voip::class, 'columns' => ['name', 'provider', 'phone_number', 'type', 'username', 'cost', 'expiry_date', 'status', 'notes', 'created_at'],
-        ],
-        'service-providers' => [
-            'model' => ServiceProvider::class, 'columns' => ['name', 'type', 'website', 'cost', 'status', 'notes', 'created_at'],
-        ],
-        'domain-emails' => [
-            'model' => DomainEmail::class, 'columns' => ['email', 'provider', 'domain_id', 'storage_mb', 'cost', 'expiry_date', 'status', 'notes', 'created_at'],
-        ],
-        'other-services' => [
-            'model' => OtherService::class, 'columns' => ['name', 'service_type', 'website', 'cost', 'expiry_date', 'status', 'notes', 'created_at'],
-        ],
-        'expiry-trackers' => [
-            'model' => ExpiryTracker::class, 'columns' => ['name', 'expiry_date', 'cost', 'status', 'notes', 'created_at'],
-        ],
-    ];
+    /** @param array<string, array{model: class-string, columns: string[], admin?: bool, module_slug?: string}> */
+    private array $types = [];
 
-    public function export(Request $request, string $type): \Illuminate\Http\Response|\Illuminate\Http\JsonResponse
+    public function __construct()
     {
-        if (!isset($this->types[$type])) {
+        $this->types = DataTypeConfig::exportTypes();
+    }
+
+    public function export(Request $request, string $type): Response|JsonResponse
+    {
+        if (! $request->user()->hasRole('super-admin')) {
+            return $this->message('Forbidden', 403);
+        }
+
+        if (! isset($this->types[$type])) {
             return $this->message('Invalid export type', 404);
         }
 
-        $user = $request->user();
         $cfg = $this->types[$type];
         $modelClass = $cfg['model'];
         $columns = $cfg['columns'];
 
         $query = $modelClass::orderBy('id');
-        if (!$user->hasRole('super-admin')) {
-            $query->where('user_id', $user->id);
+        if ($type === 'tokens') {
+            $query = PersonalAccessToken::where('tokenable_id', $request->user()->id)
+                ->where('tokenable_type', get_class($request->user()))
+                ->orderBy('id');
         }
-        $rows = $query->get($columns)->toArray();
+        $rows = $query->select($columns)->lazy()->map(fn ($m) => $m->only($columns))->toArray();
 
         $csv = $this->toCsv(array_merge([$columns], $rows));
 
-        $filename = $type . '-' . now()->format('Y-m-d-His') . '.csv';
+        $filename = $type.'-'.now()->format('Y-m-d-His').'.csv';
 
-        return Response::make($csv, 200, [
+        return ResponseFacade::make($csv, 200, [
             'Content-Type' => 'text/csv; charset=utf-8',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
         ]);
+    }
+
+    private function sanitizeCsvValue(mixed $value): mixed
+    {
+        if (! is_string($value)) {
+            return $value;
+        }
+
+        if (preg_match('/^[=+\-@]/', $value)) {
+            return "\t".$value;
+        }
+
+        return $value;
     }
 
     /** @param array<int, array<int, mixed>> $data */
@@ -79,12 +73,13 @@ class ExportController extends Controller
             return '';
         }
         foreach ($data as $row) {
-            $row = array_map(fn($v) => is_array($v) ? json_encode($v) : $v, $row);
+            $row = array_map(fn ($v) => is_array($v) ? json_encode($v) : $this->sanitizeCsvValue($v), $row);
             fputcsv($out, $row);
         }
         rewind($out);
         $content = stream_get_contents($out);
         fclose($out);
+
         return $content;
     }
 }

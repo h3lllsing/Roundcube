@@ -16,7 +16,7 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: 'cost', type: 'number', format: 'float', nullable: true),
         new OA\Property(property: 'status', type: 'string'),
         new OA\Property(property: 'dns_servers', type: 'string', nullable: true),
-        new OA\Property(property: 'notes', type: 'string', nullable: true),
+        new OA\Property(property: 'description', type: 'string', nullable: true),
         new OA\Property(property: 'module', ref: '#/components/schemas/ModuleData'),
         new OA\Property(property: 'user', type: 'object', nullable: true),
         new OA\Property(property: 'created_at', type: 'string'),
@@ -24,6 +24,4 @@ use OpenApi\Attributes as OA;
     ],
     type: 'object'
 )]
-class DomainData
-{
-}
+class DomainData {}

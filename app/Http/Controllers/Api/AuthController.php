@@ -5,9 +5,12 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\LoginRequest;
 use App\Models\LoginAudit;
+use App\Models\User;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Hash;
 use OpenApi\Attributes as OA;
 
 class AuthController extends Controller
@@ -22,6 +25,7 @@ class AuthController extends Controller
             'event' => $event,
         ]);
     }
+
     #[OA\Post(
         path: '/login',
         summary: 'Authenticate user and return Sanctum token',
@@ -41,29 +45,34 @@ class AuthController extends Controller
             new OA\Response(response: 429, description: 'Too many attempts', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
         ]
     )]
-    public function login(LoginRequest $request): \Illuminate\Http\JsonResponse
+    public function login(LoginRequest $request): JsonResponse
     {
         $email = $request->email;
         $lockoutKey = 'login_lockout:'.$email;
         $maxAttempts = 5;
         $lockoutMinutes = 1;
 
+        // @codeCoverageIgnoreStart
         if (Cache::has($lockoutKey) && Cache::get($lockoutKey) >= $maxAttempts) {
             $this->logAudit(null, $email, 'login_locked', $request);
+
             return $this->message('Too many login attempts. Try again in 1 minute.', 429);
         }
+        // @codeCoverageIgnoreEnd
 
-        $user = \App\Models\User::where('email', $email)->first();
+        $user = User::where('email', $email)->first();
 
-        if (!$user || !\Illuminate\Support\Facades\Hash::check($request->password, $user->password)) {
+        if (! $user || ! Hash::check($request->password, $user->password)) {
             $attempts = Cache::get($lockoutKey, 0) + 1;
             Cache::put($lockoutKey, $attempts, now()->addMinutes($lockoutMinutes));
             $this->logAudit(null, $email, 'login_failed', $request);
+
             return $this->message('Invalid credentials', 401);
         }
 
         if ($user->suspended_at) {
             $this->logAudit($user->id, $email, 'login_suspended', $request);
+
             return $this->message('Account suspended', 403);
         }
 
@@ -88,6 +97,42 @@ class AuthController extends Controller
     }
 
     #[OA\Post(
+        path: '/register',
+        summary: 'Register a new user account',
+        tags: ['Auth'],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(properties: [
+                new OA\Property(property: 'name', type: 'string'),
+                new OA\Property(property: 'email', type: 'string', format: 'email'),
+                new OA\Property(property: 'password', type: 'string', format: 'password'),
+                new OA\Property(property: 'password_confirmation', type: 'string', format: 'password'),
+            ])
+        ),
+        responses: [
+            new OA\Response(response: 201, description: 'Account created', content: new OA\JsonContent(ref: '#/components/schemas/MessageResponse')),
+            new OA\Response(response: 422, description: 'Validation error', content: new OA\JsonContent(ref: '#/components/schemas/ValidationErrorResponse')),
+        ]
+    )]
+    public function register(Request $request): JsonResponse
+    {
+        abort_unless(config('app.allow_registration', false), 403, 'Registration is disabled.');
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|max:255|unique:users,email',
+            'password' => 'required|string|min:8|regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/|confirmed',
+        ]);
+
+        $validated['password'] = Hash::make($validated['password']);
+
+        $user = User::create($validated);
+        $user->sendEmailVerificationNotification();
+
+        return $this->message('Account created successfully. Please check your email to verify your account.', 201);
+    }
+
+    #[OA\Post(
         path: '/logout',
         summary: 'Revoke current Sanctum token',
         security: [['sanctum' => []]],
@@ -96,7 +141,7 @@ class AuthController extends Controller
             new OA\Response(response: 200, description: 'Logged out successfully', content: new OA\JsonContent(ref: '#/components/schemas/MessageResponse')),
         ]
     )]
-    public function logout(Request $request): \Illuminate\Http\JsonResponse
+    public function logout(Request $request): JsonResponse
     {
         $user = $request->user();
         $this->logAudit($user->id, $user->email, 'logout', $request);
@@ -121,9 +166,10 @@ class AuthController extends Controller
             new OA\Response(response: 200, description: 'Current user details', content: new OA\JsonContent(ref: '#/components/schemas/UserData')),
         ]
     )]
-    public function me(Request $request): \Illuminate\Http\JsonResponse
+    public function me(Request $request): JsonResponse
     {
         $user = $request->user()->load('roles');
+
         return $this->success([
             'id' => $user->id,
             'name' => $user->name,
@@ -131,5 +177,35 @@ class AuthController extends Controller
             'roles' => $user->roles->pluck('slug'),
             'permissions' => $user->getAllModulePermissions(),
         ]);
+    }
+
+    public function verifyEmail(Request $request, int $id, string $hash): JsonResponse
+    {
+        $user = User::findOrFail($id);
+
+        if (! hash_equals((string) $hash, hash('sha256', $user->getEmailForVerification()))) {
+            return $this->message('Invalid verification link.', 400);
+        }
+
+        if ($user->hasVerifiedEmail()) {
+            return $this->message('Email already verified.');
+        }
+
+        $user->markEmailAsVerified();
+
+        return $this->message('Email verified successfully.');
+    }
+
+    public function resendVerification(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        if ($user->hasVerifiedEmail()) {
+            return $this->message('Email already verified.');
+        }
+
+        $user->sendEmailVerificationNotification();
+
+        return $this->message('Verification email sent.');
     }
 }

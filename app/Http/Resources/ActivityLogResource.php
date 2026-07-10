@@ -2,10 +2,12 @@
 
 namespace App\Http\Resources;
 
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Spatie\Activitylog\Models\Activity;
 
-/** @mixin \Spatie\Activitylog\Models\Activity */
+/** @mixin Activity */
 class ActivityLogResource extends JsonResource
 {
     /** @return array<string, mixed> */
@@ -18,9 +20,9 @@ class ActivityLogResource extends JsonResource
             'event' => $this->event,
             'subject_type' => $this->subject_type,
             'subject_id' => $this->subject_id,
-            'subject' => $this->whenLoaded('subject', fn() => [
+            'subject' => $this->whenLoaded('subject', fn () => [
                 'id' => $this->subject?->getAttribute('id'),
-                'label' => match (class_basename($this->subject_type)) {
+                'label' => match (class_basename(Relation::getMorphedModel($this->subject_type) ?? $this->subject_type)) {
                     'Feature' => $this->subject?->getAttribute('name'),
                     'Module' => $this->subject?->getAttribute('name'),
                     'Task' => $this->subject?->getAttribute('title'),
@@ -29,7 +31,7 @@ class ActivityLogResource extends JsonResource
                     default => $this->subject_type.' #'.$this->subject?->getAttribute('id'),
                 },
             ]),
-            'causer' => $this->whenLoaded('causer', fn() => [
+            'causer' => $this->whenLoaded('causer', fn () => [
                 'id' => $this->causer->getAttribute('id'),
                 'name' => $this->causer->getAttribute('name'),
                 'email' => $this->causer->getAttribute('email'),

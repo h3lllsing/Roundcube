@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use OpenApi\Attributes as OA;
 
@@ -15,9 +16,16 @@ class TokenController extends Controller
         tags: ['Tokens'],
         responses: [new OA\Response(response: 200, description: 'List of tokens')]
     )]
-    public function index(Request $request): \Illuminate\Http\JsonResponse
+    public function index(Request $request): JsonResponse
     {
-        $tokens = $request->user()->tokens()->orderByDesc('id')->get()->map(fn($t) => [
+        $query = $request->user()->tokens()->orderByDesc('id');
+
+        $request->validate(['search' => 'nullable|string|max:255']);
+        if ($search = $request->get('search')) {
+            $query->where('name', 'like', "%{$search}%");
+        }
+
+        $tokens = $query->get()->map(fn ($t) => [
             'id' => $t->id,
             'name' => $t->name,
             'created_at' => $t->created_at,
@@ -34,7 +42,7 @@ class TokenController extends Controller
         tags: ['Tokens'],
         responses: [new OA\Response(response: 200, description: 'Token created')]
     )]
-    public function store(Request $request): \Illuminate\Http\JsonResponse
+    public function store(Request $request): JsonResponse
     {
         $request->validate(['name' => 'required|string|max:255']);
 
@@ -55,11 +63,11 @@ class TokenController extends Controller
         tags: ['Tokens'],
         responses: [new OA\Response(response: 200, description: 'Token revoked')]
     )]
-    public function destroy(Request $request, int $id): \Illuminate\Http\JsonResponse
+    public function destroy(Request $request, int $id): JsonResponse
     {
         $deleted = $request->user()->tokens()->where('id', $id)->delete();
 
-        if (!$deleted) {
+        if (! $deleted) {
             return $this->message('Token not found', 404);
         }
 

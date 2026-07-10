@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Models\Attachment;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 class AttachmentFactory extends Factory
@@ -12,7 +13,7 @@ class AttachmentFactory extends Factory
     public function definition(): array
     {
         return [
-            'user_id' => 1,
+            'user_id' => User::factory(),
             'notable_type' => null,
             'notable_id' => null,
             'filename' => 'test.txt',

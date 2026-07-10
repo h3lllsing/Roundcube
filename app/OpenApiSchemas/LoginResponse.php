@@ -12,6 +12,4 @@ use OpenApi\Attributes as OA;
     ],
     type: 'object'
 )]
-class LoginResponse
-{
-}
+class LoginResponse {}

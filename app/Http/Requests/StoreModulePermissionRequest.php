@@ -22,6 +22,8 @@ class StoreModulePermissionRequest extends FormRequest
             'can_delete' => 'boolean',
             'can_approve' => 'boolean',
             'can_export' => 'boolean',
+            'can_reveal' => 'boolean',
+            'can_import' => 'boolean',
         ];
     }
 }

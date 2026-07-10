@@ -1,88 +1,88 @@
 #!/usr/bin/env bash
-# FTP Deployment Script for Tyro RBAC
-# Usage: ./deploy.sh [production|staging]
-# Requires: lftp installed, .env.deploy sourced or set below
-
 set -euo pipefail
 
-ENV="${1:-production}"
+# ============================================================
+# deploy.sh — OpsPilot Production Build Script
+# Prepares a deployment-ready build. Run from project root.
+# ============================================================
 
-# === CONFIG — override via .env.deploy or environment ===
-FTP_HOST="${FTP_HOST:-ftp.example.com}"
-FTP_USER="${FTP_USER:-username}"
-FTP_PASS="${FTP_PASS:-password}"
-FTP_PORT="${FTP_PORT:-21}"
-REMOTE_DIR="${REMOTE_DIR:-/public_html}"
+APP_NAME="ops pilot"
 
-LOCAL_DIR="$(cd "$(dirname "$0")" && pwd)"
-TIMESTAMP="$(date +%Y%m%d-%H%M%S)"
+echo "==> Step 1: Install dependencies (no dev)"
+composer install --no-dev --optimize-autoloader
 
-echo "=== Deploying to $ENV environment ==="
-echo "Host: $FTP_HOST:$FTP_PORT"
-echo "Remote: $REMOTE_DIR"
+echo "==> Step 2: Build frontend assets"
+npm ci && npm run build
+
+echo "==> Step 3: Clear caches"
+php artisan optimize:clear
+
+echo "==> Step 4: Cache for production"
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache
+php artisan event:cache
+
+echo "==> Step 5: Create storage link (if not exists)"
+php artisan storage:link --force
+
+echo "==> Step 6: Build deploy archive"
+DEPLOY_DIR="$(dirname "$0")/deploy_$(date +%Y%m%d_%H%M%S)"
+mkdir -p "$DEPLOY_DIR"
+
+rsync -av --progress \
+  --exclude='.env' \
+  --exclude='_can_delete' \
+  --exclude='coverage' \
+  --exclude='tests' \
+  --exclude='node_modules' \
+  --exclude='storage/logs/*.log' \
+  --exclude='storage/framework/cache/*' \
+  --exclude='storage/framework/sessions/*' \
+  --exclude='storage/framework/views/*' \
+  --exclude='storage/api-docs' \
+  --exclude='bootstrap/cache/*.php' \
+  --exclude='.phpunit*' \
+  --exclude='phpunit*' \
+  --exclude='phpstan*' \
+  --exclude='Dockerfile*' \
+  --exclude='docker-compose*' \
+  --exclude='.dockerignore' \
+  --exclude='deploy.sh' \
+  --exclude='.env.e2e' \
+  --exclude='.env.testing' \
+  --exclude='.editorconfig' \
+  --exclude='docs/' \
+  --exclude='scripts/' \
+  --exclude='e2e/' \
+  --exclude='.github/' \
+  --exclude='resources/js/' \
+  --exclude='resources/css/' \
+  --exclude='deploy_*' \
+  "$(dirname "$0")/" "$DEPLOY_DIR/"
+
+echo "==> Step 7: Compress archive"
+cd "$(dirname "$0")"
+tar -czf "${DEPLOY_DIR}.tar.gz" -C "$(dirname "$DEPLOY_DIR")" "$(basename "$DEPLOY_DIR")"
+rm -rf "$DEPLOY_DIR"
+
 echo ""
-
-# 1. Build frontend
-echo ">>> Building frontend..."
-cd "$LOCAL_DIR/../unknow-frontend"
-npm ci --silent
-npm run build
-echo "Frontend build complete."
+echo "============================================"
+echo "  BUILD COMPLETE"
+echo "============================================"
+echo "  Archive: ${DEPLOY_DIR}.tar.gz"
+echo "  Size:    $(du -h "${DEPLOY_DIR}.tar.gz" | cut -f1)"
 echo ""
-
-# 2. Prepare backend
-echo ">>> Preparing backend..."
-cd "$LOCAL_DIR"
-
-# Copy frontend build into Laravel public
-rm -rf public/dist
-cp -r ../unknow-frontend/dist public/dist
-
-# Install PHP deps (no-dev for production)
-composer install --no-dev --optimize-autoloader --no-interaction
-
-# Dump .env
-if [ ! -f .env ]; then
-    cp .env.example .env
-    echo ">>> .env created from .env.example — EDIT IT BEFORE DEPLOYING!"
-fi
-echo ""
-
-# 3. Create deploy exclude list
-cat > /tmp/deploy-exclude.txt << 'EXCLUDE'
-.git
-.gitignore
-node_modules/
-tests/
-*.md
-.dockerignore
-Dockerfile
-docker-compose.yml
-deploy.sh
-deploy/
-.env
-EXCLUDE
-
-# 4. Upload via FTP
-echo ">>> Uploading to $FTP_HOST..."
-lftp -c "
-set ftp:ssl-allow no
-set net:timeout 30
-set net:max-retries 3
-set net:reconnect-interval-base 5
-open -u $FTP_USER,$FTP_PASS -p $FTP_PORT $FTP_HOST
-mirror -R -x .git/ -x node_modules/ -x tests/ -x .env \
-       -X .gitignore -X .dockerignore -X Dockerfile \
-       -X docker-compose.yml -X deploy.sh \
-       -X 'deploy/*' \
-       $LOCAL_DIR $REMOTE_DIR
-"
-
-echo "=== Deployment complete! ==="
-echo ""
-echo "Next steps:"
-echo "  1. Set .env with production DB credentials"
-echo "  2. Run: php artisan migrate --force"
-echo "  3. Run: php artisan storage:link"
-echo "  4. Run: php artisan optimize"
-echo "  5. Point your web server root to $REMOTE_DIR/public"
+echo "  Next steps:"
+echo "  1. Upload ${DEPLOY_DIR}.tar.gz to your server"
+echo "  2. Extract: tar -xzf ${DEPLOY_DIR}.tar.gz"
+echo "  3. Copy public/ contents to public_html/"
+echo "  4. Copy .env.example to .env and edit:"
+echo "     - Set APP_ENV=production, APP_DEBUG=false"
+echo "     - Set CACHE_STORE=redis (or keep file for single-server)"
+echo "  5. Run: php artisan key:generate"
+echo "  6. Run: php artisan migrate --force"
+echo "  7. Set permissions: chmod -R 775 storage bootstrap/cache"
+echo "  8. Set up cron: * * * * * php artisan schedule:run"
+echo "  9. Set up queue worker (Supervisord/Forge): php artisan queue:work"
+echo "============================================"

@@ -4,8 +4,10 @@ namespace Tests\Feature;
 
 use App\Models\Attachment;
 use App\Models\Domain;
+use App\Models\Feature;
 use App\Models\User;
-use HasinHayder\Tyro\Models\Role;
+use Database\Seeders\FeatureModuleSeeder;
+use HasinHayder\Tyro\Database\Seeders\TyroSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -18,8 +20,8 @@ class AttachmentTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->seed(\HasinHayder\Tyro\Database\Seeders\TyroSeeder::class);
-        $this->seed(\Database\Seeders\FeatureModuleSeeder::class);
+        $this->seed(TyroSeeder::class);
+        $this->seed(FeatureModuleSeeder::class);
     }
 
     public function test_upload_attachment()
@@ -44,7 +46,7 @@ class AttachmentTest extends TestCase
             'user_id' => $user->id,
         ]);
 
-        Storage::disk('public')->assertExists('attachments/' . $response->json('data.filename'));
+        Storage::disk('public')->assertExists('attachments/'.$response->json('data.filename'));
     }
 
     public function test_list_attachments()
@@ -139,7 +141,7 @@ class AttachmentTest extends TestCase
             ->assertJson(['message' => 'Attachment deleted']);
 
         $this->assertSoftDeleted($attachment);
-        Storage::disk('public')->assertMissing('attachments/' . $attachment->filename);
+        Storage::disk('public')->assertExists('attachments/'.$attachment->filename);
     }
 
     public function test_delete_attachment_forbidden_other_user()
@@ -170,12 +172,10 @@ class AttachmentTest extends TestCase
 
         $user = User::factory()->create();
         $token = $user->createToken('test')->plainTextToken;
-        $feature = \App\Models\Feature::first();
+        $feature = Feature::first();
 
-        $attachment = Attachment::create([
+        $attachment = $feature->attachments()->create([
             'user_id' => $user->id,
-            'notable_type' => get_class($feature),
-            'notable_id' => $feature->id,
             'filename' => 'feature.txt',
             'original_name' => 'feature.txt',
             'mime_type' => 'text/plain',
@@ -193,7 +193,7 @@ class AttachmentTest extends TestCase
         ]);
 
         $response = $this->withHeader('Authorization', "Bearer $token")
-            ->getJson('/api/attachments?notable_type=' . urlencode(get_class($feature)) . '&notable_id=' . $feature->id);
+            ->getJson('/api/attachments?notable_type='.urlencode(get_class($feature)).'&notable_id='.$feature->id);
 
         $response->assertStatus(200);
         $this->assertCount(1, $response->json('data'));
@@ -322,5 +322,65 @@ class AttachmentTest extends TestCase
         $response->assertOk();
         $this->assertCount(1, $response->json('data'));
         $this->assertEquals('mine.txt', $response->json('data.0.original_name'));
+    }
+
+    public function test_index_invalid_notable_type(): void
+    {
+        Storage::fake('public');
+
+        $user = User::factory()->create();
+        $token = $user->createToken('test')->plainTextToken;
+
+        $response = $this->withHeader('Authorization', "Bearer $token")
+            ->getJson('/api/attachments?notable_type=Invalid&notable_id=1');
+
+        $response->assertStatus(422);
+    }
+
+    public function test_index_notable_entity_not_found(): void
+    {
+        Storage::fake('public');
+
+        $user = User::factory()->create();
+        $token = $user->createToken('test')->plainTextToken;
+
+        $response = $this->withHeader('Authorization', "Bearer $token")
+            ->getJson('/api/attachments?notable_type='.urlencode('App\Models\Domain').'&notable_id=99999');
+
+        $response->assertStatus(404);
+    }
+
+    public function test_store_notable_entity_not_found(): void
+    {
+        Storage::fake('public');
+
+        $user = User::factory()->create();
+        $token = $user->createToken('test')->plainTextToken;
+        $file = UploadedFile::fake()->create('test.pdf', 100, 'application/pdf');
+
+        $response = $this->withHeader('Authorization', "Bearer $token")
+            ->postJson('/api/attachments', [
+                'file' => $file,
+                'notable_type' => 'App\Models\Domain',
+                'notable_id' => 99999,
+            ]);
+
+        $response->assertStatus(404);
+    }
+
+    public function test_index_forbidden_for_other_users_notable(): void
+    {
+        Storage::fake('public');
+
+        $owner = User::factory()->create();
+        $other = User::factory()->create();
+        $token = $other->createToken('test')->plainTextToken;
+
+        $domain = Domain::factory()->create(['user_id' => $owner->id]);
+
+        $response = $this->withHeader('Authorization', "Bearer $token")
+            ->getJson('/api/attachments?notable_type='.urlencode(get_class($domain)).'&notable_id='.$domain->id);
+
+        $response->assertStatus(403);
     }
 }

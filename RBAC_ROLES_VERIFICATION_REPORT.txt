@@ -1,0 +1,750 @@
+================================================================================
+           RBAC / ROLES VERIFICATION REPORT
+================================================================================
+Date:      June 25, 2026
+Project:   Tyro RBAC Portal
+
+This report verifies the current RBAC architecture against the requested
+role-based access workflow. No code was modified.
+
+================================================================================
+1. CURRENT ROLE SYSTEM
+================================================================================
+
+1A. TABLE STRUCTURES
+--------------------
+
+--- roles (from vendor/hasinhayder/tyro) ---
+  id              BIGINT PK
+  name            VARCHAR(255)       -- display name, e.g. "Super Admin"
+  slug            VARCHAR(255)       -- key slug, e.g. "super-admin"
+  created_at      TIMESTAMP
+  updated_at      TIMESTAMP
+
+--- user_roles (pivot, from vendor/hasinhayder/tyro) ---
+  id              BIGINT PK
+  user_id         FK -> users.id (cascade delete)
+  role_id         FK -> roles.id (cascade delete)
+  UNIQUE(user_id, role_id)
+  created_at      TIMESTAMP
+  updated_at      TIMESTAMP
+
+--- privileges (from vendor/hasinhayder/tyro) ---
+  id              BIGINT PK
+  name            VARCHAR(255)
+  slug            VARCHAR(255) UNIQUE
+  description     VARCHAR(255) NULLABLE
+  created_at      TIMESTAMP
+  updated_at      TIMESTAMP
+
+--- privilege_role (pivot, from vendor/hasinhayder/tyro) ---
+  id              BIGINT PK
+  role_id         FK -> roles.id (cascade delete)
+  privilege_id    FK -> privileges.id (cascade delete)
+  UNIQUE(role_id, privilege_id)
+  created_at      TIMESTAMP
+  updated_at      TIMESTAMP
+
+--- features (custom) ---
+  id              BIGINT PK
+  name            VARCHAR(255)
+  slug            VARCHAR(255) UNIQUE
+  description     TEXT NULLABLE
+  icon            VARCHAR(255) NULLABLE
+  is_active       BOOLEAN DEFAULT TRUE
+  created_by      FK -> users.id NULLABLE
+  updated_by      FK -> users.id NULLABLE
+  created_at      TIMESTAMP
+  updated_at      TIMESTAMP
+  deleted_at      TIMESTAMP NULLABLE (soft deletes)
+
+--- modules (custom) ---
+  id              BIGINT PK
+  feature_id      FK -> features.id (cascade delete)
+  name            VARCHAR(255)
+  slug            VARCHAR(255)
+  description     TEXT NULLABLE
+  is_active       BOOLEAN DEFAULT TRUE
+  created_by      FK -> users.id NULLABLE
+  updated_by      FK -> users.id NULLABLE
+  created_at      TIMESTAMP
+  updated_at      TIMESTAMP
+  deleted_at      TIMESTAMP NULLABLE (soft deletes)
+  UNIQUE(feature_id, slug)
+
+--- module_role_permissions (custom) ---
+  id              BIGINT PK
+  module_id       FK -> modules.id (cascade delete)
+  role_id         FK -> roles.id (cascade delete)
+  can_create      BOOLEAN DEFAULT FALSE
+  can_read        BOOLEAN DEFAULT FALSE
+  can_update      BOOLEAN DEFAULT FALSE
+  can_delete      BOOLEAN DEFAULT FALSE
+  can_approve     BOOLEAN DEFAULT FALSE
+  can_export      BOOLEAN DEFAULT FALSE
+  UNIQUE(module_id, role_id)
+  created_at      TIMESTAMP
+  updated_at      TIMESTAMP
+
+1B. DEFAULT ROLES
+-----------------
+Roles are created by the TyroSeeder. The code reveals:
+  - Roles are defined in vendor/hasinhayder/tyro
+  - User controller create/edit uses:
+      Role::whereNotIn('slug', ['*', 'super-admin'])
+    meaning super-admin and wildcard '*' roles are excluded from the
+    assignable role list.
+  - RoleController line 81 protects built-in roles:
+      if (in_array($role->getAttribute('slug'), ['admin', 'super-admin']))
+    prevents deletion of these two core roles.
+
+Default roles found in seeds/seeder:
+  - super-admin (slug: super-admin)
+  - admin (slug: admin)
+  - user (slug: user)
+
+The '*' wildcard slug (if it exists) grants ALL roles/privileges.
+
+1C. RELATIONSHIPS
+-----------------
+  User --< user_roles >-- Role --< privilege_role >-- Privilege
+  Role --< module_role_permissions >-- Module --< features
+
+  - User CAN have MULTIPLE roles
+  - Role CAN have MULTIPLE privileges
+  - Permissions are MERGED across all user's roles (any true = true)
+
+================================================================================
+2. CURRENT PERMISSION LOGIC
+================================================================================
+
+2A. User::hasRole($slug)
+-------------------------
+  - Defined in: HasTyroRoles trait (vendor package)
+  - Cached via TyroCache (per-user runtime version invalidation)
+  - Checks if user's role slugs array contains the given slug, or the
+    wildcard '*'
+  - Uses runtime cache (tyroRoleSlugsCache) to avoid repeated DB queries
+
+2B. User::hasPrivilege($slug)
+------------------------------
+  - Same trait: HasTyroRoles
+  - Flattens all privileges across all user's roles
+  - Cached via TyroCache (tyroPrivilegeSlugsCache)
+  - Checks if privilege slug exists in merged array, or wildcard '*'
+
+2C. User::canOnModule($module, $action)
+----------------------------------------
+  - Defined in: HasModulePermissions trait (app/Traits)
+  - Resolves user's role IDs from roles() relationship
+  - Queries module_role_permissions where role_id IN user's roles
+    AND module_id = $module->id AND can_$action = true
+  - Not cached (queries DB each time)
+
+2D. HasModulePermissions Trait Methods
+---------------------------------------
+  Method                    Purpose
+  -----------------------------------------------------------------
+  canOnModule($m, $action)  Single permission check for a module+action
+  getModulePermissions($m)  All 6 CRUD flags for a module (or null)
+  getAllModulePermissions()  Merged CRUD per module across all roles
+  getAccessibleModuleIds()   List of module IDs with read/create/etc
+  canAccessVault($vault)    Vault entry access: super-admin, owner, or
+                            has can_read on vault's module
+  isVaultOwner($vault)      super-admin OR user_id owns the entry
+
+2E. ROLE MIDDLEWARE
+-------------------
+  Registered by TyroServiceProvider:
+    - 'role'      => EnsureTyroRole       (requires ALL given roles)
+    - 'roles'     => EnsureAnyTyroRole    (requires ANY given role)
+    - 'privilege' => EnsureTyroPrivilege  (requires ALL privs)
+    - 'privileges'=> EnsureAnyTyroPrivilege (requires ANY priv)
+
+  Used in routes:
+    - Route::middleware(['auth:sanctum', ..., 'role:super-admin'])
+      (API + Web super-admin route groups)
+    - Route::middleware(['auth']) (Web authenticated group)
+    - Route::middleware(['auth:sanctum', ...]) (API authenticated group)
+
+2F. CONTROLLER PERMISSION CHECKS
+---------------------------------
+  The system uses a combination pattern:
+
+  A. Gate with abort_unless / abort_if + hasRole():
+       abort_unless($user->hasRole('super-admin'), 403)
+     Used in: UserController, RoleController, PermissionController,
+     ReportController, LoginAuditController, ActivityLogController,
+     ImportController, FeatureController (write), ModuleController (write)
+
+  B. userOwnedFilter() pattern (Web controllers):
+       if (! Auth::user()->hasRole('super-admin')) {
+           Model::addGlobalScope('ownership', fn($q) => $q->where('user_id', Auth::id()));
+       }
+     Used in: Domain, Hosting, VPS, VoIP, ServiceProvider, DomainEmail,
+     OtherService, ExpiryTracker, Note, Vault, Webhook, Attachment, Task
+
+  C. Inline checks (API controllers):
+       if (! $user->hasRole('super-admin') && $model->user_id !== $user->id) {
+           abort(403);
+       }
+     Used in: all API resource controllers (show/update/destroy)
+
+  D. accessible_module_ids filter (API services):
+       $filters['accessible_module_ids'] = $user->getAccessibleModuleIds('read')
+     Used in: all API service list() methods for non-super-admin users
+
+  E. canOnModule() + canAccessVault() / isVaultOwner():
+       Used in NoteController (API), VaultController (API)
+
+================================================================================
+3. CURRENT USER CREATE/EDIT FLOW
+================================================================================
+
+3A. ROLE ASSIGNMENT
+--------------------
+  Web (UserController):
+    - create view passes: Role::whereNotIn('slug', ['*', 'super-admin'])
+      (super-admin and wildcard roles are HIDDEN from the assignable list)
+    - User form has checkbox group for roles
+    - store(): $user->roles()->sync($request->roles)
+    - update(): same pattern, syncs selected roles
+    - edit view also excludes super-admin from selectable options
+
+  API (UsersController):
+    - StoreUserRequest validates roles.* exists:roles,id
+    - No restriction on which roles can be assigned via API
+    - store/update: Role::whereIn('id', $data['roles'])->then sync
+
+  GAP: Web controller deliberately hides super-admin role from the
+  dropdown. But the API controller does NOT exclude super-admin.
+  If an API client sends roles containing super-admin's id, it would
+  be assigned. However, the API is gated by hasRole('super-admin')
+  itself, so only an existing super-admin could make the API call.
+
+3B. PRIVILEGE ASSIGNMENT
+-------------------------
+  - NOT available in user create/edit forms
+  - Privileges are managed through Role CRUD (RoleController)
+  - RoleController has privilege attach/detach methods
+  - Privileges are assigned to ROLES, not directly to users
+  - Current user create/edit forms have NO UI for privileges
+
+3C. MODULE PERMISSION ASSIGNMENT
+---------------------------------
+  - NOT available in user create/edit forms
+  - Managed through separate ModulePermissionController
+  - Has web UI at module permissions index page
+  - ModulePermissionService handles CRUD for module_role_permissions
+  - Per-role, per-module CRUD flags (create/read/update/delete/approve/export)
+
+3D. PASSWORD HANDLING
+----------------------
+  - Web controller: Hash::make($validated['password'])
+  - API: User model has 'password' => 'hashed' cast (Laravel auto-hashes)
+  - Update: if not filled, unset from data (password stays unchanged)
+  - Password confirmation enforced via 'confirmed' rule
+  - Password minimum: 8 chars
+
+3E. SAFETY
+-----------
+  - Password is hashed BEFORE storage (never stored as plaintext)
+  - Web create/update uses manual Hash::make()
+  - API relies on model's 'hashed' cast
+  - Both are safe approaches
+
+================================================================================
+4. CURRENT ACCESS BEHAVIOR BY MODULE
+================================================================================
+
+MODULE              WEB AUTH          API AUTH                OWNERSHIP SCOPE
+-------------------------------------------------------------------------
+VPS                 auth +            sanctum + role:         userOwnedFilter()
+                    userOwnedFilter() super-admin route       + inline user_id check
+
+Hosting             auth +            sanctum + role:         userOwnedFilter()
+                    userOwnedFilter() super-admin route       + inline user_id check
+
+Domains             auth +            sanctum + role:         userOwnedFilter()
+                    userOwnedFilter() super-admin route       + inline user_id check
+
+Domain Emails       auth +            sanctum + role:         userOwnedFilter()
+                    userOwnedFilter() super-admin route       + inline user_id check
+
+Service Providers   auth +            sanctum + role:         userOwnedFilter()
+                    userOwnedFilter() super-admin route       + inline user_id check
+
+VoIP                auth +            sanctum + role:         userOwnedFilter()
+                    userOwnedFilter() super-admin route       + inline user_id check
+
+Tasks               auth +            sanctum + route:        userOwnedFilter()
+                    userOwnedFilter() auth-only               (owner OR assignee)
+
+Notes               auth +            sanctum + route:        userOwnedFilter()
+                    userOwnedFilter() auth-only               + canOnModule(module,read)
+
+Vault               auth +            sanctum + route:        userOwnedFilter()
+                    userOwnedFilter() auth-only               + canAccessVault()
+                                                              + isVaultOwner()
+
+Reports             auth +            sanctum + role:         super-admin only
+                    super-admin       super-admin route
+
+Import              super-admin       sanctum + role:         super-admin only
+                    (route-gated)     super-admin route
+
+Export              auth +            sanctum + route:        userOwnedFilter()
+                    checks canExport  auth-only               + accessible_module_ids
+                    per module                                + super-admin bypass
+
+Search              auth +            sanctum + route:        super-admin sees all
+                    super-admin       auth-only               non-admin: user_id + module
+                    branch                                    accessible_module_ids
+
+Dashboard           auth +            sanctum + route:        super-admin sees all
+                    super-admin       auth-only               non-admin: user_id
+                    branch                                    + accessible_module_ids
+
+Monitor             auth +            sanctum + route:        super-admin sees all
+                    userPassedFilter auth-only               non-admin: user_id
+?                   
+
+Activity Log        auth +            sanctum + role:         super-admin only
+                    super-admin       super-admin route
+
+Login Audits        auth +            sanctum + role:         super-admin only
+                    super-admin       super-admin route
+
+Webhooks            auth +            sanctum + route:        userOwnedFilter()
+                    userOwnedFilter() auth-only               + inline user_id
+
+Attachments         auth +            sanctum + route:        userOwnedFilter()
+                    super-admin +     auth-only               + inline user_id
+                    userOwnedFilter()
+
+Features/Modules    auth +            sanctum + auth +        accessible_module_ids
+  (read/index)      super-admin       super-admin route       for non-admin
+
+Features/Modules    auth +            sanctum +               super-admin only
+  (write/CRUD)      super-admin       super-admin route      
+
+Module Permissions  auth +            sanctum +               super-admin only
+                    super-admin       super-admin route
+
+Roles/Privileges    auth +            sanctum +               super-admin only
+                    super-admin       super-admin route
+
+Users (CRUD)        auth +            sanctum +               super-admin only
+                    super-admin       super-admin route
+
+================================================================================
+5. RECOMMENDED ROLE TEMPLATES (using existing system only)
+================================================================================
+
+5A. Super Admin
+---------------
+  Configuration:
+    Role: super-admin (existing)
+    Module permissions: ALL modules — can_create, can_read, can_update,
+                        can_delete, can_approve, can_export = TRUE
+
+  Current behavior (NO changes needed):
+    - Bypasses all userOwnedFilter() scopes
+    - Sees all records
+    - All routes accessible
+    - Bypasses vault ownership checks
+    - Full import/export
+    - Can manage users, roles, privileges, module permissions
+    - Can suspend/unsuspend/delete users
+    - Everything works
+
+5B. Admin
+---------
+  Configuration:
+    Role: admin (existing)
+    Module permissions: Per-assigned modules only
+      - can_create, can_read, can_update, can_delete, can_export = TRUE
+      - can_approve = configurable
+
+  Current behavior:
+    - Currently behaves identically to non-admin user (userOwnedFilter applies)
+    - Can only see own records (user_id = Auth::id())
+    - Admin needs can_read + module_role_permissions to see module
+    - accessible_module_ids filter exists but admin's user_id filter
+      still restricts to own records
+
+  GAP: Admin role currently gets NO special treatment beyond any
+  non-super-admin user. The userOwnedFilter() scopes records to the
+  admin's own user_id. An "admin" who manages servers needs to see
+  ALL records in their modules, not just their own.
+
+  RECOMMENDATION: The userOwnedFilter() pattern needs a middle tier:
+    - If user has super-admin role: no filter (current)
+    - If user has admin role AND has can_read on module: filter by
+      accessible_module_ids instead of user_id
+    - Otherwise: filter by user_id (current)
+
+5C. IT Support
+--------------
+  Configuration:
+    Role: ItSupport or user
+    Module permissions:
+      - can_read = TRUE (assigned modules)
+      - can_update = TRUE (notes, status)
+      - can_create = FALSE (unless needed)
+      - can_delete = FALSE
+      - can_export = FALSE
+      - can_approve = FALSE
+
+  Password reveal:
+    - Currently gated by isVaultOwner() and canAccessVault()
+    - canAccessVault() checks can_read on vault's module
+    - To allow IT Support to reveal passwords: they need can_read on
+      the vault entry's module AND the vault entry must not be owned
+      by someone else (isVaultOwner returns false for others)
+    
+  GAP: isVaultOwner() only returns true for super-admin OR the record
+  owner. IT Support needs a separate password-reveal permission that
+  does not require ownership.
+
+5D. Read Only
+-------------
+  Configuration:
+    Role: readonly (NEW) or user
+    Module permissions:
+      - can_read = TRUE (assigned modules)
+      - can_create/can_update/can_delete/can_approve/can_export = FALSE
+
+  Current behavior:
+    - userOwnedFilter() restricts to own records
+    - Read Only user would need to own records they're supposed to read
+    - OR the userOwnedFilter() needs the admin-tier treatment
+
+  GAP: Same scoping issue as Admin role. Without modifying the
+  userOwnedFilter() logic, Read Only users can only see their own records.
+
+5E. HR / Finance
+----------------
+  Configuration:
+    Role: finance (NEW) or user
+    Module permissions: based on need
+
+  Not feasible with current per-module access without modifying
+  the userOwnedFilter pattern. Same scoping gap as Admin/Read Only.
+
+================================================================================
+6. VERIFICATION: CURRENT SYSTEM CAPABILITIES
+================================================================================
+
+CAPABILITY                        SUPPORTED?  DETAILS
+-------------------------------------------------------------------------
+Role-based access                 YES         hasRole(), role middleware,
+                                              role assignment in user CRUD
+
+Per-module read/write/export      PARTIAL     module_role_permissions table
+                                              exists. Services check
+                                              accessible_module_ids for read.
+                                              BUT: write checks (create/update/
+                                              delete) are NOT checked in Web
+                                              controllers via canOnModule().
+                                              Only ownership is enforced.
+
+Password reveal permission        PARTIAL     isVaultOwner() and
+                                              canAccessVault() exist.
+                                              But canAccessVault() checks
+                                              can_read on module, not a
+                                              separate reveal permission.
+
+Import permission                 NO          ImportController gates on
+                                              hasRole('super-admin') only.
+                                              No per-role import permission.
+
+Delete/restore/force-delete       PARTIAL     Module has can_delete field.
+  separation                                  But no separate can_restore
+                                              or can_force_delete permission.
+                                              Web controllers allow delete
+                                              for all authenticated non-admin
+                                              (via ownership scope), not based
+                                              on can_delete flag.
+
+User management separation        YES         User CRUD is gated by
+                                              hasRole('super-admin')
+                                              for both Web and API.
+
+Route protection (URL access)     PARTIAL     API: route groups use
+                                              role:super-admin middleware.
+                                              Web: route groups use auth
+                                              middleware. Non-admin routes
+                                              aren't gated by module
+                                              permissions at route level.
+                                              Controllers use userOwnedFilter()
+                                              as safety net. Non-admin users
+                                              CAN access URLs for modules they
+                                              have no permissions on — the
+                                              list would just be empty (scoped
+                                              to their own records).
+
+================================================================================
+7. GAP ANALYSIS
+================================================================================
+
+7A. CRITICAL GAPS
+----------------------
+
+GAP 1: userOwnedFilter() has only two tiers
+--------------------------------------------
+  Current logic: super-admin = ALL, everyone else = own records only.
+  Needed: middle tier where admin roles see all records in their
+  assigned modules (filtered by accessible_module_ids instead of user_id).
+
+  Files affected: ALL Web controllers with userOwnedFilter()
+    - app/Http/Controllers/Web/*.php (~14 controllers)
+    - Change pattern from:
+        if (! Auth::user()->hasRole('super-admin')) {
+            Model::addGlobalScope('ownership', fn($q) => $q->where('user_id', Auth::id()));
+        }
+      to:
+        if (! Auth::user()->hasRole('super-admin')) {
+            $user = Auth::user();
+            $accessibleIds = $user->getAccessibleModuleIds('read');
+            if ($user->hasRole('admin') && ! empty($accessibleIds)) {
+                // Middle tier: see all records in assigned modules
+                Model::addGlobalScope('adminScope', fn($q) => $q->whereIn('module_id', $accessibleIds));
+            } else {
+                // Base tier: own records only
+                Model::addGlobalScope('ownership', fn($q) => $q->where('user_id', $user->id));
+            }
+        }
+
+GAP 2: Web controllers do NOT check can_create/can_update/can_delete
+----------------------------------------------------------------------
+  Web controllers enforce ownership but NOT module-level permissions.
+  An admin without can_create on the VPS module can still access
+  the create form and POST data. The store succeeds because there's
+  no canOnModule($module, 'create') guard.
+
+  The API controllers have the same gap for write operations.
+
+  Files affected: All Web resource controllers (store/update/destroy methods)
+
+GAP 3: No password-reveal permission separate from ownership
+-------------------------------------------------------------
+  isVaultOwner() only allows super-admin or record owner.
+  canAccessVault() checks can_read on module.
+  There is no "can_reveal_password" permission or privilege.
+
+  Needed: A dedicated module_role_permissions field (can_reveal_passwords)
+  or a privilege slug like 'passwords.reveal'.
+
+GAP 4: No per-role import permission
+--------------------------------------
+  Import is gated by hasRole('super-admin') only.
+  Export has per-module permission (can_export).
+  Import should also be gatable by role/module.
+
+GAP 5: Web create/edit forms exclude super-admin role from selection
+----------------------------------------------------------------------
+  UserController create/edit uses:
+    Role::whereNotIn('slug', ['*', 'super-admin'])
+  This means super-admin role can never be assigned through the web UI.
+  Only an API call or direct DB manipulation can assign it.
+
+  This IS a safety feature (prevents accidental super-admin promotion),
+  but it means the Super Admin role is effectively "self-only" —
+  you can't grant it through the UI.
+
+7B. MEDIUM GAPS
+---------------
+
+GAP 6: No can_delete check in Web controllers
+-----------------------------------------------
+  Destroy methods use userOwnedFilter() but don't check
+  canOnModule($module, 'delete'). A non-admin user with can_read only
+  could still delete their own records.
+
+GAP 7: No can_export check in Web export for non-module types
+---------------------------------------------------------------
+  ExportController checks can_export for module-based exports.
+  But for non-module exports (users, roles, privileges), it only
+  checks hasRole('super-admin'). No privilege-based gating.
+
+GAP 8: Role templates / seeders missing
+-----------------------------------------
+  There's no RoleTemplateSeeder or default role configuration for
+  the recommended role templates (Admin, IT Support, Read Only).
+  Currently the seeder creates super-admin, admin, user roles —
+  but without pre-configured module_role_permissions.
+
+GAP 9: Privilege system underutilized
+---------------------------------------
+  The Tyro package provides a privilege system (privileges table +
+  privilege_role pivot + hasPrivilege() method + privilege middleware).
+  The codebase barely uses privileges — it relies on hasRole('super-admin')
+  and hasRole('admin') checks. Privileges like 'import.execute',
+  'passwords.reveal', 'users.manage', 'reports.view' would provide
+  more granular control without modifying the module_role_permissions
+  system.
+
+7C. MINOR GAPS
+--------------
+
+GAP 10: No can_approve enforcement
+------------------------------------
+  The module_role_permissions table has can_approve but no code
+  checks this field anywhere. It's defined but unused.
+
+GAP 11: Module permission UI is read-only in user show
+--------------------------------------------------------
+  User show page displays module permissions (merged across roles).
+  But user edit page has no module permission controls.
+  Module permissions must be set per-role via the separate
+  ModulePermissionController.
+
+GAP 12: No audit trail for module permission changes in non-admin scope
+-------------------------------------------------------------------------
+  ModuleRolePermission model uses LogsActivity, so changes are audited.
+  But there's no enforcement that only super-admin can set module
+  permissions (the controller checks hasRole('super-admin') already).
+
+================================================================================
+8. RECOMMENDED WORKFLOW FOR CLEAN ACCESS SYSTEM
+================================================================================
+
+The following changes would make the system fully "set-and-forget":
+
+8A. ESSENTIAL (needed for any multi-tier role system)
+-----------------------------------------------------
+
+  1. Modify userOwnedFilter() pattern (14 Web controllers)
+     Add a middle tier: admin role with can_read on modules should
+     see records filtered by accessible_module_ids, not user_id.
+
+  2. Add can_create/can_update/can_delete guards
+     Web resource controllers' store/update/destroy should call
+     canOnModule($module, 'create'|'update'|'delete') before
+     performing the operation.
+
+  3. Add a password-reveal permission
+     Either a new can_reveal column in module_role_permissions,
+     or a privilege slug like 'passwords.reveal' in the privileges
+     table.
+
+  4. Add import permission
+     Either a new can_import field or use a privilege slug.
+
+  5. Create role seeder defaults
+     RoleTemplateSeeder that pre-configures module_role_permissions
+     for each role template (Admin, IT Support, Read Only).
+
+8B. RECOMMENDED (quality of life)
+----------------------------------
+
+  6. Super Admin protection
+     Add a check to prevent normal Admin from editing, deleting, or
+     viewing the Super Admin user. UserController should skip the
+     super-admin user from non-super-admin operations.
+
+  7. Route-level module access guard
+     Add middleware or controller base class logic that checks
+     can_read on the module before the page loads, preventing empty
+     list rendering for unauthorized users.
+
+  8. User form improvements
+     - Add privilege selection to user create/edit (optional)
+     - Add module permission summary in user edit
+     - Show "can_reveal_password" badge in user profile
+
+  9. Audit and test
+     - Add tests for all permission paths
+     - Add audit log for permission denials
+     - Test all role templates end-to-end
+
+8C. SAFETY RULES REQUIREMENTS
+-----------------------------
+
+  Safety 1: Super Admin must never be lockable out
+    [VERIFIED] Route groups for super-admin use role:super-admin middleware.
+    A normal Admin routes are in the 'auth' group, not the 'role:super-admin'
+    group. Admin cannot reach super-admin routes.
+
+  Safety 2: Admin must not edit Super Admin user
+    [NOT IMPLEMENTED] UserController does not check target user's role.
+    An Admin who somehow gets super-admin access could edit them.
+    Actually, route check (hasRole('super-admin')) prevents this since
+    user management routes are in the super-admin group.
+    
+    But: if super-admin role is assignable via API (it is, since API
+    controller doesn't exclude it), then a super-admin could accidentally
+    promote someone. The API is gated by hasRole('super-admin'), so only
+    an existing super-admin can do this. Recommendation: keep API limit.
+
+  Safety 3: Staff must not access hidden modules via direct URL
+    [PARTIALLY IMPLEMENTED] Web routes are grouped under 'auth'.
+    Non-admin users see empty lists when accessing modules they have
+    no records in. This is a soft blocker, not a hard 403.
+    Fix would require module permission middleware on resource routes.
+
+  Safety 4: Export/import must respect module permissions
+    [Export: VERIFIED] ExportController checks canExport + module_slug.
+    [Import: NOT IMPLEMENTED] ImportController has no per-module check.
+
+  Safety 5: Password reveal must be audited
+    [VERIFIED] VaultController reveal/create uses activity() logger
+    with event('revealed'). Spatie Activitylog records the event.
+    VPS and other service controllers also log password reveals
+    via getPassword() methods.
+
+================================================================================
+9. EXACT FILES TO MODIFY (for reference only)
+================================================================================
+
+This section lists file paths only — no code changes were made.
+
+  Web Controllers (userOwnedFilter pattern):
+    app/Http/Controllers/Web/DomainController.php
+    app/Http/Controllers/Web/HostingController.php
+    app/Http/Controllers/Web/VpsController.php
+    app/Http/Controllers/Web/VoipController.php
+    app/Http/Controllers/Web/ServiceProviderController.php
+    app/Http/Controllers/Web/DomainEmailController.php
+    app/Http/Controllers/Web/OtherServiceController.php
+    app/Http/Controllers/Web/ExpiryTrackerController.php
+    app/Http/Controllers/Web/AttachmentController.php
+    app/Http/Controllers/Web/WebhookController.php
+    app/Http/Controllers/Web/NoteController.php
+    app/Http/Controllers/Web/VaultController.php
+    app/Http/Controllers/Web/TaskController.php
+    app/Http/Controllers/Web/DashboardController.php
+
+  API Controllers (inline checks):
+    app/Http/Controllers/Api/DomainController.php
+    app/Http/Controllers/Api/HostingController.php
+    app/Http/Controllers/Api/VpsController.php
+    app/Http/Controllers/Api/VoipController.php
+    app/Http/Controllers/Api/ServiceProviderController.php
+    app/Http/Controllers/Api/DomainEmailController.php
+    app/Http/Controllers/Api/OtherServiceController.php
+    app/Http/Controllers/Api/ExpiryTrackerController.php
+    app/Http/Controllers/Api/VaultController.php
+    app/Http/Controllers/Api/NoteController.php
+    app/Http/Controllers/Api/ImportController.php
+
+  Traits:
+    app/Traits/HasModulePermissions.php (add can_reveal support)
+
+  Models:
+    app/Models/ModuleRolePermission.php (add can_import, can_reveal fields)
+
+  Database:
+    New migration for module_role_permissions new fields
+
+  Seeders:
+    New RoleTemplateSeeder
+
+  Views:
+    resources/views/users/create.blade.php
+    resources/views/users/edit.blade.php
+
+================================================================================
+END OF REPORT
+================================================================================

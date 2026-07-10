@@ -30,5 +30,8 @@ return new class extends Migration
         });
     }
 
-    public function down(): void { Schema::dropIfExists('vps'); }
+    public function down(): void
+    {
+        Schema::dropIfExists('vps');
+    }
 };

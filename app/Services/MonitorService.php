@@ -13,6 +13,7 @@ class MonitorService
         try {
             $response = Http::timeout(10)->get($url);
             $elapsed = round((microtime(true) - $start) * 1000);
+
             return [
                 'success' => $response->successful(),
                 'status_code' => $response->status(),
@@ -33,15 +34,15 @@ class MonitorService
     public function checkSsl(string $url): array
     {
         $host = parse_url($url, PHP_URL_HOST);
-        if (!$host) {
+        if (! $host) {
             return ['success' => false, 'error' => 'Invalid URL', 'valid' => false, 'days_remaining' => null, 'issuer' => null];
         }
 
         try {
-            $context = stream_context_create(['ssl' => ['capture_peer_cert' => true, 'verify_peer' => false, 'verify_peer_name' => false]]);
-            $client = @stream_socket_client('ssl://' . $host . ':443', $errno, $errstr, 10, STREAM_CLIENT_CONNECT, $context);
+            $context = stream_context_create(['ssl' => ['capture_peer_cert' => true, 'verify_peer' => env('MONITOR_SSL_VERIFY_PEER', true), 'verify_peer_name' => env('MONITOR_SSL_VERIFY_PEER_NAME', true)]]);
+            $client = stream_socket_client('ssl://'.$host.':443', $errno, $errstr, 10, STREAM_CLIENT_CONNECT, $context);
 
-            if (!$client) {
+            if (! $client) {
                 return ['success' => false, 'error' => $errstr, 'valid' => false, 'days_remaining' => null, 'issuer' => null];
             }
 
@@ -50,7 +51,7 @@ class MonitorService
             $certInfo = $this->parseSslCert($cert);
             fclose($client);
 
-            if (!$certInfo) {
+            if (! $certInfo) {
                 return ['success' => false, 'error' => 'Failed to parse certificate', 'valid' => false, 'days_remaining' => null, 'issuer' => null];
             }
 

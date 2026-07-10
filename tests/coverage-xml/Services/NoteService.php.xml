@@ -1,0 +1,1204 @@
+<?xml version="1.0"?>
+<phpunit xmlns="https://schema.phpunit.de/coverage/1.0">
+  <file name="NoteService.php" path="\Services">
+    <totals>
+      <lines total="98" comments="6" code="92" executable="38" executed="38" percent="100.00"/>
+      <methods count="5" tested="5" percent="100.00"/>
+      <functions count="0" tested="0" percent="0"/>
+      <classes count="1" tested="1" percent="100.00"/>
+      <traits count="0" tested="0" percent="0"/>
+    </totals>
+    <class name="App\Services\NoteService" start="12" executable="38" executed="38" crap="15">
+      <namespace name="App\Services"/>
+      <method name="listFor" signature="listFor(mixed $notable, array $filters): Illuminate\Pagination\LengthAwarePaginator" start="18" end="45" crap="6" executable="16" executed="16" coverage="100"/>
+      <method name="create" signature="create(array $data, mixed $notable): App\Models\Note" start="48" end="64" crap="2" executable="9" executed="9" coverage="100"/>
+      <method name="update" signature="update(App\Models\Note $note, array $data): App\Models\Note" start="67" end="76" crap="2" executable="5" executed="5" coverage="100"/>
+      <method name="delete" signature="delete(App\Models\Note $note): void" start="78" end="81" crap="1" executable="1" executed="1" coverage="100"/>
+      <method name="notifyNoteAdded" signature="notifyNoteAdded(App\Models\Note $note): void" start="83" end="96" crap="4" executable="7" executed="7" coverage="100"/>
+    </class>
+    <coverage>
+      <line nr="20">
+        <covered by="Tests\Unit\NoteServiceTest::test_lists_global_notes"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_list_filters_by_user_id"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_list_searches_by_content"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_list_invalid_sort_falls_back_to_created_at"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_list_invalid_sort_order_falls_back_to_desc"/>
+        <covered by="Tests\Feature\NoteTest::test_list_global_notes"/>
+        <covered by="Tests\Feature\NoteTest::test_note_search_filter"/>
+        <covered by="Tests\Feature\NoteTest::test_note_sort_by_content"/>
+        <covered by="Tests\Feature\NoteTest::test_list_feature_notes"/>
+        <covered by="Tests\Feature\NoteTest::test_list_module_notes"/>
+        <covered by="Tests\Feature\NoteTest::test_module_notes_returns_paginated_response"/>
+      </line>
+      <line nr="21">
+        <covered by="Tests\Feature\NoteTest::test_list_feature_notes"/>
+        <covered by="Tests\Feature\NoteTest::test_list_module_notes"/>
+        <covered by="Tests\Feature\NoteTest::test_module_notes_returns_paginated_response"/>
+      </line>
+      <line nr="23">
+        <covered by="Tests\Unit\NoteServiceTest::test_lists_global_notes"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_list_filters_by_user_id"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_list_searches_by_content"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_list_invalid_sort_falls_back_to_created_at"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_list_invalid_sort_order_falls_back_to_desc"/>
+        <covered by="Tests\Feature\NoteTest::test_list_global_notes"/>
+        <covered by="Tests\Feature\NoteTest::test_note_search_filter"/>
+        <covered by="Tests\Feature\NoteTest::test_note_sort_by_content"/>
+      </line>
+      <line nr="24">
+        <covered by="Tests\Unit\NoteServiceTest::test_lists_global_notes"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_list_filters_by_user_id"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_list_searches_by_content"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_list_invalid_sort_falls_back_to_created_at"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_list_invalid_sort_order_falls_back_to_desc"/>
+        <covered by="Tests\Feature\NoteTest::test_list_global_notes"/>
+        <covered by="Tests\Feature\NoteTest::test_note_search_filter"/>
+        <covered by="Tests\Feature\NoteTest::test_note_sort_by_content"/>
+      </line>
+      <line nr="25">
+        <covered by="Tests\Unit\NoteServiceTest::test_list_filters_by_user_id"/>
+        <covered by="Tests\Feature\NoteTest::test_list_global_notes"/>
+        <covered by="Tests\Feature\NoteTest::test_note_search_filter"/>
+        <covered by="Tests\Feature\NoteTest::test_note_sort_by_content"/>
+      </line>
+      <line nr="29">
+        <covered by="Tests\Unit\NoteServiceTest::test_lists_global_notes"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_list_filters_by_user_id"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_list_searches_by_content"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_list_invalid_sort_falls_back_to_created_at"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_list_invalid_sort_order_falls_back_to_desc"/>
+        <covered by="Tests\Feature\NoteTest::test_list_global_notes"/>
+        <covered by="Tests\Feature\NoteTest::test_note_search_filter"/>
+        <covered by="Tests\Feature\NoteTest::test_note_sort_by_content"/>
+        <covered by="Tests\Feature\NoteTest::test_list_feature_notes"/>
+        <covered by="Tests\Feature\NoteTest::test_list_module_notes"/>
+        <covered by="Tests\Feature\NoteTest::test_module_notes_returns_paginated_response"/>
+      </line>
+      <line nr="30">
+        <covered by="Tests\Unit\NoteServiceTest::test_list_searches_by_content"/>
+        <covered by="Tests\Feature\NoteTest::test_note_search_filter"/>
+      </line>
+      <line nr="33">
+        <covered by="Tests\Unit\NoteServiceTest::test_lists_global_notes"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_list_filters_by_user_id"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_list_searches_by_content"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_list_invalid_sort_falls_back_to_created_at"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_list_invalid_sort_order_falls_back_to_desc"/>
+        <covered by="Tests\Feature\NoteTest::test_list_global_notes"/>
+        <covered by="Tests\Feature\NoteTest::test_note_search_filter"/>
+        <covered by="Tests\Feature\NoteTest::test_note_sort_by_content"/>
+        <covered by="Tests\Feature\NoteTest::test_list_feature_notes"/>
+        <covered by="Tests\Feature\NoteTest::test_list_module_notes"/>
+        <covered by="Tests\Feature\NoteTest::test_module_notes_returns_paginated_response"/>
+      </line>
+      <line nr="34">
+        <covered by="Tests\Unit\NoteServiceTest::test_lists_global_notes"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_list_filters_by_user_id"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_list_searches_by_content"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_list_invalid_sort_falls_back_to_created_at"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_list_invalid_sort_order_falls_back_to_desc"/>
+        <covered by="Tests\Feature\NoteTest::test_list_global_notes"/>
+        <covered by="Tests\Feature\NoteTest::test_note_search_filter"/>
+        <covered by="Tests\Feature\NoteTest::test_note_sort_by_content"/>
+        <covered by="Tests\Feature\NoteTest::test_list_feature_notes"/>
+        <covered by="Tests\Feature\NoteTest::test_list_module_notes"/>
+        <covered by="Tests\Feature\NoteTest::test_module_notes_returns_paginated_response"/>
+      </line>
+      <line nr="35">
+        <covered by="Tests\Unit\NoteServiceTest::test_lists_global_notes"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_list_filters_by_user_id"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_list_searches_by_content"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_list_invalid_sort_falls_back_to_created_at"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_list_invalid_sort_order_falls_back_to_desc"/>
+        <covered by="Tests\Feature\NoteTest::test_list_global_notes"/>
+        <covered by="Tests\Feature\NoteTest::test_note_search_filter"/>
+        <covered by="Tests\Feature\NoteTest::test_note_sort_by_content"/>
+        <covered by="Tests\Feature\NoteTest::test_list_feature_notes"/>
+        <covered by="Tests\Feature\NoteTest::test_list_module_notes"/>
+        <covered by="Tests\Feature\NoteTest::test_module_notes_returns_paginated_response"/>
+      </line>
+      <line nr="36">
+        <covered by="Tests\Unit\NoteServiceTest::test_lists_global_notes"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_list_filters_by_user_id"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_list_searches_by_content"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_list_invalid_sort_falls_back_to_created_at"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_list_invalid_sort_order_falls_back_to_desc"/>
+        <covered by="Tests\Feature\NoteTest::test_list_global_notes"/>
+        <covered by="Tests\Feature\NoteTest::test_note_search_filter"/>
+        <covered by="Tests\Feature\NoteTest::test_note_sort_by_content"/>
+        <covered by="Tests\Feature\NoteTest::test_list_feature_notes"/>
+        <covered by="Tests\Feature\NoteTest::test_list_module_notes"/>
+        <covered by="Tests\Feature\NoteTest::test_module_notes_returns_paginated_response"/>
+      </line>
+      <line nr="37">
+        <covered by="Tests\Unit\NoteServiceTest::test_list_invalid_sort_falls_back_to_created_at"/>
+      </line>
+      <line nr="39">
+        <covered by="Tests\Unit\NoteServiceTest::test_lists_global_notes"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_list_filters_by_user_id"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_list_searches_by_content"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_list_invalid_sort_falls_back_to_created_at"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_list_invalid_sort_order_falls_back_to_desc"/>
+        <covered by="Tests\Feature\NoteTest::test_list_global_notes"/>
+        <covered by="Tests\Feature\NoteTest::test_note_search_filter"/>
+        <covered by="Tests\Feature\NoteTest::test_note_sort_by_content"/>
+        <covered by="Tests\Feature\NoteTest::test_list_feature_notes"/>
+        <covered by="Tests\Feature\NoteTest::test_list_module_notes"/>
+        <covered by="Tests\Feature\NoteTest::test_module_notes_returns_paginated_response"/>
+      </line>
+      <line nr="40">
+        <covered by="Tests\Unit\NoteServiceTest::test_list_invalid_sort_order_falls_back_to_desc"/>
+      </line>
+      <line nr="43">
+        <covered by="Tests\Unit\NoteServiceTest::test_lists_global_notes"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_list_filters_by_user_id"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_list_searches_by_content"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_list_invalid_sort_falls_back_to_created_at"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_list_invalid_sort_order_falls_back_to_desc"/>
+        <covered by="Tests\Feature\NoteTest::test_list_global_notes"/>
+        <covered by="Tests\Feature\NoteTest::test_note_search_filter"/>
+        <covered by="Tests\Feature\NoteTest::test_note_sort_by_content"/>
+        <covered by="Tests\Feature\NoteTest::test_list_feature_notes"/>
+        <covered by="Tests\Feature\NoteTest::test_list_module_notes"/>
+        <covered by="Tests\Feature\NoteTest::test_module_notes_returns_paginated_response"/>
+      </line>
+      <line nr="44">
+        <covered by="Tests\Unit\NoteServiceTest::test_lists_global_notes"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_list_filters_by_user_id"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_list_searches_by_content"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_list_invalid_sort_falls_back_to_created_at"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_list_invalid_sort_order_falls_back_to_desc"/>
+        <covered by="Tests\Feature\NoteTest::test_list_global_notes"/>
+        <covered by="Tests\Feature\NoteTest::test_note_search_filter"/>
+        <covered by="Tests\Feature\NoteTest::test_note_sort_by_content"/>
+        <covered by="Tests\Feature\NoteTest::test_list_feature_notes"/>
+        <covered by="Tests\Feature\NoteTest::test_list_module_notes"/>
+        <covered by="Tests\Feature\NoteTest::test_module_notes_returns_paginated_response"/>
+      </line>
+      <line nr="50">
+        <covered by="Tests\Unit\NoteServiceTest::test_creates_global_note"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_create_sends_notification_to_other_super_admins"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_create_does_not_notify_note_author"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_create_with_notable"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_create_handles_no_super_admin_role"/>
+        <covered by="Tests\Feature\NoteTest::test_create_global_note"/>
+        <covered by="Tests\Feature\NoteTest::test_create_note_on_feature"/>
+        <covered by="Tests\Feature\NoteTest::test_create_note_on_module"/>
+        <covered by="Tests\Feature\NoteTest::test_module_notes_returns_paginated_response"/>
+      </line>
+      <line nr="52">
+        <covered by="Tests\Unit\NoteServiceTest::test_creates_global_note"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_create_sends_notification_to_other_super_admins"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_create_does_not_notify_note_author"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_create_with_notable"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_create_handles_no_super_admin_role"/>
+        <covered by="Tests\Feature\NoteTest::test_create_global_note"/>
+        <covered by="Tests\Feature\NoteTest::test_create_note_on_feature"/>
+        <covered by="Tests\Feature\NoteTest::test_create_note_on_module"/>
+        <covered by="Tests\Feature\NoteTest::test_module_notes_returns_paginated_response"/>
+      </line>
+      <line nr="53">
+        <covered by="Tests\Unit\NoteServiceTest::test_create_with_notable"/>
+        <covered by="Tests\Feature\NoteTest::test_create_note_on_feature"/>
+        <covered by="Tests\Feature\NoteTest::test_create_note_on_module"/>
+        <covered by="Tests\Feature\NoteTest::test_module_notes_returns_paginated_response"/>
+      </line>
+      <line nr="56">
+        <covered by="Tests\Unit\NoteServiceTest::test_creates_global_note"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_create_sends_notification_to_other_super_admins"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_create_does_not_notify_note_author"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_create_with_notable"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_create_handles_no_super_admin_role"/>
+        <covered by="Tests\Feature\NoteTest::test_create_global_note"/>
+        <covered by="Tests\Feature\NoteTest::test_create_note_on_feature"/>
+        <covered by="Tests\Feature\NoteTest::test_create_note_on_module"/>
+        <covered by="Tests\Feature\NoteTest::test_module_notes_returns_paginated_response"/>
+      </line>
+      <line nr="59">
+        <covered by="Tests\Unit\NoteServiceTest::test_creates_global_note"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_create_sends_notification_to_other_super_admins"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_create_does_not_notify_note_author"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_create_with_notable"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_create_handles_no_super_admin_role"/>
+        <covered by="Tests\Feature\NoteTest::test_create_global_note"/>
+        <covered by="Tests\Feature\NoteTest::test_create_note_on_feature"/>
+        <covered by="Tests\Feature\NoteTest::test_create_note_on_module"/>
+        <covered by="Tests\Feature\NoteTest::test_module_notes_returns_paginated_response"/>
+      </line>
+      <line nr="61">
+        <covered by="Tests\Unit\NoteServiceTest::test_creates_global_note"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_create_sends_notification_to_other_super_admins"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_create_does_not_notify_note_author"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_create_with_notable"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_create_handles_no_super_admin_role"/>
+        <covered by="Tests\Feature\NoteTest::test_create_global_note"/>
+        <covered by="Tests\Feature\NoteTest::test_create_note_on_feature"/>
+        <covered by="Tests\Feature\NoteTest::test_create_note_on_module"/>
+        <covered by="Tests\Feature\NoteTest::test_module_notes_returns_paginated_response"/>
+      </line>
+      <line nr="63">
+        <covered by="Tests\Unit\NoteServiceTest::test_creates_global_note"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_create_sends_notification_to_other_super_admins"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_create_does_not_notify_note_author"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_create_with_notable"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_create_handles_no_super_admin_role"/>
+        <covered by="Tests\Feature\NoteTest::test_create_global_note"/>
+        <covered by="Tests\Feature\NoteTest::test_create_note_on_feature"/>
+        <covered by="Tests\Feature\NoteTest::test_create_note_on_module"/>
+        <covered by="Tests\Feature\NoteTest::test_module_notes_returns_paginated_response"/>
+      </line>
+      <line nr="57">
+        <covered by="Tests\Unit\NoteServiceTest::test_creates_global_note"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_create_sends_notification_to_other_super_admins"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_create_does_not_notify_note_author"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_create_with_notable"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_create_handles_no_super_admin_role"/>
+        <covered by="Tests\Feature\NoteTest::test_create_global_note"/>
+        <covered by="Tests\Feature\NoteTest::test_create_note_on_feature"/>
+        <covered by="Tests\Feature\NoteTest::test_create_note_on_module"/>
+        <covered by="Tests\Feature\NoteTest::test_module_notes_returns_paginated_response"/>
+      </line>
+      <line nr="58">
+        <covered by="Tests\Unit\NoteServiceTest::test_creates_global_note"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_create_sends_notification_to_other_super_admins"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_create_does_not_notify_note_author"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_create_with_notable"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_create_handles_no_super_admin_role"/>
+        <covered by="Tests\Feature\NoteTest::test_create_global_note"/>
+        <covered by="Tests\Feature\NoteTest::test_create_note_on_feature"/>
+        <covered by="Tests\Feature\NoteTest::test_create_note_on_module"/>
+        <covered by="Tests\Feature\NoteTest::test_module_notes_returns_paginated_response"/>
+      </line>
+      <line nr="69">
+        <covered by="Tests\Feature\ApiNewResourcesTest::test_api_notes_update"/>
+      </line>
+      <line nr="70">
+        <covered by="Tests\Feature\ApiNewResourcesTest::test_api_notes_update"/>
+      </line>
+      <line nr="72">
+        <covered by="Tests\Feature\ApiNewResourcesTest::test_api_notes_update"/>
+      </line>
+      <line nr="73">
+        <covered by="Tests\Feature\ApiNewResourcesTest::test_api_notes_update"/>
+      </line>
+      <line nr="75">
+        <covered by="Tests\Feature\ApiNewResourcesTest::test_api_notes_update"/>
+      </line>
+      <line nr="80">
+        <covered by="Tests\Unit\NoteServiceTest::test_deletes_note"/>
+        <covered by="Tests\Feature\NoteTest::test_owner_can_delete_note"/>
+      </line>
+      <line nr="85">
+        <covered by="Tests\Unit\NoteServiceTest::test_creates_global_note"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_create_sends_notification_to_other_super_admins"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_create_does_not_notify_note_author"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_create_with_notable"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_create_handles_no_super_admin_role"/>
+        <covered by="Tests\Feature\NoteTest::test_create_global_note"/>
+        <covered by="Tests\Feature\NoteTest::test_create_note_on_feature"/>
+        <covered by="Tests\Feature\NoteTest::test_create_note_on_module"/>
+        <covered by="Tests\Feature\NoteTest::test_module_notes_returns_paginated_response"/>
+      </line>
+      <line nr="86">
+        <covered by="Tests\Unit\NoteServiceTest::test_creates_global_note"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_create_sends_notification_to_other_super_admins"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_create_does_not_notify_note_author"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_create_with_notable"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_create_handles_no_super_admin_role"/>
+        <covered by="Tests\Feature\NoteTest::test_create_global_note"/>
+        <covered by="Tests\Feature\NoteTest::test_create_note_on_feature"/>
+        <covered by="Tests\Feature\NoteTest::test_create_note_on_module"/>
+        <covered by="Tests\Feature\NoteTest::test_module_notes_returns_paginated_response"/>
+      </line>
+      <line nr="87">
+        <covered by="Tests\Unit\NoteServiceTest::test_create_handles_no_super_admin_role"/>
+      </line>
+      <line nr="90">
+        <covered by="Tests\Unit\NoteServiceTest::test_creates_global_note"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_create_sends_notification_to_other_super_admins"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_create_does_not_notify_note_author"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_create_with_notable"/>
+        <covered by="Tests\Feature\NoteTest::test_create_global_note"/>
+        <covered by="Tests\Feature\NoteTest::test_create_note_on_feature"/>
+        <covered by="Tests\Feature\NoteTest::test_create_note_on_module"/>
+        <covered by="Tests\Feature\NoteTest::test_module_notes_returns_paginated_response"/>
+      </line>
+      <line nr="91">
+        <covered by="Tests\Unit\NoteServiceTest::test_creates_global_note"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_create_sends_notification_to_other_super_admins"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_create_does_not_notify_note_author"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_create_with_notable"/>
+        <covered by="Tests\Feature\NoteTest::test_create_global_note"/>
+        <covered by="Tests\Feature\NoteTest::test_create_note_on_feature"/>
+        <covered by="Tests\Feature\NoteTest::test_create_note_on_module"/>
+        <covered by="Tests\Feature\NoteTest::test_module_notes_returns_paginated_response"/>
+      </line>
+      <line nr="92">
+        <covered by="Tests\Unit\NoteServiceTest::test_create_sends_notification_to_other_super_admins"/>
+        <covered by="Tests\Unit\NoteServiceTest::test_create_does_not_notify_note_author"/>
+        <covered by="Tests\Feature\NoteTest::test_create_note_on_feature"/>
+        <covered by="Tests\Feature\NoteTest::test_create_note_on_module"/>
+        <covered by="Tests\Feature\NoteTest::test_module_notes_returns_paginated_response"/>
+      </line>
+      <line nr="93">
+        <covered by="Tests\Unit\NoteServiceTest::test_create_sends_notification_to_other_super_admins"/>
+      </line>
+    </coverage>
+    <source>
+      <line no="1">
+        <token name="T_OPEN_TAG">&lt;?php</token>
+      </line>
+      <line no="2"/>
+      <line no="3">
+        <token name="T_NAMESPACE">namespace</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_NAME_QUALIFIED">App\Services</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="4"/>
+      <line no="5">
+        <token name="T_USE">use</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_NAME_QUALIFIED">App\Models\Note</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="6">
+        <token name="T_USE">use</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_NAME_QUALIFIED">App\Models\User</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="7">
+        <token name="T_USE">use</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_NAME_QUALIFIED">App\Notifications\NoteAdded</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="8">
+        <token name="T_USE">use</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_NAME_QUALIFIED">HasinHayder\Tyro\Models\Role</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="9">
+        <token name="T_USE">use</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_NAME_QUALIFIED">Illuminate\Pagination\LengthAwarePaginator</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="10">
+        <token name="T_USE">use</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_NAME_QUALIFIED">Illuminate\Support\Facades\DB</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="11"/>
+      <line no="12">
+        <token name="T_CLASS">class</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">NoteService</token>
+      </line>
+      <line no="13">
+        <token name="T_OPEN_CURLY">{</token>
+      </line>
+      <line no="14">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_DOC_COMMENT">/**</token>
+      </line>
+      <line no="15">
+        <token name="T_DOC_COMMENT">     * @param  array&lt;string, mixed&gt;  $filters</token>
+      </line>
+      <line no="16">
+        <token name="T_DOC_COMMENT">     * @return LengthAwarePaginator&lt;int, Note&gt;</token>
+      </line>
+      <line no="17">
+        <token name="T_DOC_COMMENT">     */</token>
+      </line>
+      <line no="18">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_PUBLIC">public</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_FUNCTION">function</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">listFor</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_STRING">mixed</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$notable</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_EQUAL">=</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">null</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_ARRAY">array</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$filters</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_EQUAL">=</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_SQUARE">[</token>
+        <token name="T_CLOSE_SQUARE">]</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_COLON">:</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">LengthAwarePaginator</token>
+      </line>
+      <line no="19">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_OPEN_CURLY">{</token>
+      </line>
+      <line no="20">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_IF">if</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_VARIABLE">$notable</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_CURLY">{</token>
+      </line>
+      <line no="21">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_VARIABLE">$query</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_EQUAL">=</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$notable</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">notes</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="22">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_CLOSE_CURLY">}</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_ELSE">else</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_CURLY">{</token>
+      </line>
+      <line no="23">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_VARIABLE">$query</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_EQUAL">=</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">Note</token>
+        <token name="T_DOUBLE_COLON">::</token>
+        <token name="T_STRING">whereNull</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'notable_type'</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="24">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_IF">if</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_ISSET">isset</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_VARIABLE">$filters</token>
+        <token name="T_OPEN_SQUARE">[</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'user_id'</token>
+        <token name="T_CLOSE_SQUARE">]</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_CURLY">{</token>
+      </line>
+      <line no="25">
+        <token name="T_WHITESPACE">                </token>
+        <token name="T_VARIABLE">$query</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">where</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'user_id'</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$filters</token>
+        <token name="T_OPEN_SQUARE">[</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'user_id'</token>
+        <token name="T_CLOSE_SQUARE">]</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="26">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_CLOSE_CURLY">}</token>
+      </line>
+      <line no="27">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_CLOSE_CURLY">}</token>
+      </line>
+      <line no="28"/>
+      <line no="29">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_IF">if</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_ISSET">isset</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_VARIABLE">$filters</token>
+        <token name="T_OPEN_SQUARE">[</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'search'</token>
+        <token name="T_CLOSE_SQUARE">]</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_CURLY">{</token>
+      </line>
+      <line no="30">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_VARIABLE">$query</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">where</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'content'</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'like'</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'%'</token>
+        <token name="T_DOT">.</token>
+        <token name="T_VARIABLE">$filters</token>
+        <token name="T_OPEN_SQUARE">[</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'search'</token>
+        <token name="T_CLOSE_SQUARE">]</token>
+        <token name="T_DOT">.</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'%'</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="31">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_CLOSE_CURLY">}</token>
+      </line>
+      <line no="32"/>
+      <line no="33">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_VARIABLE">$sortBy</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_EQUAL">=</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$filters</token>
+        <token name="T_OPEN_SQUARE">[</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'sort_by'</token>
+        <token name="T_CLOSE_SQUARE">]</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_COALESCE">??</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'created_at'</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="34">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_VARIABLE">$sortOrder</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_EQUAL">=</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$filters</token>
+        <token name="T_OPEN_SQUARE">[</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'sort_order'</token>
+        <token name="T_CLOSE_SQUARE">]</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_COALESCE">??</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'desc'</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="35">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_VARIABLE">$allowedSort</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_EQUAL">=</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_SQUARE">[</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'created_at'</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'updated_at'</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'content'</token>
+        <token name="T_CLOSE_SQUARE">]</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="36">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_IF">if</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_EXCLAMATION_MARK">!</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">in_array</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_VARIABLE">$sortBy</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$allowedSort</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_CURLY">{</token>
+      </line>
+      <line no="37">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_VARIABLE">$sortBy</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_EQUAL">=</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'created_at'</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="38">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_CLOSE_CURLY">}</token>
+      </line>
+      <line no="39">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_IF">if</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_EXCLAMATION_MARK">!</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">in_array</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_VARIABLE">$sortOrder</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_SQUARE">[</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'asc'</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'desc'</token>
+        <token name="T_CLOSE_SQUARE">]</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_CURLY">{</token>
+      </line>
+      <line no="40">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_VARIABLE">$sortOrder</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_EQUAL">=</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'desc'</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="41">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_CLOSE_CURLY">}</token>
+      </line>
+      <line no="42"/>
+      <line no="43">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_RETURN">return</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$query</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">with</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'user'</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">orderBy</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_VARIABLE">$sortBy</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$sortOrder</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+      </line>
+      <line no="44">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">paginate</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_STRING">min</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_VARIABLE">$filters</token>
+        <token name="T_OPEN_SQUARE">[</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'per_page'</token>
+        <token name="T_CLOSE_SQUARE">]</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_COALESCE">??</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_LNUMBER">50</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_LNUMBER">100</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="45">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_CLOSE_CURLY">}</token>
+      </line>
+      <line no="46"/>
+      <line no="47">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_DOC_COMMENT">/** @param array&lt;string, mixed&gt; $data */</token>
+      </line>
+      <line no="48">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_PUBLIC">public</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_FUNCTION">function</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">create</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_ARRAY">array</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$data</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">mixed</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$notable</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_EQUAL">=</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">null</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_COLON">:</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">Note</token>
+      </line>
+      <line no="49">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_OPEN_CURLY">{</token>
+      </line>
+      <line no="50">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_VARIABLE">$note</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_EQUAL">=</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_NEW">new</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">Note</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_OPEN_SQUARE">[</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'content'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$data</token>
+        <token name="T_OPEN_SQUARE">[</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'content'</token>
+        <token name="T_CLOSE_SQUARE">]</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'user_id'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$data</token>
+        <token name="T_OPEN_SQUARE">[</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'user_id'</token>
+        <token name="T_CLOSE_SQUARE">]</token>
+        <token name="T_CLOSE_SQUARE">]</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="51"/>
+      <line no="52">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_IF">if</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_VARIABLE">$notable</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_CURLY">{</token>
+      </line>
+      <line no="53">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_VARIABLE">$note</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">notable</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">associate</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_VARIABLE">$notable</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="54">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_CLOSE_CURLY">}</token>
+      </line>
+      <line no="55"/>
+      <line no="56">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_STRING">DB</token>
+        <token name="T_DOUBLE_COLON">::</token>
+        <token name="T_STRING">transaction</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_FUNCTION">function</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_USE">use</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_VARIABLE">$note</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_CURLY">{</token>
+      </line>
+      <line no="57">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_VARIABLE">$note</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">save</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="58">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_VARIABLE">$this</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">notifyNoteAdded</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_VARIABLE">$note</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="59">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_CLOSE_CURLY">}</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="60"/>
+      <line no="61">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_VARIABLE">$note</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">load</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'user'</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="62"/>
+      <line no="63">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_RETURN">return</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$note</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="64">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_CLOSE_CURLY">}</token>
+      </line>
+      <line no="65"/>
+      <line no="66">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_DOC_COMMENT">/** @param array&lt;string, mixed&gt; $data */</token>
+      </line>
+      <line no="67">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_PUBLIC">public</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_FUNCTION">function</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">update</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_STRING">Note</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$note</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_ARRAY">array</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$data</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_COLON">:</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">Note</token>
+      </line>
+      <line no="68">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_OPEN_CURLY">{</token>
+      </line>
+      <line no="69">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_IF">if</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_ISSET">isset</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_VARIABLE">$data</token>
+        <token name="T_OPEN_SQUARE">[</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'content'</token>
+        <token name="T_CLOSE_SQUARE">]</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_CURLY">{</token>
+      </line>
+      <line no="70">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_VARIABLE">$note</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">content</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_EQUAL">=</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$data</token>
+        <token name="T_OPEN_SQUARE">[</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'content'</token>
+        <token name="T_CLOSE_SQUARE">]</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="71">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_CLOSE_CURLY">}</token>
+      </line>
+      <line no="72">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_VARIABLE">$note</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">save</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="73">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_VARIABLE">$note</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">load</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'user'</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="74"/>
+      <line no="75">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_RETURN">return</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$note</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="76">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_CLOSE_CURLY">}</token>
+      </line>
+      <line no="77"/>
+      <line no="78">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_PUBLIC">public</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_FUNCTION">function</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">delete</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_STRING">Note</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$note</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_COLON">:</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">void</token>
+      </line>
+      <line no="79">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_OPEN_CURLY">{</token>
+      </line>
+      <line no="80">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_VARIABLE">$note</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">delete</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="81">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_CLOSE_CURLY">}</token>
+      </line>
+      <line no="82"/>
+      <line no="83">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_PRIVATE">private</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_FUNCTION">function</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">notifyNoteAdded</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_STRING">Note</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$note</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_COLON">:</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">void</token>
+      </line>
+      <line no="84">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_OPEN_CURLY">{</token>
+      </line>
+      <line no="85">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_VARIABLE">$superAdminRole</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_EQUAL">=</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">Role</token>
+        <token name="T_DOUBLE_COLON">::</token>
+        <token name="T_STRING">where</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'slug'</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'super-admin'</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">first</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="86">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_IF">if</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_EXCLAMATION_MARK">!</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$superAdminRole</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_CURLY">{</token>
+      </line>
+      <line no="87">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_RETURN">return</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="88">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_CLOSE_CURLY">}</token>
+      </line>
+      <line no="89"/>
+      <line no="90">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_VARIABLE">$superAdmins</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_EQUAL">=</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">User</token>
+        <token name="T_DOUBLE_COLON">::</token>
+        <token name="T_STRING">whereHas</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'roles'</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_FN">fn</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_VARIABLE">$q</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$q</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">where</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'roles.id'</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$superAdminRole</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">id</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">get</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="91">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_FOREACH">foreach</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_VARIABLE">$superAdmins</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_AS">as</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$admin</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_CURLY">{</token>
+      </line>
+      <line no="92">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_IF">if</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_VARIABLE">$admin</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">id</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_IS_NOT_IDENTICAL">!==</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$note</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">user_id</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_CURLY">{</token>
+      </line>
+      <line no="93">
+        <token name="T_WHITESPACE">                </token>
+        <token name="T_VARIABLE">$admin</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">notify</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_NEW">new</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">NoteAdded</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_VARIABLE">$note</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="94">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_CLOSE_CURLY">}</token>
+      </line>
+      <line no="95">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_CLOSE_CURLY">}</token>
+      </line>
+      <line no="96">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_CLOSE_CURLY">}</token>
+      </line>
+      <line no="97">
+        <token name="T_CLOSE_CURLY">}</token>
+      </line>
+      <line no="98"/>
+    </source>
+  </file>
+</phpunit>

@@ -12,7 +12,7 @@ class AlertVaultOwner
         $owner = $event->entry->user;
         $causer = $event->causer;
 
-        if (!$owner) {
+        if (! $owner) {
             return;
         }
 

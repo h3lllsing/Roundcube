@@ -11,6 +11,7 @@ use App\Models\ServiceProvider;
 use App\Models\User;
 use App\Models\Voip;
 use App\Models\Vps;
+use HasinHayder\Tyro\Database\Seeders\TyroSeeder;
 use HasinHayder\Tyro\Models\Role;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -23,7 +24,7 @@ class MonitorCheckCommandTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->seed(\HasinHayder\Tyro\Database\Seeders\TyroSeeder::class);
+        $this->seed(TyroSeeder::class);
     }
 
     public function test_checks_all_model_types_with_monitoring_url(): void
@@ -86,7 +87,7 @@ class MonitorCheckCommandTest extends TestCase
 
     public function test_handles_http_exception(): void
     {
-        Http::fake(['*' => fn() => throw new \Exception('Connection refused')]);
+        Http::fake(['*' => fn () => throw new \Exception('Connection refused')]);
         $user = User::factory()->create();
         $user->assignRole(Role::where('slug', 'super-admin')->firstOrFail());
 

@@ -1,0 +1,1122 @@
+<?xml version="1.0"?>
+<phpunit xmlns="https://schema.phpunit.de/coverage/1.0">
+  <file name="ModulePermissionService.php" path="\Services">
+    <totals>
+      <lines total="91" comments="3" code="88" executable="52" executed="52" percent="100.00"/>
+      <methods count="4" tested="4" percent="100.00"/>
+      <functions count="0" tested="0" percent="0"/>
+      <classes count="1" tested="1" percent="100.00"/>
+      <traits count="0" tested="0" percent="0"/>
+    </totals>
+    <class name="App\Services\ModulePermissionService" start="8" executable="52" executed="52" crap="9">
+      <namespace name="App\Services"/>
+      <method name="getForModule" signature="getForModule(App\Models\Module $module): array" start="11" end="32" crap="2" executable="18" executed="18" coverage="100"/>
+      <method name="setForRole" signature="setForRole(App\Models\Module $module, int $roleId, array $permissions): App\Models\ModuleRolePermission" start="35" end="50" crap="1" executable="12" executed="12" coverage="100"/>
+      <method name="removeForRole" signature="removeForRole(App\Models\Module $module, int $roleId): void" start="52" end="57" crap="1" executable="3" executed="3" coverage="100"/>
+      <method name="getUserPermissionsForModule" signature="getUserPermissionsForModule(App\Models\Module $module, mixed $user): ?array" start="60" end="89" crap="5" executable="19" executed="19" coverage="100"/>
+    </class>
+    <coverage>
+      <line nr="13">
+        <covered by="Tests\Unit\ModulePermissionServiceTest::test_get_for_module_returns_mapped_permissions"/>
+        <covered by="Tests\Feature\ModulePermissionTest::test_index_lists_permissions_for_module"/>
+        <covered by="Tests\Feature\ModuleTest::test_list_module_permissions"/>
+      </line>
+      <line nr="14">
+        <covered by="Tests\Unit\ModulePermissionServiceTest::test_get_for_module_returns_mapped_permissions"/>
+        <covered by="Tests\Feature\ModulePermissionTest::test_index_lists_permissions_for_module"/>
+        <covered by="Tests\Feature\ModuleTest::test_list_module_permissions"/>
+      </line>
+      <line nr="15">
+        <covered by="Tests\Unit\ModulePermissionServiceTest::test_get_for_module_returns_mapped_permissions"/>
+        <covered by="Tests\Feature\ModulePermissionTest::test_index_lists_permissions_for_module"/>
+        <covered by="Tests\Feature\ModuleTest::test_list_module_permissions"/>
+      </line>
+      <line nr="16">
+        <covered by="Tests\Unit\ModulePermissionServiceTest::test_get_for_module_returns_mapped_permissions"/>
+        <covered by="Tests\Feature\ModulePermissionTest::test_index_lists_permissions_for_module"/>
+        <covered by="Tests\Feature\ModuleTest::test_list_module_permissions"/>
+      </line>
+      <line nr="30">
+        <covered by="Tests\Unit\ModulePermissionServiceTest::test_get_for_module_returns_mapped_permissions"/>
+        <covered by="Tests\Feature\ModulePermissionTest::test_index_lists_permissions_for_module"/>
+        <covered by="Tests\Feature\ModuleTest::test_list_module_permissions"/>
+      </line>
+      <line nr="31">
+        <covered by="Tests\Unit\ModulePermissionServiceTest::test_get_for_module_returns_mapped_permissions"/>
+        <covered by="Tests\Feature\ModulePermissionTest::test_index_lists_permissions_for_module"/>
+        <covered by="Tests\Feature\ModuleTest::test_list_module_permissions"/>
+      </line>
+      <line nr="17">
+        <covered by="Tests\Unit\ModulePermissionServiceTest::test_get_for_module_returns_mapped_permissions"/>
+        <covered by="Tests\Feature\ModulePermissionTest::test_index_lists_permissions_for_module"/>
+        <covered by="Tests\Feature\ModuleTest::test_list_module_permissions"/>
+      </line>
+      <line nr="20">
+        <covered by="Tests\Unit\ModulePermissionServiceTest::test_get_for_module_returns_mapped_permissions"/>
+        <covered by="Tests\Feature\ModulePermissionTest::test_index_lists_permissions_for_module"/>
+        <covered by="Tests\Feature\ModuleTest::test_list_module_permissions"/>
+      </line>
+      <line nr="21">
+        <covered by="Tests\Unit\ModulePermissionServiceTest::test_get_for_module_returns_mapped_permissions"/>
+        <covered by="Tests\Feature\ModulePermissionTest::test_index_lists_permissions_for_module"/>
+        <covered by="Tests\Feature\ModuleTest::test_list_module_permissions"/>
+      </line>
+      <line nr="22">
+        <covered by="Tests\Unit\ModulePermissionServiceTest::test_get_for_module_returns_mapped_permissions"/>
+        <covered by="Tests\Feature\ModulePermissionTest::test_index_lists_permissions_for_module"/>
+        <covered by="Tests\Feature\ModuleTest::test_list_module_permissions"/>
+      </line>
+      <line nr="23">
+        <covered by="Tests\Unit\ModulePermissionServiceTest::test_get_for_module_returns_mapped_permissions"/>
+        <covered by="Tests\Feature\ModulePermissionTest::test_index_lists_permissions_for_module"/>
+        <covered by="Tests\Feature\ModuleTest::test_list_module_permissions"/>
+      </line>
+      <line nr="24">
+        <covered by="Tests\Unit\ModulePermissionServiceTest::test_get_for_module_returns_mapped_permissions"/>
+        <covered by="Tests\Feature\ModulePermissionTest::test_index_lists_permissions_for_module"/>
+        <covered by="Tests\Feature\ModuleTest::test_list_module_permissions"/>
+      </line>
+      <line nr="25">
+        <covered by="Tests\Unit\ModulePermissionServiceTest::test_get_for_module_returns_mapped_permissions"/>
+        <covered by="Tests\Feature\ModulePermissionTest::test_index_lists_permissions_for_module"/>
+        <covered by="Tests\Feature\ModuleTest::test_list_module_permissions"/>
+      </line>
+      <line nr="26">
+        <covered by="Tests\Unit\ModulePermissionServiceTest::test_get_for_module_returns_mapped_permissions"/>
+        <covered by="Tests\Feature\ModulePermissionTest::test_index_lists_permissions_for_module"/>
+        <covered by="Tests\Feature\ModuleTest::test_list_module_permissions"/>
+      </line>
+      <line nr="27">
+        <covered by="Tests\Unit\ModulePermissionServiceTest::test_get_for_module_returns_mapped_permissions"/>
+        <covered by="Tests\Feature\ModulePermissionTest::test_index_lists_permissions_for_module"/>
+        <covered by="Tests\Feature\ModuleTest::test_list_module_permissions"/>
+      </line>
+      <line nr="28">
+        <covered by="Tests\Unit\ModulePermissionServiceTest::test_get_for_module_returns_mapped_permissions"/>
+        <covered by="Tests\Feature\ModulePermissionTest::test_index_lists_permissions_for_module"/>
+        <covered by="Tests\Feature\ModuleTest::test_list_module_permissions"/>
+      </line>
+      <line nr="38">
+        <covered by="Tests\Unit\ModulePermissionServiceTest::test_set_for_role_creates_permission"/>
+        <covered by="Tests\Unit\ModulePermissionServiceTest::test_set_for_role_updates_existing"/>
+        <covered by="Tests\Feature\ModulePermissionTest::test_store_creates_permission"/>
+        <covered by="Tests\Feature\ModulePermissionTest::test_store_updates_existing_permission"/>
+        <covered by="Tests\Feature\ModuleTest::test_store_module_permission"/>
+        <covered by="Tests\Feature\ModuleTest::test_delete_module_permission"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_module_permissions_destroy_removes"/>
+      </line>
+      <line nr="39">
+        <covered by="Tests\Unit\ModulePermissionServiceTest::test_set_for_role_creates_permission"/>
+        <covered by="Tests\Unit\ModulePermissionServiceTest::test_set_for_role_updates_existing"/>
+        <covered by="Tests\Feature\ModulePermissionTest::test_store_creates_permission"/>
+        <covered by="Tests\Feature\ModulePermissionTest::test_store_updates_existing_permission"/>
+        <covered by="Tests\Feature\ModuleTest::test_store_module_permission"/>
+        <covered by="Tests\Feature\ModuleTest::test_delete_module_permission"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_module_permissions_destroy_removes"/>
+      </line>
+      <line nr="40">
+        <covered by="Tests\Unit\ModulePermissionServiceTest::test_set_for_role_creates_permission"/>
+        <covered by="Tests\Unit\ModulePermissionServiceTest::test_set_for_role_updates_existing"/>
+        <covered by="Tests\Feature\ModulePermissionTest::test_store_creates_permission"/>
+        <covered by="Tests\Feature\ModulePermissionTest::test_store_updates_existing_permission"/>
+        <covered by="Tests\Feature\ModuleTest::test_store_module_permission"/>
+        <covered by="Tests\Feature\ModuleTest::test_delete_module_permission"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_module_permissions_destroy_removes"/>
+      </line>
+      <line nr="41">
+        <covered by="Tests\Unit\ModulePermissionServiceTest::test_set_for_role_creates_permission"/>
+        <covered by="Tests\Unit\ModulePermissionServiceTest::test_set_for_role_updates_existing"/>
+        <covered by="Tests\Feature\ModulePermissionTest::test_store_creates_permission"/>
+        <covered by="Tests\Feature\ModulePermissionTest::test_store_updates_existing_permission"/>
+        <covered by="Tests\Feature\ModuleTest::test_store_module_permission"/>
+        <covered by="Tests\Feature\ModuleTest::test_delete_module_permission"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_module_permissions_destroy_removes"/>
+      </line>
+      <line nr="42">
+        <covered by="Tests\Unit\ModulePermissionServiceTest::test_set_for_role_creates_permission"/>
+        <covered by="Tests\Unit\ModulePermissionServiceTest::test_set_for_role_updates_existing"/>
+        <covered by="Tests\Feature\ModulePermissionTest::test_store_creates_permission"/>
+        <covered by="Tests\Feature\ModulePermissionTest::test_store_updates_existing_permission"/>
+        <covered by="Tests\Feature\ModuleTest::test_store_module_permission"/>
+        <covered by="Tests\Feature\ModuleTest::test_delete_module_permission"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_module_permissions_destroy_removes"/>
+      </line>
+      <line nr="43">
+        <covered by="Tests\Unit\ModulePermissionServiceTest::test_set_for_role_creates_permission"/>
+        <covered by="Tests\Unit\ModulePermissionServiceTest::test_set_for_role_updates_existing"/>
+        <covered by="Tests\Feature\ModulePermissionTest::test_store_creates_permission"/>
+        <covered by="Tests\Feature\ModulePermissionTest::test_store_updates_existing_permission"/>
+        <covered by="Tests\Feature\ModuleTest::test_store_module_permission"/>
+        <covered by="Tests\Feature\ModuleTest::test_delete_module_permission"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_module_permissions_destroy_removes"/>
+      </line>
+      <line nr="37">
+        <covered by="Tests\Unit\ModulePermissionServiceTest::test_set_for_role_creates_permission"/>
+        <covered by="Tests\Unit\ModulePermissionServiceTest::test_set_for_role_updates_existing"/>
+        <covered by="Tests\Feature\ModulePermissionTest::test_store_creates_permission"/>
+        <covered by="Tests\Feature\ModulePermissionTest::test_store_updates_existing_permission"/>
+        <covered by="Tests\Feature\ModuleTest::test_store_module_permission"/>
+        <covered by="Tests\Feature\ModuleTest::test_delete_module_permission"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_module_permissions_destroy_removes"/>
+      </line>
+      <line nr="46">
+        <covered by="Tests\Unit\ModulePermissionServiceTest::test_set_for_role_creates_permission"/>
+        <covered by="Tests\Unit\ModulePermissionServiceTest::test_set_for_role_updates_existing"/>
+        <covered by="Tests\Feature\ModulePermissionTest::test_store_creates_permission"/>
+        <covered by="Tests\Feature\ModulePermissionTest::test_store_updates_existing_permission"/>
+        <covered by="Tests\Feature\ModuleTest::test_store_module_permission"/>
+        <covered by="Tests\Feature\ModuleTest::test_delete_module_permission"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_module_permissions_destroy_removes"/>
+      </line>
+      <line nr="47">
+        <covered by="Tests\Unit\ModulePermissionServiceTest::test_set_for_role_creates_permission"/>
+        <covered by="Tests\Unit\ModulePermissionServiceTest::test_set_for_role_updates_existing"/>
+        <covered by="Tests\Feature\ModulePermissionTest::test_store_creates_permission"/>
+        <covered by="Tests\Feature\ModulePermissionTest::test_store_updates_existing_permission"/>
+        <covered by="Tests\Feature\ModuleTest::test_store_module_permission"/>
+        <covered by="Tests\Feature\ModuleTest::test_delete_module_permission"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_module_permissions_destroy_removes"/>
+      </line>
+      <line nr="54">
+        <covered by="Tests\Unit\ModulePermissionServiceTest::test_remove_for_role_deletes_permission"/>
+        <covered by="Tests\Feature\ModulePermissionTest::test_destroy_removes_role_permissions"/>
+        <covered by="Tests\Feature\ModuleTest::test_delete_module_permission"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_module_permissions_destroy_removes"/>
+      </line>
+      <line nr="55">
+        <covered by="Tests\Unit\ModulePermissionServiceTest::test_remove_for_role_deletes_permission"/>
+        <covered by="Tests\Feature\ModulePermissionTest::test_destroy_removes_role_permissions"/>
+        <covered by="Tests\Feature\ModuleTest::test_delete_module_permission"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_module_permissions_destroy_removes"/>
+      </line>
+      <line nr="56">
+        <covered by="Tests\Unit\ModulePermissionServiceTest::test_remove_for_role_deletes_permission"/>
+        <covered by="Tests\Feature\ModulePermissionTest::test_destroy_removes_role_permissions"/>
+        <covered by="Tests\Feature\ModuleTest::test_delete_module_permission"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_module_permissions_destroy_removes"/>
+      </line>
+      <line nr="62">
+        <covered by="Tests\Unit\ModulePermissionServiceTest::test_get_user_permissions_for_module_merges_multiple_roles"/>
+        <covered by="Tests\Unit\ModulePermissionServiceTest::test_get_user_permissions_returns_null_when_no_perms"/>
+        <covered by="Tests\Feature\ModulePermissionTest::test_user_permissions_for_module"/>
+        <covered by="Tests\Feature\ModuleTest::test_my_module_permissions_single_module"/>
+      </line>
+      <line nr="63">
+        <covered by="Tests\Unit\ModulePermissionServiceTest::test_get_user_permissions_for_module_merges_multiple_roles"/>
+        <covered by="Tests\Unit\ModulePermissionServiceTest::test_get_user_permissions_returns_null_when_no_perms"/>
+        <covered by="Tests\Feature\ModulePermissionTest::test_user_permissions_for_module"/>
+        <covered by="Tests\Feature\ModuleTest::test_my_module_permissions_single_module"/>
+      </line>
+      <line nr="64">
+        <covered by="Tests\Unit\ModulePermissionServiceTest::test_get_user_permissions_for_module_merges_multiple_roles"/>
+        <covered by="Tests\Unit\ModulePermissionServiceTest::test_get_user_permissions_returns_null_when_no_perms"/>
+        <covered by="Tests\Feature\ModulePermissionTest::test_user_permissions_for_module"/>
+        <covered by="Tests\Feature\ModuleTest::test_my_module_permissions_single_module"/>
+      </line>
+      <line nr="65">
+        <covered by="Tests\Unit\ModulePermissionServiceTest::test_get_user_permissions_for_module_merges_multiple_roles"/>
+        <covered by="Tests\Unit\ModulePermissionServiceTest::test_get_user_permissions_returns_null_when_no_perms"/>
+        <covered by="Tests\Feature\ModulePermissionTest::test_user_permissions_for_module"/>
+        <covered by="Tests\Feature\ModuleTest::test_my_module_permissions_single_module"/>
+      </line>
+      <line nr="67">
+        <covered by="Tests\Unit\ModulePermissionServiceTest::test_get_user_permissions_for_module_merges_multiple_roles"/>
+        <covered by="Tests\Unit\ModulePermissionServiceTest::test_get_user_permissions_returns_null_when_no_perms"/>
+        <covered by="Tests\Feature\ModulePermissionTest::test_user_permissions_for_module"/>
+        <covered by="Tests\Feature\ModuleTest::test_my_module_permissions_single_module"/>
+      </line>
+      <line nr="68">
+        <covered by="Tests\Unit\ModulePermissionServiceTest::test_get_user_permissions_returns_null_when_no_perms"/>
+      </line>
+      <line nr="71">
+        <covered by="Tests\Unit\ModulePermissionServiceTest::test_get_user_permissions_for_module_merges_multiple_roles"/>
+        <covered by="Tests\Feature\ModulePermissionTest::test_user_permissions_for_module"/>
+        <covered by="Tests\Feature\ModuleTest::test_my_module_permissions_single_module"/>
+      </line>
+      <line nr="80">
+        <covered by="Tests\Unit\ModulePermissionServiceTest::test_get_user_permissions_for_module_merges_multiple_roles"/>
+        <covered by="Tests\Feature\ModulePermissionTest::test_user_permissions_for_module"/>
+        <covered by="Tests\Feature\ModuleTest::test_my_module_permissions_single_module"/>
+      </line>
+      <line nr="81">
+        <covered by="Tests\Unit\ModulePermissionServiceTest::test_get_user_permissions_for_module_merges_multiple_roles"/>
+        <covered by="Tests\Feature\ModulePermissionTest::test_user_permissions_for_module"/>
+        <covered by="Tests\Feature\ModuleTest::test_my_module_permissions_single_module"/>
+      </line>
+      <line nr="82">
+        <covered by="Tests\Unit\ModulePermissionServiceTest::test_get_user_permissions_for_module_merges_multiple_roles"/>
+        <covered by="Tests\Feature\ModulePermissionTest::test_user_permissions_for_module"/>
+        <covered by="Tests\Feature\ModuleTest::test_my_module_permissions_single_module"/>
+      </line>
+      <line nr="83">
+        <covered by="Tests\Unit\ModulePermissionServiceTest::test_get_user_permissions_for_module_merges_multiple_roles"/>
+        <covered by="Tests\Feature\ModulePermissionTest::test_user_permissions_for_module"/>
+        <covered by="Tests\Feature\ModuleTest::test_my_module_permissions_single_module"/>
+      </line>
+      <line nr="88">
+        <covered by="Tests\Unit\ModulePermissionServiceTest::test_get_user_permissions_for_module_merges_multiple_roles"/>
+        <covered by="Tests\Feature\ModulePermissionTest::test_user_permissions_for_module"/>
+        <covered by="Tests\Feature\ModuleTest::test_my_module_permissions_single_module"/>
+      </line>
+      <line nr="19">
+        <covered by="Tests\Unit\ModulePermissionServiceTest::test_get_for_module_returns_mapped_permissions"/>
+        <covered by="Tests\Feature\ModulePermissionTest::test_index_lists_permissions_for_module"/>
+        <covered by="Tests\Feature\ModuleTest::test_list_module_permissions"/>
+      </line>
+      <line nr="29">
+        <covered by="Tests\Unit\ModulePermissionServiceTest::test_get_for_module_returns_mapped_permissions"/>
+        <covered by="Tests\Feature\ModulePermissionTest::test_index_lists_permissions_for_module"/>
+        <covered by="Tests\Feature\ModuleTest::test_list_module_permissions"/>
+      </line>
+      <line nr="44">
+        <covered by="Tests\Unit\ModulePermissionServiceTest::test_set_for_role_creates_permission"/>
+        <covered by="Tests\Unit\ModulePermissionServiceTest::test_set_for_role_updates_existing"/>
+        <covered by="Tests\Feature\ModulePermissionTest::test_store_creates_permission"/>
+        <covered by="Tests\Feature\ModulePermissionTest::test_store_updates_existing_permission"/>
+        <covered by="Tests\Feature\ModuleTest::test_store_module_permission"/>
+        <covered by="Tests\Feature\ModuleTest::test_delete_module_permission"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_module_permissions_destroy_removes"/>
+      </line>
+      <line nr="48">
+        <covered by="Tests\Unit\ModulePermissionServiceTest::test_set_for_role_creates_permission"/>
+        <covered by="Tests\Unit\ModulePermissionServiceTest::test_set_for_role_updates_existing"/>
+        <covered by="Tests\Feature\ModulePermissionTest::test_store_creates_permission"/>
+        <covered by="Tests\Feature\ModulePermissionTest::test_store_updates_existing_permission"/>
+        <covered by="Tests\Feature\ModuleTest::test_store_module_permission"/>
+        <covered by="Tests\Feature\ModuleTest::test_delete_module_permission"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_module_permissions_destroy_removes"/>
+      </line>
+      <line nr="49">
+        <covered by="Tests\Unit\ModulePermissionServiceTest::test_set_for_role_creates_permission"/>
+        <covered by="Tests\Unit\ModulePermissionServiceTest::test_set_for_role_updates_existing"/>
+        <covered by="Tests\Feature\ModulePermissionTest::test_store_creates_permission"/>
+        <covered by="Tests\Feature\ModulePermissionTest::test_store_updates_existing_permission"/>
+        <covered by="Tests\Feature\ModuleTest::test_store_module_permission"/>
+        <covered by="Tests\Feature\ModuleTest::test_delete_module_permission"/>
+        <covered by="Tests\Feature\WebNewResourcesTest::test_module_permissions_destroy_removes"/>
+      </line>
+      <line nr="72">
+        <covered by="Tests\Unit\ModulePermissionServiceTest::test_get_user_permissions_for_module_merges_multiple_roles"/>
+        <covered by="Tests\Feature\ModulePermissionTest::test_user_permissions_for_module"/>
+        <covered by="Tests\Feature\ModuleTest::test_my_module_permissions_single_module"/>
+      </line>
+      <line nr="73">
+        <covered by="Tests\Unit\ModulePermissionServiceTest::test_get_user_permissions_for_module_merges_multiple_roles"/>
+        <covered by="Tests\Feature\ModulePermissionTest::test_user_permissions_for_module"/>
+        <covered by="Tests\Feature\ModuleTest::test_my_module_permissions_single_module"/>
+      </line>
+      <line nr="74">
+        <covered by="Tests\Unit\ModulePermissionServiceTest::test_get_user_permissions_for_module_merges_multiple_roles"/>
+        <covered by="Tests\Feature\ModulePermissionTest::test_user_permissions_for_module"/>
+        <covered by="Tests\Feature\ModuleTest::test_my_module_permissions_single_module"/>
+      </line>
+      <line nr="75">
+        <covered by="Tests\Unit\ModulePermissionServiceTest::test_get_user_permissions_for_module_merges_multiple_roles"/>
+        <covered by="Tests\Feature\ModulePermissionTest::test_user_permissions_for_module"/>
+        <covered by="Tests\Feature\ModuleTest::test_my_module_permissions_single_module"/>
+      </line>
+      <line nr="76">
+        <covered by="Tests\Unit\ModulePermissionServiceTest::test_get_user_permissions_for_module_merges_multiple_roles"/>
+        <covered by="Tests\Feature\ModulePermissionTest::test_user_permissions_for_module"/>
+        <covered by="Tests\Feature\ModuleTest::test_my_module_permissions_single_module"/>
+      </line>
+      <line nr="77">
+        <covered by="Tests\Unit\ModulePermissionServiceTest::test_get_user_permissions_for_module_merges_multiple_roles"/>
+        <covered by="Tests\Feature\ModulePermissionTest::test_user_permissions_for_module"/>
+        <covered by="Tests\Feature\ModuleTest::test_my_module_permissions_single_module"/>
+      </line>
+      <line nr="78">
+        <covered by="Tests\Unit\ModulePermissionServiceTest::test_get_user_permissions_for_module_merges_multiple_roles"/>
+        <covered by="Tests\Feature\ModulePermissionTest::test_user_permissions_for_module"/>
+        <covered by="Tests\Feature\ModuleTest::test_my_module_permissions_single_module"/>
+      </line>
+    </coverage>
+    <source>
+      <line no="1">
+        <token name="T_OPEN_TAG">&lt;?php</token>
+      </line>
+      <line no="2"/>
+      <line no="3">
+        <token name="T_NAMESPACE">namespace</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_NAME_QUALIFIED">App\Services</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="4"/>
+      <line no="5">
+        <token name="T_USE">use</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_NAME_QUALIFIED">App\Models\Module</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="6">
+        <token name="T_USE">use</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_NAME_QUALIFIED">App\Models\ModuleRolePermission</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="7"/>
+      <line no="8">
+        <token name="T_CLASS">class</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">ModulePermissionService</token>
+      </line>
+      <line no="9">
+        <token name="T_OPEN_CURLY">{</token>
+      </line>
+      <line no="10">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_DOC_COMMENT">/** @return array&lt;int, array{id: int, role_id: int, role_name: string|null, can_create: bool, can_read: bool, can_update: bool, can_delete: bool, can_approve: bool, can_export: bool}&gt; */</token>
+      </line>
+      <line no="11">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_PUBLIC">public</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_FUNCTION">function</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">getForModule</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_STRING">Module</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$module</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_COLON">:</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_ARRAY">array</token>
+      </line>
+      <line no="12">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_OPEN_CURLY">{</token>
+      </line>
+      <line no="13">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_RETURN">return</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">ModuleRolePermission</token>
+        <token name="T_DOUBLE_COLON">::</token>
+        <token name="T_STRING">where</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'module_id'</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$module</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">id</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+      </line>
+      <line no="14">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">with</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'role'</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+      </line>
+      <line no="15">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">get</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+      </line>
+      <line no="16">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">map</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_FUNCTION">function</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_STRING">ModuleRolePermission</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$perm</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_CURLY">{</token>
+      </line>
+      <line no="17">
+        <token name="T_WHITESPACE">                </token>
+        <token name="T_VARIABLE">$roleName</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_EQUAL">=</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$perm</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">role</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_QUESTION_MARK">?</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING_CAST">(string)</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$perm</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">role</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">getAttribute</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'name'</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_COLON">:</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">null</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="18"/>
+      <line no="19">
+        <token name="T_WHITESPACE">                </token>
+        <token name="T_RETURN">return</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_SQUARE">[</token>
+      </line>
+      <line no="20">
+        <token name="T_WHITESPACE">                    </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'id'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_INT_CAST">(int)</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$perm</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">id</token>
+        <token name="T_COMMA">,</token>
+      </line>
+      <line no="21">
+        <token name="T_WHITESPACE">                    </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'role_id'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_INT_CAST">(int)</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$perm</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">role_id</token>
+        <token name="T_COMMA">,</token>
+      </line>
+      <line no="22">
+        <token name="T_WHITESPACE">                    </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'role_name'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$roleName</token>
+        <token name="T_COMMA">,</token>
+      </line>
+      <line no="23">
+        <token name="T_WHITESPACE">                    </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'can_create'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_BOOL_CAST">(bool)</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$perm</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">can_create</token>
+        <token name="T_COMMA">,</token>
+      </line>
+      <line no="24">
+        <token name="T_WHITESPACE">                    </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'can_read'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_BOOL_CAST">(bool)</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$perm</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">can_read</token>
+        <token name="T_COMMA">,</token>
+      </line>
+      <line no="25">
+        <token name="T_WHITESPACE">                    </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'can_update'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_BOOL_CAST">(bool)</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$perm</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">can_update</token>
+        <token name="T_COMMA">,</token>
+      </line>
+      <line no="26">
+        <token name="T_WHITESPACE">                    </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'can_delete'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_BOOL_CAST">(bool)</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$perm</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">can_delete</token>
+        <token name="T_COMMA">,</token>
+      </line>
+      <line no="27">
+        <token name="T_WHITESPACE">                    </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'can_approve'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_BOOL_CAST">(bool)</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$perm</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">can_approve</token>
+        <token name="T_COMMA">,</token>
+      </line>
+      <line no="28">
+        <token name="T_WHITESPACE">                    </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'can_export'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_BOOL_CAST">(bool)</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$perm</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">can_export</token>
+        <token name="T_COMMA">,</token>
+      </line>
+      <line no="29">
+        <token name="T_WHITESPACE">                </token>
+        <token name="T_CLOSE_SQUARE">]</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="30">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_CLOSE_CURLY">}</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+      </line>
+      <line no="31">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">all</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="32">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_CLOSE_CURLY">}</token>
+      </line>
+      <line no="33"/>
+      <line no="34">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_DOC_COMMENT">/** @param array&lt;string, bool&gt; $permissions */</token>
+      </line>
+      <line no="35">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_PUBLIC">public</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_FUNCTION">function</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">setForRole</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_STRING">Module</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$module</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">int</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$roleId</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_ARRAY">array</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$permissions</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_COLON">:</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">ModuleRolePermission</token>
+      </line>
+      <line no="36">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_OPEN_CURLY">{</token>
+      </line>
+      <line no="37">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_VARIABLE">$data</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_EQUAL">=</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_SQUARE">[</token>
+      </line>
+      <line no="38">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'can_create'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$permissions</token>
+        <token name="T_OPEN_SQUARE">[</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'can_create'</token>
+        <token name="T_CLOSE_SQUARE">]</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_COALESCE">??</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">false</token>
+        <token name="T_COMMA">,</token>
+      </line>
+      <line no="39">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'can_read'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$permissions</token>
+        <token name="T_OPEN_SQUARE">[</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'can_read'</token>
+        <token name="T_CLOSE_SQUARE">]</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_COALESCE">??</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">false</token>
+        <token name="T_COMMA">,</token>
+      </line>
+      <line no="40">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'can_update'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$permissions</token>
+        <token name="T_OPEN_SQUARE">[</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'can_update'</token>
+        <token name="T_CLOSE_SQUARE">]</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_COALESCE">??</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">false</token>
+        <token name="T_COMMA">,</token>
+      </line>
+      <line no="41">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'can_delete'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$permissions</token>
+        <token name="T_OPEN_SQUARE">[</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'can_delete'</token>
+        <token name="T_CLOSE_SQUARE">]</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_COALESCE">??</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">false</token>
+        <token name="T_COMMA">,</token>
+      </line>
+      <line no="42">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'can_approve'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$permissions</token>
+        <token name="T_OPEN_SQUARE">[</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'can_approve'</token>
+        <token name="T_CLOSE_SQUARE">]</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_COALESCE">??</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">false</token>
+        <token name="T_COMMA">,</token>
+      </line>
+      <line no="43">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'can_export'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$permissions</token>
+        <token name="T_OPEN_SQUARE">[</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'can_export'</token>
+        <token name="T_CLOSE_SQUARE">]</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_COALESCE">??</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">false</token>
+        <token name="T_COMMA">,</token>
+      </line>
+      <line no="44">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_CLOSE_SQUARE">]</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="45"/>
+      <line no="46">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_RETURN">return</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">ModuleRolePermission</token>
+        <token name="T_DOUBLE_COLON">::</token>
+        <token name="T_STRING">updateOrCreate</token>
+        <token name="T_OPEN_BRACKET">(</token>
+      </line>
+      <line no="47">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_OPEN_SQUARE">[</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'module_id'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$module</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">id</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'role_id'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$roleId</token>
+        <token name="T_CLOSE_SQUARE">]</token>
+        <token name="T_COMMA">,</token>
+      </line>
+      <line no="48">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_VARIABLE">$data</token>
+      </line>
+      <line no="49">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="50">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_CLOSE_CURLY">}</token>
+      </line>
+      <line no="51"/>
+      <line no="52">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_PUBLIC">public</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_FUNCTION">function</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">removeForRole</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_STRING">Module</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$module</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">int</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$roleId</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_COLON">:</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">void</token>
+      </line>
+      <line no="53">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_OPEN_CURLY">{</token>
+      </line>
+      <line no="54">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_STRING">ModuleRolePermission</token>
+        <token name="T_DOUBLE_COLON">::</token>
+        <token name="T_STRING">where</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'module_id'</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$module</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">id</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+      </line>
+      <line no="55">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">where</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'role_id'</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$roleId</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+      </line>
+      <line no="56">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">delete</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="57">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_CLOSE_CURLY">}</token>
+      </line>
+      <line no="58"/>
+      <line no="59">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_DOC_COMMENT">/** @return array{can_create: bool, can_read: bool, can_update: bool, can_delete: bool, can_approve: bool, can_export: bool}|null */</token>
+      </line>
+      <line no="60">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_PUBLIC">public</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_FUNCTION">function</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">getUserPermissionsForModule</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_STRING">Module</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$module</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">mixed</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$user</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_COLON">:</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_QUESTION_MARK">?</token>
+        <token name="T_ARRAY">array</token>
+      </line>
+      <line no="61">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_OPEN_CURLY">{</token>
+      </line>
+      <line no="62">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_VARIABLE">$roleIds</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_EQUAL">=</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$user</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">roles</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">pluck</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'roles.id'</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="63">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_VARIABLE">$perms</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_EQUAL">=</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">ModuleRolePermission</token>
+        <token name="T_DOUBLE_COLON">::</token>
+        <token name="T_STRING">where</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'module_id'</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$module</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">id</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+      </line>
+      <line no="64">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">whereIn</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'role_id'</token>
+        <token name="T_COMMA">,</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$roleIds</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+      </line>
+      <line no="65">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">get</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="66"/>
+      <line no="67">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_IF">if</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_VARIABLE">$perms</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_STRING">isEmpty</token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_CURLY">{</token>
+      </line>
+      <line no="68">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_RETURN">return</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">null</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="69">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_CLOSE_CURLY">}</token>
+      </line>
+      <line no="70"/>
+      <line no="71">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_VARIABLE">$merged</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_EQUAL">=</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_SQUARE">[</token>
+      </line>
+      <line no="72">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'can_create'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">false</token>
+        <token name="T_COMMA">,</token>
+      </line>
+      <line no="73">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'can_read'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">false</token>
+        <token name="T_COMMA">,</token>
+      </line>
+      <line no="74">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'can_update'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">false</token>
+        <token name="T_COMMA">,</token>
+      </line>
+      <line no="75">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'can_delete'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">false</token>
+        <token name="T_COMMA">,</token>
+      </line>
+      <line no="76">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'can_approve'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">false</token>
+        <token name="T_COMMA">,</token>
+      </line>
+      <line no="77">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_CONSTANT_ENCAPSED_STRING">'can_export'</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">false</token>
+        <token name="T_COMMA">,</token>
+      </line>
+      <line no="78">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_CLOSE_SQUARE">]</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="79"/>
+      <line no="80">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_FOREACH">foreach</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_VARIABLE">$perms</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_AS">as</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$p</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_CURLY">{</token>
+      </line>
+      <line no="81">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_FOREACH">foreach</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_VARIABLE">$merged</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_AS">as</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$key</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_DOUBLE_ARROW">=&gt;</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_AMPERSAND_FOLLOWED_BY_VAR_OR_VARARG">&amp;</token>
+        <token name="T_VARIABLE">$val</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_CURLY">{</token>
+      </line>
+      <line no="82">
+        <token name="T_WHITESPACE">                </token>
+        <token name="T_IF">if</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_BRACKET">(</token>
+        <token name="T_VARIABLE">$p</token>
+        <token name="T_OBJECT_OPERATOR">-&gt;</token>
+        <token name="T_VARIABLE">$key</token>
+        <token name="T_CLOSE_BRACKET">)</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_OPEN_CURLY">{</token>
+      </line>
+      <line no="83">
+        <token name="T_WHITESPACE">                    </token>
+        <token name="T_VARIABLE">$val</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_EQUAL">=</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_STRING">true</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="84">
+        <token name="T_WHITESPACE">                </token>
+        <token name="T_CLOSE_CURLY">}</token>
+      </line>
+      <line no="85">
+        <token name="T_WHITESPACE">            </token>
+        <token name="T_CLOSE_CURLY">}</token>
+      </line>
+      <line no="86">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_CLOSE_CURLY">}</token>
+      </line>
+      <line no="87"/>
+      <line no="88">
+        <token name="T_WHITESPACE">        </token>
+        <token name="T_RETURN">return</token>
+        <token name="T_WHITESPACE"> </token>
+        <token name="T_VARIABLE">$merged</token>
+        <token name="T_SEMICOLON">;</token>
+      </line>
+      <line no="89">
+        <token name="T_WHITESPACE">    </token>
+        <token name="T_CLOSE_CURLY">}</token>
+      </line>
+      <line no="90">
+        <token name="T_CLOSE_CURLY">}</token>
+      </line>
+      <line no="91"/>
+    </source>
+  </file>
+</phpunit>

@@ -1,0 +1,340 @@
+================================================================================
+PHASE 5A — FINAL ARCHITECTURE REVIEW
+================================================================================
+Date:       2026-06-26
+Status:     FINAL — READY FOR PHASE 5B IMPLEMENTATION
+Ref:        PHASE_5A_SIMPLIFIED_IT_ASSET_PLAN.txt
+Changes:    8 adjustments applied below
+================================================================================
+
+TABLE OF ADJUSTMENTS
+================================================================================
+
+  #   Adjustment                                              Section
+  ─── ─────────────────────────────────────────────────────  ────────────────
+  1   Remove "maintenance" status                            §1
+  2   Flat locations (no hierarchy)                           §2
+  3   No brand/model duplication — prefer type_id only       §3
+  4   Reuse existing Department structure (or free-text)      §4
+  5   Keep JSON specifications — no EAV                       §5
+  6   Optional Vault integration reference                    §6
+  7   Add qr_identifier field — no QR generation              §7
+  8   Future BitLocker Recovery Key via Vault                 §8
+
+================================================================================
+§1 — STATUS VALUES (REDUCED)
+================================================================================
+
+  Before (simplified plan):  available, assigned, maintenance, lost, decommissioned
+
+  After (final):             available, assigned, lost, decommissioned
+
+  Removed:  maintenance
+  Rationale: No maintenance workflow exists in scope; assets needing repair
+  can be set to "available" (if repairable) or "decommissioned" (if disposed).
+  If repair tracking is needed in the future, a separate maintenance_records
+  table can be added without changing asset statuses.
+
+  Status transition matrix:
+
+    available       ──→ assigned, lost, decommissioned
+    assigned        ──→ available, lost, decommissioned
+    lost            ──→ (terminal)
+    decommissioned  ──→ (terminal)
+
+  Implementation: Use a simple string column with validation in requests.
+  No enum class needed for 4 values — config constant or array is sufficient:
+
+    Asset::STATUSES = ['available', 'assigned', 'lost', 'decommissioned']
+
+================================================================================
+§2 — FLAT LOCATIONS (NO HIERARCHY)
+================================================================================
+
+  Before:  asset_locations with parent_id for hierarchy
+
+  After:   Flat locations only. No parent_id column.
+
+  asset_locations table (revised):
+
+    id              bigIncrements      PK
+    name            string(191)        "HQ Floor 3 Rack A1"
+    description     text, nullable     Optional notes about this location
+    is_active       boolean            default true
+    created_at      timestamp
+    updated_at      timestamp
+    deleted_at      softDeletes
+
+    INDEX(is_active)
+
+  No parent_id, no left/right nested set, no depth column. Locations are
+  flat labels. If hierarchical location is needed later, add parent_id then.
+
+================================================================================
+§3 — NO BRAND/MODEL DUPLICATION
+================================================================================
+
+  Before (simplified plan):
+    asset_types had:  name, brand, model_number
+    assets had:       brand, model  (denormalized)
+
+  After:
+    asset_types has:  name, brand, model_number  (brand defined here only)
+    assets has:       type_id (FK) — NO brand, NO model columns
+
+  Rationale: Brand and model are properties of the type, not the individual
+  asset. Denormalizing them onto assets creates update anomalies (change a
+  type's brand → must update N assets) and duplicates data. The relationship
+  `asset->type->brand` is one JOIN away and performs well with indexing.
+
+  Updated asset_types table:
+
+    id              bigIncrements      PK
+    category_id     bigInteger, FK → asset_categories.id, NOT NULL
+    name            string(191)        "Latitude 5540" (model variant name)
+    brand           string(191)        "Dell" (manufacturer)
+    model_number    string(100), nullable  Official SKU/model code
+    is_active       boolean            default true
+    created_at      timestamp
+    updated_at      timestamp
+    deleted_at      softDeletes
+
+    UNIQUE(category_id, brand, name)
+
+  Updated assets table (relevant columns only):
+
+    id              bigIncrements      PK
+    asset_tag       string(100)        UNIQUE
+    category_id     bigInteger, FK → asset_categories.id, NOT NULL
+    type_id         bigInteger, FK → asset_types.id, NOT NULL
+    serial_number   string(191), nullable
+    status          string(50)         default 'available'
+    ...
+    (NO brand or model columns)
+
+  Retrieving brand/model in Blade views:
+    $asset->type->brand
+    $asset->type->name
+    $asset->type->model_number
+
+  Eager-loading for index pages:
+    Asset::with('type')->get();
+
+================================================================================
+§4 — DEPARTMENT STRUCTURE
+================================================================================
+
+  Finding: No existing Department model or table exists in the codebase.
+  The only appearance of "department" is a free-text string column on the
+  VPS model, which was later dropped.
+
+  Decision: Use a free-text string on assets. Does not warrant a full table
+  or FK for this scope.
+
+  assets.department:
+
+    department      string(191), nullable
+
+  If a Department model is added in the future (cross-cutting concern across
+  multiple modules), migrate to a FK at that time. The migration would:
+    1. Create departments table (id, name, code, is_active)
+    2. Backfill: INSERT DISTINCT department INTO departments
+    3. Add department_id FK to assets
+    4. Drop assets.department
+
+================================================================================
+§5 — JSON SPECIFICATIONS (CONFIRMED)
+================================================================================
+
+  No change from simplified plan. JSON column on assets table.
+
+    specifications  json, nullable
+
+  Example values:
+
+    Laptop:         {"processor":"Intel i7-1365U","ram":"32GB","storage":"512GB","os":"Windows 11 Pro"}
+    Headphone:      {"connection_type":"Bluetooth 5.3","mic_available":true}
+    Mouse:          {"connection_type":"USB-C","dpi":8000}
+    Network Device: {"ip_address":"192.168.1.1","mac_address":"00:1A:2B:3C:4D:5E","ports":24,"firmware":"v12.2","login_url":"https://192.168.1.1"}
+
+  No EAV table. No separate asset_specifications table.
+
+  In Blade views, access via:
+    $asset->specifications['processor'] ?? 'N/A'
+
+  In form validation, define rules per category:
+    'specifications.processor' => 'required_if:category_id,1|string|max:255'
+    'specifications.connection_type' => 'required_if:category_id,2|string|max:255'
+    etc.
+
+================================================================================
+§6 — OPTIONAL VAULT INTEGRATION
+================================================================================
+
+  Assets may reference an existing VaultEntry credential. This is purely
+  optional — most assets will not have a vault reference.
+
+  Add to assets table:
+
+    vault_entry_id  bigInteger, FK → password_vault.id, nullable
+
+  Relationship on Asset model:
+
+    public function vaultEntry(): BelongsTo
+    {
+        return $this->belongsTo(VaultEntry::class);
+    }
+
+  Usage:
+    - Network devices may reference admin login credentials
+    - Laptops may reference BitLocker recovery keys (see §8)
+    - No passwords stored directly in the assets table or specifications JSON
+
+  Authorization:
+    - The existing VaultEntry `canAccessVault()` / `isVaultOwner()` checks
+      apply. Users must have vault read permission to view the referenced
+      credential.
+    - Asset detail page: show a "View Credentials" button only if
+      Auth::user()->canAccessVault($asset->vaultEntry) passes.
+    - Require vault reveal confirmation (follow existing reveal pattern).
+
+================================================================================
+§7 — qr_identifier FIELD (NO QR GENERATION)
+================================================================================
+
+  Add to assets table:
+
+    qr_identifier   string(100), nullable   UNIQUE
+
+  Purpose:
+    - Stores a user-assigned QR/barcode code for physical inventory scans
+    - Human-readable, set manually or imported from CSV
+    - Independent from the auto-increment asset_tag
+
+  Optional: generate a default based on asset_tag if left empty during
+  creation (e.g., set to asset_tag value).
+
+  What is NOT included:
+    - No QR image generation library
+    - No print-label template
+    - No mobile scanning endpoint
+    - No QR controller or route
+
+  These can be added in a future phase if needed. The field exists so the
+  data model is ready without migration.
+
+================================================================================
+§8 — FUTURE BITLOCKER RECOVERY KEY SUPPORT
+================================================================================
+
+  NOT IMPLEMENTED. Documented for future reference.
+
+  BitLocker Recovery Keys are 48-digit numeric recovery passwords used to
+  unlock encrypted Windows drives. They should be stored in the Vault
+  (password_vault table), NOT in the assets table or specifications JSON.
+
+  Recommended approach for future implementation:
+
+    1. Extend VaultEntry (or create a dedicated model) with:
+       - asset_id (FK → assets.id)
+       - recovery_key (encrypted string — 48-digit key)
+       - key_id (string — Key Protector ID from manage-bde)
+       - drive_letter (string — "C:", "D:")
+       - encryption_method (string — "XTS-AES 128", "XTS-AES 256")
+
+    2. Each BitLocker key is a separate vault record (an asset may have
+       multiple keys if multi-drive encryption).
+
+    3. Access control follows existing vault permissions (canAccessVault).
+
+    4. Viewing the key requires the "reveal" action (follow reveal pattern
+       with reason logging).
+
+    5. No plain-text recovery key ever stored or logged.
+
+    6. Export: recovery keys are NEVER included in asset CSV export.
+
+  The qr_identifier field (§7) could later be used to associate a physical
+  laptop asset with a printed recovery key QR badge.
+
+================================================================================
+FINALIZED DATABASE SCHEMA
+================================================================================
+
+  TABLE: asset_categories
+  ┌─────────────────────────────────────────────────────────────────────────┐
+  │ id*  name  slug  description  is_active  sort_order  timestamps  del   │
+  └─────────────────────────────────────────────────────────────────────────┘
+
+  TABLE: asset_types
+  ┌─────────────────────────────────────────────────────────────────────────┐
+  │ id*  category_id†  name  brand  model_number  is_active  ts  del       │
+  └─────────────────────────────────────────────────────────────────────────┘
+
+  TABLE: asset_locations (flat)
+  ┌─────────────────────────────────────────────────────────────────────────┐
+  │ id*  name  description  is_active  timestamps  deleted_at              │
+  └─────────────────────────────────────────────────────────────────────────┘
+
+  TABLE: assets (master table)
+  ┌─────────────────────────────────────────────────────────────────────────┐
+  │ id*  asset_tag**  category_id†  type_id†  serial_number  status         │
+  │ assigned_to†  location_id†  issue_date  return_date  condition          │
+  │ department  specifications§  notes  vault_entry_id†  qr_identifier     │
+  │ user_id†  module_id†  timestamps  deleted_at                            │
+  └─────────────────────────────────────────────────────────────────────────┘
+    *  = Primary Key
+    ** = UNIQUE
+    †  = Foreign Key
+    §  = JSON
+
+  TABLE: asset_assignments
+  ┌─────────────────────────────────────────────────────────────────────────┐
+  │ id*  asset_id†  assigned_to†  department  assigned_by†  assigned_at     │
+  │ expected_return_at  returned_at  condition_on_return  note  created_at  │
+  └─────────────────────────────────────────────────────────────────────────┘
+
+  Total: 5 tables (asset_history deferred — Spatie activity_log is sufficient)
+
+================================================================================
+UPDATED STATUSES
+================================================================================
+
+  ┌──────────────────┬──────────────────────────────────────────────────────┐
+  │ Status           │ Meaning                                              │
+  ├──────────────────┼──────────────────────────────────────────────────────┤
+  │ available        │ In inventory, ready to assign                        │
+  │ assigned         │ Checked out to a user                                │
+  │ lost             │ Reported lost/stolen (terminal)                      │
+  │ decommissioned   │ End of life / disposed (terminal)                    │
+  └──────────────────┴──────────────────────────────────────────────────────┘
+
+  Validation: allowed transitions (from → to):
+
+    available       → assigned, lost, decommissioned
+    assigned        → available, lost, decommissioned
+    lost            → (none)
+    decommissioned  → (none)
+
+================================================================================
+SUMMARY OF CHANGES FROM SIMPLIFIED PLAN
+================================================================================
+
+  ┌─────────────────────────────────────┬──────────────────┬──────────────────┐
+  │ Aspect                              │ Simplified Plan  │ Final (Reviewed) │
+  ├─────────────────────────────────────┼──────────────────┼──────────────────┤
+  │ Statuses                            │ 5                │ 4                │
+  │ Asset location hierarchy            │ parent_id        │ Flat             │
+  │ Brand/model on assets               │ Denormalized     │ Via type_id FK   │
+  │ Department                          │ Free-text        │ Free-text        │
+  │ JSON specifications                 │ Yes              │ Yes (confirmed)  │
+  │ Vault integration                   │ No               │ vault_entry_id   │
+  │ qr_identifier                       │ No               │ Yes (field only) │
+  │ BitLocker Recovery Key              │ No               │ Documented for   │
+  │                                     │                  │ future via Vault │
+  │ Total tables                        │ 5–6              │ 5                │
+  └─────────────────────────────────────┴──────────────────┴──────────────────┘
+
+================================================================================
+END OF PHASE 5A — FINAL ARCHITECTURE REVIEW
+================================================================================

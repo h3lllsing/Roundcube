@@ -7,6 +7,7 @@ use App\Models\Domain;
 use App\Models\DomainEmail;
 use App\Models\User;
 use App\Notifications\MonitorCheckFailed as MonitorCheckFailedNotification;
+use HasinHayder\Tyro\Database\Seeders\TyroSeeder;
 use HasinHayder\Tyro\Models\Role;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
@@ -19,7 +20,7 @@ class NotifyMonitorFailureTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->seed(\HasinHayder\Tyro\Database\Seeders\TyroSeeder::class);
+        $this->seed(TyroSeeder::class);
     }
 
     public function test_notifies_all_admin_users_when_monitor_check_fails(): void
@@ -51,7 +52,8 @@ class NotifyMonitorFailureTest extends TestCase
         MonitorCheckFailed::dispatch($domain, 'Domain', 'Connection timeout');
 
         Notification::assertSentTo($admin, MonitorCheckFailedNotification::class, function ($notification) {
-            $data = $notification->toArray(new User());
+            $data = $notification->toArray(new User);
+
             return $data['type'] === 'monitor_check_failed'
                 && $data['resource_type'] === 'Domain'
                 && $data['resource_name'] === 'My Domain'
@@ -70,7 +72,8 @@ class NotifyMonitorFailureTest extends TestCase
         MonitorCheckFailed::dispatch($email, 'DomainEmail', 'Error');
 
         Notification::assertSentTo($admin, MonitorCheckFailedNotification::class, function ($notification) {
-            $data = $notification->toArray(new User());
+            $data = $notification->toArray(new User);
+
             return $data['resource_name'] === 'test@example.com';
         });
     }
