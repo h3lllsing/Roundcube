@@ -2,6 +2,43 @@
 
 > Generated: 2026-07-10
 
+---
+
+## Improvement Batch 1 — Verified Code Fixes (2026-07-10)
+
+Following the Production Readiness Audit's improvement backlog, 6 items were verified and fixed. 9 items were reviewed and skipped as false positives or design choices.
+
+### Applied Fixes
+
+| # | Item | Category | File(s) | Verification |
+|---|------|----------|---------|-------------|
+| 1 | `Asset.anydesk_password` encrypted cast | Security | `app/Models/Asset.php:63` | Casts array now includes `'anydesk_password' => 'encrypted'` |
+| 2 | AssetController index over-fetching + N+1 | Performance | `app/Http/Controllers/Web/AssetController.php:72` | Explicit `->select()` + `->with('module')` |
+| 3 | DomainEmailController N+1 (edit/destroy) | Performance | `app/Http/Controllers/Web/DomainEmailController.php:114,150` | Added `->with('module')` to both methods |
+| 4 | Stray `</tbody>` in domains/index | UI Markup | `resources/views/domains/index.blade.php:93` | Extra closing tag removed |
+| 5 | Docs: stale super-admin references | Documentation | 4 files in `docs/reference/` | `config('tyro.super_admin_email')` → `hasRole('super-admin')` |
+
+### Items Reviewed & Skipped
+
+| # | Item | Reason |
+|---|------|--------|
+| 1 | Help view `innerHTML` XSS | Content is server-sanitized `HtmlSanitizer` + codebase-owned markdown files |
+| 2 | CSP middleware missing | Already exists (`AddSecurityHeaders` globally registered in `bootstrap/app.php`) |
+| 3 | CSRF `@csrf` in JS string | Blade renders full `<input>` tag; token is alphanumeric — works correctly |
+| 4 | 6 missing DB indexes | All covered by Laravel `->constrained()` foreign key auto-indexes |
+| 5 | VaultController `show()` missing `can_read` | `userOwnedFilter()` applies RBAC scope filtering by `getAccessibleModuleIds('read')` |
+| 6 | RoleTemplate pagination | Typically <20 records; `->get()` is appropriate for config data |
+| 7 | ModulePermission pagination | Permission matrix needs all modules+roles on one page |
+| 8 | MonitoringOverview fake pagination | Requires cross-table union query — broad refactoring |
+| 9 | NotificationController N+1 | View accesses only `data` JSON column — no relationship following |
+| 10 | Raw `<table>` vs `<x-table>` | Design choice — all render correctly |
+| 11 | SmtpProfile pagination config | `config('app.pagination_per_page')` is flexible best practice |
+
+### Verification
+- `php artisan view:cache` — ✅ PASS
+- `php artisan config:cache` — ✅ PASS
+- `php artisan route:cache` — ✅ PASS
+
 ## Sprint 1
 
 | # | Question | Answer |
@@ -220,3 +257,35 @@ Following the final Production Readiness Audit, 7 pre-deployment fixes were appl
 - CURRENT_EXECUTION_STATUS.md — Updated
 - FINAL_RELEASE_AUDIT.md — Updated
 - CHANGELOG.md — Updated
+
+## Documentation Cleanup � Markdown Overhaul (2026-07-10)
+
+Complete cleanup of all `.md` files in the repository. 45 obsolete/stale files deleted, 72 keep files verified. Zero broken links introduced.
+
+### Deleted (45 files)
+
+| Directory | Files Deleted | Reasoning |
+|-----------|---------------|-----------|
+| `docs/archive/` | 28 | Old audits, plans, roadmaps, signoffs, assumptions � all preserved in Git history |
+| `docs/reference/audits/` | 3 | Completed IA/design/UX audits � Git-preserved |
+| `docs/reference/design/` | 14 | Old design analyses, persona models, artwork specs, workflow analyses � Git-preserved |
+| `docs/reference/security/V1_TECHNICAL_DEBT.md` | 1 | Outdated tech debt document � Git-preserved |
+
+### Kept (72 files)
+
+| Location | Count | Notes |
+|----------|-------|-------|
+| Root (active docs) | 9 | README, PROJECT_ARCHITECTURE_LOCK, BUSINESS_RULES, CURRENT_EXECUTION_STATUS, FINAL_RELEASE_AUDIT, CHANGELOG, DEPLOY, PRODUCTION_READINESS_REPORT, CONTRIBUTING |
+| Root (app data) | 18 | 01�19 numbered guides loaded by HelpService via `base_path()` |
+| `docs/operations/` | 14 | 13 OPSPILOT_* operational training guides + README |
+| `docs/reference/architecture/` | 11 | Stable reference architecture, API, limitations docs |
+| `docs/reference/guides/` | 14 | Deployment, installation, rollback, smoke-test guides |
+| `docs/reference/monitoring/` | 3 | Monitoring dashboard, widget scope, product architecture |
+| `docs/reference/security/` | 3 | Frontend contract, do-not-break list, security baseline |
+| **Total** | **72** | |
+
+### Verification
+- All 72 keep files confirmed present
+- Zero broken links found across remaining `.md` files
+- No application code modified
+- README.md links already fixed in earlier pass

@@ -181,6 +181,6 @@ Outbound HTTP endpoints that trigger on system events. Super Admin only.
 
 ## Related Modules
 
-- [Permission Reference](08_PERMISSION_REFERENCE.md)
-- [Role Matrix](09_ROLE_MATRIX.md)
-- [FAQ](07_FAQ.md)
+- [Permission Reference](../../../08_PERMISSION_REFERENCE.md)
+- [Role Matrix](../../../09_ROLE_MATRIX.md)
+- [FAQ](../../../07_FAQ.md)

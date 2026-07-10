@@ -4,6 +4,43 @@ All notable changes to OpsPilot are documented in this file.
 
 ---
 
+## [1.7.1] — 2026-07-10 — Improvement Batch 1
+
+### Security & Data Protection
+- **AnyDesk password encryption**: Added `'anydesk_password' => 'encrypted'` cast to `Asset` model (`app/Models/Asset.php:63`) — passwords no longer stored in plaintext
+
+### Performance
+- **AssetController index**: Added `->select(['id', 'asset_tag', 'brand', 'model', 'assigned_user_name', 'status', 'premises', 'anydesk_id', 'module_id'])` and `->with('module')` to prevent over-fetching and N+1 lazy load (`app/Http/Controllers/Web/AssetController.php:72`)
+- **DomainEmailController N+1**: Added `->with('module')` to `edit()` and `destroy()` methods to prevent lazy-load of `$email->module` (`app/Http/Controllers/Web/DomainEmailController.php:114,150`)
+
+### UI Markup
+- **Fixed stray `</tbody>`**: Removed extra closing tag in `resources/views/domains/index.blade.php:93` — `<x-table>` component already wraps slot in `<tbody>`
+
+### Documentation Cleanup — Markdown Overhaul
+- **45 obsolete/stale `.md` files deleted** (Git-preserved): 28 from `docs/archive/`, 3 audit files, 14 design analysis files, 1 outdated tech debt doc
+- **72 keep files verified** across root (27), `docs/operations/` (14), `docs/reference/architecture/` (11), `docs/reference/guides/` (14), `docs/reference/monitoring/` (3), `docs/reference/security/` (3)
+- **Fixed all broken cross-references** in README.md, SECURITY_BASELINE.md, 11_GLOSSARY.md caused by prior file moves
+- **Zero broken links remain** across all `.md` files
+- **No application code modified**
+
+### Documentation (Batch 1)
+- Updated stale super-admin references in 4 docs files:
+  - `docs/reference/architecture/05_PERMISSION_SYSTEM.md` — `config('tyro.super_admin_email')` → `$user->hasRole('super-admin')`
+  - `docs/reference/architecture/04_MODULE_BUSINESS_LOGIC.md` — same fix
+  - `docs/reference/architecture/02_ARCHITECTURE_LAYERING.md` — same fix
+  - `docs/reference/security/12_DO_NOT_BREAK_LIST.md` — same fix
+
+### Items Reviewed & Skipped (False Positives / Design Choices)
+- Help view XSS (`innerHTML`) — content is server-sanitized, codebase-owned markdown
+- CSP headers — already exists via `AddSecurityHeaders` middleware (globally registered)
+- CSRF in JS string (`@csrf` in concatenation) — works correctly, token is alphanumeric
+- 6 missing DB indexes — all already covered by foreign key auto-indexes
+- VaultController `show()` `can_read` gate — RBAC scope already enforces read access
+- Pagination fixes — all require broad refactoring (MonitoringOverview, ModulePermission matrix)
+- NotificationController N+1 — view accesses only `data` JSON column, no relationship following
+- Raw `<table>` vs `<x-table>` consistency — design choice, all render correctly
+- SmtpProfile pagination config — using `config()` is better practice than hardcoding
+
 ## [1.7.0] — 2026-07-10 — Production Readiness Fixes
 
 ### Pre-Deployment Hardening

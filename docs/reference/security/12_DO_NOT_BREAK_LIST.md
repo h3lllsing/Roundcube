@@ -123,7 +123,7 @@ This is the definitive list of things a frontend/UI redesign must NEVER break. V
 - **ServiceProvider morph type** — changing to uppercase or different casing breaks all existing data.
 - **`config('app.pagination_per_page')`** — all index pages change their default pagination.
 - **`config('renewals.notify_days_before')`** — renewal notification timing changes globally.
-- **`config('tyro.super_admin_email')`** — super admin detection breaks.
+- **`$user->hasRole('super-admin')`** — super admin detection breaks if `super-admin` role is removed or renamed.
 - **`config('permissions.php')` keys** — `sensitive_modules` and `sensitive_permissions` used in Blade for UI confirmation dialogs.
 - **ExpiryTracker model `$fillable`** — removing a field from fillable stops it from being mass-assigned.
 - **`AppServiceProvider::boot()` morph map** — all relations break if any alias changes.

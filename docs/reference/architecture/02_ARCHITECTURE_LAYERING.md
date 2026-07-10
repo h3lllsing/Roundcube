@@ -122,7 +122,7 @@ public function index(Request $request)
 3. Every subsequent request passes through `web` middleware group (session, CSRF, cookie encryption).
 4. `auth` middleware ensures authenticated access to all protected routes.
 5. Controllers use `$this->authorize()` or `Gate::allows()` with module permission checks.
-6. Super admin is determined by `User::is_super_admin` attribute (hardcoded ID matching `config('tyro.super_admin_email')`).
+6. Super admin is determined by `$user->hasRole('super-admin')` via Spatie Permission role assignment.
 
 ## Caching Strategy
 

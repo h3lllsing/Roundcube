@@ -447,7 +447,7 @@ Every password reveal creates an activity log entry with:
 - [ ] Log rotation configured (14-day retention default)
 - [ ] PHP and Laravel version updates monitored for security patches
 
-See also: [`PRODUCTION_CHECKLIST.md`](PRODUCTION_CHECKLIST.md)
+See also: [`PRODUCTION_CHECKLIST.md`](../guides/PRODUCTION_CHECKLIST.md)
 
 ---
 
@@ -505,7 +505,7 @@ Maintain a secure (encrypted) document with:
 | 3 | Run static analysis | `php artisan lint` (PHPStan) — level 6 required |
 | 4 | Review changed files | No `.env`, no `APP_KEY`, no secrets in code |
 | 5 | Stage deployment | Deploy to staging; run smoke tests |
-| 6 | Production deployment | Deploy per [`DEPLOYMENT_GUIDE.md`](DEPLOYMENT_GUIDE.md) |
+| 6 | Production deployment | Deploy per [`DEPLOYMENT_GUIDE.md`](../guides/DEPLOYMENT_GUIDE.md) |
 | 7 | Post-deploy verification | Run security checklist items |
 | 8 | Monitor | Review logs for 24 hours post-deploy |
 
@@ -583,9 +583,8 @@ Maintain a secure (encrypted) document with:
 
 ## References
 
-- [`PRODUCTION_CHECKLIST.md`](PRODUCTION_CHECKLIST.md) — Pre-deployment and go-live checklist
-- [`DEPLOYMENT_GUIDE.md`](DEPLOYMENT_GUIDE.md) — Shared-hosting, VPS, and Docker deployment
-- [`BACKUP_AND_RESTORE.md`](BACKUP_AND_RESTORE.md) — Backup strategy and recovery procedures
-- [`PROJECT_ARCHITECTURE_FREEZE_v1.0.md`](PROJECT_ARCHITECTURE_FREEZE_v1.0.md) — Frozen module contracts
-- [`INSTALLATION.md`](INSTALLATION.md) — Installation guide
-- [`ADMIN_GUIDE.md`](ADMIN_GUIDE.md) — Administrator manual
+- [`PRODUCTION_CHECKLIST.md`](../guides/PRODUCTION_CHECKLIST.md) — Pre-deployment and go-live checklist
+- [`DEPLOYMENT_GUIDE.md`](../guides/DEPLOYMENT_GUIDE.md) — Shared-hosting, VPS, and Docker deployment
+- [`13_BACKUP_AND_RESTORE.md`](../../../13_BACKUP_AND_RESTORE.md) — Backup strategy and recovery procedures
+- [`INSTALLATION.md`](../guides/INSTALLATION.md) — Installation guide
+- [`03_ADMIN_GUIDE.md`](../../../03_ADMIN_GUIDE.md) — Administrator manual

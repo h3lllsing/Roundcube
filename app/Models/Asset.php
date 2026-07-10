@@ -61,6 +61,7 @@ class Asset extends Model
             'issue_date' => 'date',
             'return_date' => 'date',
             'specifications' => 'array',
+            'anydesk_password' => 'encrypted',
         ];
     }
 

@@ -281,7 +281,7 @@
 - Standard Laravel Breeze auth users.
 - Roles assigned via Spatie Permission package (`Spatie\Permission\Models\Role`).
 - Module permissions assigned per-user or per-role via custom pivot structure (`user_module_permissions`, `module_role`, `module_user`?).
-- Super admin flag: `User::isSuperAdmin()` checks against `config('tyro.super_admin_email')`.
+- Super admin flag: `$user->hasRole('super-admin')` via Spatie Permission role assignment.
 
 ### Super Admin
 - Hardcoded email. Bypasses ALL permission checks.

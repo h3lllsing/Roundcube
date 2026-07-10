@@ -223,3 +223,8 @@ Root holds 20 active `.md` files. 200+ historical records are organized in `docs
 | 2026-07-10 | Pre-Deployment Fixes | Verified Api\WebhookController::store() + Web\WebhookController::store() have gates before create() calls | ✅ |
 | 2026-07-10 | Pre-Deployment Fixes | Permission test suite: RoleTemplateTest 19 passed / 15 pre-existing DB errors; no regressions from gate changes | ✅ |
 | 2026-07-10 | Pre-Deployment Fixes | All reports updated — PRODUCTION_READINESS_REPORT, CURRENT_EXECUTION_STATUS, FINAL_RELEASE_AUDIT, CHANGELOG | ✅ |
+| 2026-07-10 | Improvement Batch 1 | `Asset.anydesk_password` encrypted cast added | ✅ |
+| 2026-07-10 | Improvement Batch 1 | AssetController index: `->select()` + `->with('module')` for over-fetch/N+1 | ✅ |
+| 2026-07-10 | Improvement Batch 1 | DomainEmailController edit/destroy: `->with('module')` for N+1 | ✅ |
+| 2026-07-10 | Improvement Batch 1 | domains/index.blade.php: stray `</tbody>` removed | ✅ |
+| 2026-07-10 | Improvement Batch 1 | Docs: stale `config('tyro.super_admin_email')` refs updated in 4 files | ✅ |

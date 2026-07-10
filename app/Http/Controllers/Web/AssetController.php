@@ -69,7 +69,7 @@ class AssetController extends Controller
             $query->search($request->search);
         }
 
-        $assets = $query->latest()->paginate(20);
+        $assets = $query->select(['id', 'asset_tag', 'brand', 'model', 'assigned_user_name', 'status', 'premises', 'anydesk_id', 'module_id'])->with('module')->latest()->paginate(20);
 
         $user = Auth::user();
         $module = \App\Helpers\ModuleCache::findBySlug($this->moduleSlug());

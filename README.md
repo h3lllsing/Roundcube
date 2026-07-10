@@ -95,7 +95,7 @@ app/
 
 ## API
 
-Full reference: [API_REFERENCE.md](API_REFERENCE.md) | Swagger UI: `/api/documentation`
+Full reference: [API_REFERENCE.md](docs/reference/architecture/API_REFERENCE.md) | Swagger UI: `/api/documentation`
 
 ## Deployment
 

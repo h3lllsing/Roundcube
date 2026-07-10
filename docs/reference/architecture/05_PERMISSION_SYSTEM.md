@@ -100,15 +100,15 @@ if (! $user->canAccessModule('vault', 'can_reveal_vault')) {
 
 ## Super Admin Bypass
 
-- Defined by `config('tyro.super_admin_email')`.
-- `isSuperAdmin()` method on User model checks if user's email matches.
+- Defined by Spatie `Role` with slug `super-admin`.
+- `$user->hasRole('super-admin')` checks if user has the super-admin role.
 - All permission gates short-circuit to `true` for super admin.
 - Ownership scoping also bypassed: super admin sees ALL records.
 
 ## Default Role Permissions
 
 When a new user is created via seeding (`Database\Seeders\RolesAndPermissionsSeeder`), roles and their module permissions are seeded. Key roles:
-- **Super Admin** — full access (bypasses gates, not by role but by email check).
+- **Super Admin** — full access (bypasses gates via `super-admin` role).
 - **Admin** — full read on all modules, write on most. No user/role/permission management.
 - **User** — own records only, limited write.
 - **Customer** — own records, create/read/update, no delete.

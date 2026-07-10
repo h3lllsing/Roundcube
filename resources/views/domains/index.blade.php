@@ -90,7 +90,6 @@
                 @empty
                     <tr><x-empty-state :colspan="9" icon="globe" title="No domains found." message="Register or add domains to track them." /></tr>
                 @endforelse
-            </tbody>
         </x-table>
 
         <div class="mt-4">{{ $domains->links() }}</div>

@@ -111,7 +111,7 @@ class DomainEmailController extends Controller
     public function edit(int $id): View
     {
         $this->userOwnedFilter();
-        $email = DomainEmail::findOrFail($id);
+        $email = DomainEmail::with('module')->findOrFail($id);
 
         $user = Auth::user();
         abort_unless($user->hasRole('super-admin') || ($email->module && $user->canOnModule($email->module, 'update')), 403);
@@ -147,7 +147,7 @@ class DomainEmailController extends Controller
     public function destroy(int $id): RedirectResponse
     {
         $this->userOwnedFilter();
-        $email = DomainEmail::findOrFail($id);
+        $email = DomainEmail::with('module')->findOrFail($id);
 
         $user = Auth::user();
         abort_unless($user->hasRole('super-admin') || ($email->module && $user->canOnModule($email->module, 'delete')), 403);
