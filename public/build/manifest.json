@@ -1,0 +1,56 @@
+{
+  "_vendor-DrysJrxD.js": {
+    "file": "assets/vendor-DrysJrxD.js",
+    "name": "vendor"
+  },
+  "_vendor-chart-B6Gwp-ID.js": {
+    "file": "assets/vendor-chart-B6Gwp-ID.js",
+    "name": "vendor-chart",
+    "imports": [
+      "_vendor-DrysJrxD.js"
+    ]
+  },
+  "resources/css/app.css": {
+    "file": "assets/app-DNq99-F4.css",
+    "src": "resources/css/app.css",
+    "isEntry": true,
+    "name": "app",
+    "names": [
+      "app.css"
+    ]
+  },
+  "resources/css/help-center.css": {
+    "file": "assets/help-center-DFaC2YAC.css",
+    "src": "resources/css/help-center.css",
+    "isEntry": true,
+    "name": "help-center",
+    "names": [
+      "help-center.css"
+    ]
+  },
+  "resources/css/permissions.css": {
+    "file": "assets/permissions-DdSR484e.css",
+    "src": "resources/css/permissions.css",
+    "isEntry": true,
+    "name": "permissions",
+    "names": [
+      "permissions.css"
+    ]
+  },
+  "resources/js/app.js": {
+    "file": "assets/app-CnZzAsdz.js",
+    "name": "app",
+    "src": "resources/js/app.js",
+    "isEntry": true,
+    "imports": [
+      "_vendor-DrysJrxD.js",
+      "_vendor-chart-B6Gwp-ID.js"
+    ]
+  },
+  "resources/js/help-center.js": {
+    "file": "assets/help-center-Ccl3KLpL.js",
+    "name": "help-center",
+    "src": "resources/js/help-center.js",
+    "isEntry": true
+  }
+}
