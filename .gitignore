@@ -13,7 +13,6 @@
 /.zed
 /auth.json
 /node_modules
-# /public/build - production assets, committed for deployment
 /public/hot
 /public/storage
 /storage/*.key
@@ -40,6 +39,14 @@ _tmp_*
 # Other generated files
 /opspilot_test
 /.env.example.bak
+
+# Runtime storage — contents are ephemeral; inner .gitignore placeholders preserve directories
+/storage/app/public/*
+/storage/logs/*
+/storage/framework/cache/*
+/storage/framework/sessions/*
+/storage/framework/views/*
+!/storage/**/.gitignore
 
 # Empty docs directories (keep gitignore for structure)
 docs/analysis/

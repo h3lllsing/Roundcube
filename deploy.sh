@@ -1,88 +1,231 @@
 #!/usr/bin/env bash
+# ============================================================
+# deploy.sh — OpsPilot cPanel Production Deployment
+# ============================================================
+# Usage:
+#   bash deploy.sh           Normal deployment (main branch)
+#   bash deploy.sh --check   Dry-run status check only
+# ============================================================
 set -euo pipefail
 
+PROJECT_PATH="/home/whizzweb/alphaspacepro.online"
+PRODUCTION_BRANCH="main"
+APP_NAME="OpsPilot"
+
+# ---- Colors ----
+RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC='\033[0m'
+ok()  { echo -e "  ${GREEN}✓${NC} $1"; }
+warn(){ echo -e "  ${YELLOW}⚠${NC} $1"; }
+fail(){ echo -e "  ${RED}✗${NC} $1"; }
+
+# ---- Maintenance trap ----
+maintenance_off() {
+    if [ -f "artisan" ]; then
+        php artisan up --quiet 2>/dev/null || true
+        ok "Maintenance mode disabled"
+    fi
+}
+trap maintenance_off EXIT
+
+# ---- Helpers ----
+check_git() {
+    if ! git rev-parse --git-dir > /dev/null 2>&1; then
+        fail "Not a Git repository ($PROJECT_PATH)"
+        exit 1
+    fi
+    ok "Git repository confirmed"
+}
+
+check_branch() {
+    local branch
+    branch=$(git rev-parse --abbrev-ref HEAD)
+    if [ "$branch" != "$PRODUCTION_BRANCH" ]; then
+        fail "Branch is '$branch'; must be '$PRODUCTION_BRANCH'"
+        exit 1
+    fi
+    ok "Branch: $branch"
+}
+
+check_clean() {
+    if ! git diff --quiet HEAD; then
+        fail "Working tree has uncommitted changes. Commit or stash them first."
+        exit 1
+    fi
+    if [ -n "$(git ls-files --others --exclude-standard)" ]; then
+        warn "Untracked files exist (non-blocking)"
+    fi
+    ok "Working tree is clean"
+}
+
+check_composer() {
+    if command -v composer &> /dev/null; then
+        COMPOSER_CMD="composer"
+    elif [ -f "composer.phar" ]; then
+        COMPOSER_CMD="php composer.phar"
+    else
+        return 1
+    fi
+}
+
+check_env() {
+    if [ -f ".env" ]; then
+        ok ".env file exists"
+    else
+        fail ".env file is missing"
+        exit 1
+    fi
+}
+
+check_db() {
+    if php artisan db:show --quiet 2>/dev/null; then
+        ok "Database connection successful"
+    else
+        warn "Database connection failed (check .env DB_* settings)"
+    fi
+}
+
+check_manifest() {
+    if [ -f "public/build/manifest.json" ]; then
+        ok "Vite manifest.json present"
+    else
+        fail "public/build/manifest.json missing — run 'npm run build'"
+        exit 1
+    fi
+}
+
+check_writable() {
+    local dirs=("storage" "storage/logs" "storage/framework/cache" "storage/framework/sessions" "storage/framework/views" "bootstrap/cache")
+    local all_ok=true
+    for d in "${dirs[@]}"; do
+        if [ -d "$d" ] && [ -w "$d" ]; then
+            ok "Writable: $d/"
+        else
+            warn "Not writable: $d/  (chmod -R 775 $d)"
+            all_ok=false
+        fi
+    done
+    $all_ok || warn "Fix permissions before production deployment"
+}
+
+php_version() {
+    php -r "echo PHP_VERSION;" 2>/dev/null || echo "unknown"
+}
+
+git_remote_status() {
+    git fetch origin --quiet 2>/dev/null || true
+    local behind
+    behind=$(git rev-list --count "HEAD..origin/$PRODUCTION_BRANCH" 2>/dev/null || echo "0")
+    if [ "$behind" -gt 0 ]; then
+        warn "Local is $behind commit(s) behind origin/$PRODUCTION_BRANCH"
+    else
+        ok "Up to date with origin/$PRODUCTION_BRANCH"
+    fi
+}
+
+print_summary() {
+    echo ""
+    echo -e "${CYAN}============================================${NC}"
+    echo -e "${CYAN}  DEPLOYMENT SUMMARY${NC}"
+    echo -e "${CYAN}============================================${NC}"
+    echo "  Commit:    $(git rev-parse --short HEAD 2>/dev/null || echo 'unknown')"
+    echo "  Branch:    $(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo 'unknown')"
+    echo "  PHP:       $(php_version)"
+    echo "  App Env:   $(php -r 'echo config("app.env");' 2>/dev/null || echo 'unknown')"
+    echo "  Migrated:  $(php artisan migrate:status 2>/dev/null | tail -1 || echo 'unknown')"
+    echo -e "${CYAN}============================================${NC}"
+    echo ""
+}
+
 # ============================================================
-# deploy.sh — OpsPilot Production Build Script
-# Prepares a deployment-ready build. Run from project root.
+# MODE: --check (dry-run status)
 # ============================================================
+if [ "${1:-}" = "--check" ]; then
+    echo -e "${CYAN}OpsPilot — Pre-Deployment Check${NC}"
+    echo "  Path: $PROJECT_PATH"
+    echo ""
+    check_git
+    check_branch
+    git_remote_status
+    check_clean
+    echo ""
+    echo -e "  PHP version:    ${GREEN}$(php_version)${NC}"
+    if check_composer; then
+        ok "Composer: $COMPOSER_CMD"
+    else
+        warn "Composer not found"
+    fi
+    check_env
+    check_db
+    check_manifest
+    check_writable
+    echo ""
+    echo -e "${GREEN}Check complete.${NC}"
+    exit 0
+fi
 
-APP_NAME="ops pilot"
+# ============================================================
+# MODE: Production deploy
+# ============================================================
+echo -e "${CYAN}OpsPilot — cPanel Production Deployment${NC}"
+echo "  Target: $PROJECT_PATH"
+echo ""
 
-echo "==> Step 1: Install dependencies (no dev)"
-composer install --no-dev --optimize-autoloader
+# --- Pre-flight ---
+check_git
+check_branch
+check_clean
+echo ""
 
-echo "==> Step 2: Build frontend assets"
-npm ci && npm run build
+# --- Fetch and pull ---
+echo -e "${YELLOW}==>${NC} Fetching from origin..."
+git fetch origin
+git pull --ff-only origin "$PRODUCTION_BRANCH"
+ok "Up to date with origin/$PRODUCTION_BRANCH"
+echo ""
 
-echo "==> Step 3: Clear caches"
+# --- Maintenance mode ---
+echo -e "${YELLOW}==>${NC} Enabling maintenance mode..."
+php artisan down --retry=60
+ok "Maintenance mode enabled (retry: 60s)"
+echo ""
+
+# --- Composer ---
+echo -e "${YELLOW}==>${NC} Installing Composer dependencies..."
+if check_composer; then
+    $COMPOSER_CMD install --no-dev --optimize-autoloader --no-interaction
+    ok "Composer dependencies installed"
+else
+    fail "Composer not found. Install Composer or place composer.phar in project root."
+    php artisan up
+    exit 1
+fi
+echo ""
+
+# --- Migrations ---
+echo -e "${YELLOW}==>${NC} Running database migrations..."
+php artisan migrate --force
+ok "Migrations complete"
+echo ""
+
+# --- Vite manifest ---
+check_manifest
+echo ""
+
+# --- Caches ---
+echo -e "${YELLOW}==>${NC} Refreshing caches..."
 php artisan optimize:clear
-
-echo "==> Step 4: Cache for production"
 php artisan config:cache
 php artisan route:cache
 php artisan view:cache
-php artisan event:cache
-
-echo "==> Step 5: Create storage link (if not exists)"
-php artisan storage:link --force
-
-echo "==> Step 6: Build deploy archive"
-DEPLOY_DIR="$(dirname "$0")/deploy_$(date +%Y%m%d_%H%M%S)"
-mkdir -p "$DEPLOY_DIR"
-
-rsync -av --progress \
-  --exclude='.env' \
-  --exclude='_can_delete' \
-  --exclude='coverage' \
-  --exclude='tests' \
-  --exclude='node_modules' \
-  --exclude='storage/logs/*.log' \
-  --exclude='storage/framework/cache/*' \
-  --exclude='storage/framework/sessions/*' \
-  --exclude='storage/framework/views/*' \
-  --exclude='storage/api-docs' \
-  --exclude='bootstrap/cache/*.php' \
-  --exclude='.phpunit*' \
-  --exclude='phpunit*' \
-  --exclude='phpstan*' \
-  --exclude='Dockerfile*' \
-  --exclude='docker-compose*' \
-  --exclude='.dockerignore' \
-  --exclude='deploy.sh' \
-  --exclude='.env.e2e' \
-  --exclude='.env.testing' \
-  --exclude='.editorconfig' \
-  --exclude='docs/' \
-  --exclude='scripts/' \
-  --exclude='e2e/' \
-  --exclude='.github/' \
-  --exclude='resources/js/' \
-  --exclude='resources/css/' \
-  --exclude='deploy_*' \
-  "$(dirname "$0")/" "$DEPLOY_DIR/"
-
-echo "==> Step 7: Compress archive"
-cd "$(dirname "$0")"
-tar -czf "${DEPLOY_DIR}.tar.gz" -C "$(dirname "$DEPLOY_DIR")" "$(basename "$DEPLOY_DIR")"
-rm -rf "$DEPLOY_DIR"
-
+ok "Caches refreshed"
 echo ""
-echo "============================================"
-echo "  BUILD COMPLETE"
-echo "============================================"
-echo "  Archive: ${DEPLOY_DIR}.tar.gz"
-echo "  Size:    $(du -h "${DEPLOY_DIR}.tar.gz" | cut -f1)"
+
+# --- Writable directories ---
+check_writable
 echo ""
-echo "  Next steps:"
-echo "  1. Upload ${DEPLOY_DIR}.tar.gz to your server"
-echo "  2. Extract: tar -xzf ${DEPLOY_DIR}.tar.gz"
-echo "  3. Copy public/ contents to public_html/"
-echo "  4. Copy .env.example to .env and edit:"
-echo "     - Set APP_ENV=production, APP_DEBUG=false"
-echo "     - Set CACHE_STORE=redis (or keep file for single-server)"
-echo "  5. Run: php artisan key:generate"
-echo "  6. Run: php artisan migrate --force"
-echo "  7. Set permissions: chmod -R 775 storage bootstrap/cache"
-echo "  8. Set up cron: * * * * * php artisan schedule:run"
-echo "  9. Set up queue worker (Supervisord/Forge): php artisan queue:work"
-echo "============================================"
+
+# --- Summary ---
+print_summary
+
+echo -e "${GREEN}Deployment successful.${NC}"
+echo ""
