@@ -28,3 +28,5 @@ phpunit_stderr.txt
 _tmp_*
 *.sql
 *.sqlite
+*.txt
+!/public/robots.txt
