@@ -30,3 +30,17 @@ _tmp_*
 *.sqlite
 *.txt
 !/public/robots.txt
+
+# Generated code coverage output
+/coverage
+/tests/coverage
+/tests/coverage-xml
+/tests/coverage.xml
+
+# Other generated files
+/opspilot_test
+/.env.example.bak
+
+# Empty docs directories (keep gitignore for structure)
+docs/analysis/
+docs/proposals/
