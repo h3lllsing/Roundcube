@@ -33,86 +33,53 @@
     <form method="POST" action="{{ route('bulk-action') }}" class="mb-6" id="bulk-form">
         @csrf
         <input type="hidden" name="type" value="service-providers">
-        <x-bulk-actions type="service-providers" colspan="9" :actions="$bulkActions" />
+        <x-bulk-actions type="service-providers" colspan="5" :actions="$bulkActions" />
     </form>
 
         <x-table>
             <x-slot:head>
-                <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Serial</th>
                 <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Name</th>
                 <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Type</th>
-                <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Web URL</th>
-                <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Login ID</th>
-                <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Password</th>
-                <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Email</th>
                 <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Status</th>
                 <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Actions</th>
             </x-slot:head>
                     @forelse ($providers as $provider)
                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                             <td class="px-4 py-3"><input type="checkbox" name="ids[]" value="{{ $provider->id }}" aria-label="Select {{ $provider->name ?? $provider->id }}" class="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500 bulk-item" form="bulk-form"></td>
-                            <td class="px-6 py-3 text-gray-500">{{ $provider->id }}</td>
-                            <td class="px-6 py-3 font-medium">{{ $provider->name ?? '—' }}</td>
-                            <td class="px-6 py-3 text-gray-500">{{ $provider->type ?? '—' }}</td>
-                            <td class="px-6 py-3 max-w-[200px] truncate">
-                                @if($provider->website)
-                                    <div class="flex items-center gap-2">
-                                        <a href="{{ $provider->website }}" target="_blank" class="text-indigo-600 dark:text-indigo-400 hover:underline truncate block" title="{{ $provider->website }}">{{ $provider->website }}</a>
-                                        <x-copy-button :text="$provider->website" title="Copy URL" />
-                                    </div>
-                                @else
-                                    <span class="text-gray-400">—</span>
-                                @endif
-                            </td>
-                            <td class="px-6 py-3">
-                                @if($provider->login_id)
-                                    <div class="flex items-center gap-2">
-                                        <span class="text-sm max-w-[120px] truncate" title="{{ $provider->login_id }}">{{ $provider->login_id }}</span>
-                                        <x-copy-button :text="$provider->login_id" title="Copy login ID" />
-                                    </div>
-                                @else
-                                    <span class="text-gray-400">—</span>
-                                @endif
-                            </td>
-                            <td class="px-6 py-3">
-                                @if($provider->password)
-                                    <div class="flex items-center gap-2">
-                                        <span class="font-mono text-sm text-gray-400">••••••••</span>
-                                        <x-permission-check :module="$provider->module ?? $vaultModule" action="reveal">
-                                        <x-copy-button password-route="{{ url('service-providers') }}/{{ $provider->id }}/password" title="Copy password" />
-                                        </x-permission-check>
-                                    </div>
-                                @else
-                                    <span class="text-gray-400">—</span>
-                                @endif
-                            </td>
-                            <td class="px-6 py-3">
-                                @if($provider->email)
-                                    <div class="flex items-center gap-2">
-                                        <span class="text-sm max-w-[160px] truncate" title="{{ $provider->email }}">{{ $provider->email }}</span>
-                                        <x-copy-button :text="$provider->email" title="Copy email" />
-                                    </div>
-                                @else
-                                    <span class="text-gray-400">—</span>
-                                @endif
-                            </td>
+                            <td class="px-6 py-3 font-medium"><a href="{{ route('service-providers.show', $provider->id) }}" class="text-indigo-600 dark:text-indigo-400 hover:underline">{{ $provider->name ?? '—' }}</a></td>
+                            <td class="px-6 py-3 text-gray-500 dark:text-gray-400">{{ $provider->type ?? '—' }}</td>
                             <td class="px-6 py-3">
                                 <x-badge :variant="$provider->status">{{ $provider->status }}</x-badge>
                             </td>
                             <td class="px-6 py-3 whitespace-nowrap">
-                            <x-action href="{{ route('service-providers.show', $provider->id) }}" color="indigo" icon="view" label="" title="View" />
-                            <x-permission-check :module="$provider->module" action="update">
-                            <x-action href="{{ route('service-providers.edit', $provider->id) }}" color="amber" icon="edit" label="" title="Edit" />
-                            </x-permission-check>
-                            <x-permission-check :module="$provider->module" action="delete">
-                            <x-action action="{{ route('service-providers.destroy', $provider->id) }}" color="red" icon="delete" label="" title="Delete" confirm="Are you sure?" method="DELETE" />
-                            </x-permission-check>
+                            @php $_canEdit = auth()->user()->hasRole('super-admin') || ($provider->module && auth()->user()->canOnModule($provider->module, 'update')); @endphp
+                            @php $_canDelete = auth()->user()->hasRole('super-admin') || ($provider->module && auth()->user()->canOnModule($provider->module, 'delete')); @endphp
+                            <div x-data="{ open: false, style: '' }" @click.away="open = false" class="relative inline-block">
+                                <button type="button" @click="
+                                    open = !open;
+                                    if (open) { $nextTick(() => { const r = $el.getBoundingClientRect(); style = 'position:fixed;left:' + r.left + 'px;top:' + (r.bottom + 4) + 'px;z-index:50'; }); }
+                                " @keydown.escape.prevent="open = false" class="inline-flex items-center justify-center w-9 h-9 rounded-xl transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500/40 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-700/50" aria-haspopup="true" :aria-expanded="open.toString()" aria-label="Provider actions" title="Provider actions">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>
+                                </button>
+                                <div x-show="open" :style="style" x-cloak role="menu" x-transition:enter="transition ease-out duration-100" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100" class="bg-gray-50 dark:bg-black rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 py-1 w-36">
+                                    <a href="{{ route('service-providers.show', $provider->id) }}" class="block px-3 py-2 text-sm text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500/40" role="menuitem">View Details</a>
+                                    @if($_canEdit)
+                                    <a href="{{ route('service-providers.edit', $provider->id) }}" class="block px-3 py-2 text-sm text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500/40" role="menuitem">Edit</a>
+                                    @endif
+                                    @if($_canDelete)
+                                    <form method="POST" action="{{ route('service-providers.destroy', $provider->id) }}" class="block">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" data-confirm="Are you sure?" x-on:click="startLoading($el)" class="w-full text-left px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-red-500/40" role="menuitem">Delete</button>
+                                    </form>
+                                    @endif
+                                </div>
+                            </div>
                             </td>
                         </tr>
                 @empty
-                    <tr><x-empty-state :colspan="9" icon="box" title="No service providers found." message="Add service providers to keep track of vendors." /></tr>
+                    <tr><x-empty-state :colspan="5" icon="box" title="No service providers found." message="Add service providers to keep track of vendors." /></tr>
                     @endforelse
-                </tbody>
         </x-table>
 
         <div class="mt-4">{{ $providers->links() }}</div>
