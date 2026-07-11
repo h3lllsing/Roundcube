@@ -33,24 +33,26 @@
     <form method="POST" action="{{ route('bulk-action') }}" class="mb-6" id="bulk-form">
         @csrf
         <input type="hidden" name="type" value="vps">
-        <x-bulk-actions type="vps" colspan="9" :actions="$bulkActions" />
+        <x-bulk-actions type="vps" colspan="8" :actions="$bulkActions" />
     </form>
 
         <x-table>
             <x-slot:head>
                 <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">VPS</th>
+                <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Status</th>
                 <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Vendor</th>
                 <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">VPS IP</th>
-                <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">VPS Pass</th>
-                <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Department</th>
-                <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Location</th>
+                <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Expiry</th>
                 <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Associate</th>
                 <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Actions</th>
             </x-slot:head>
                     @forelse ($vpsList as $vps)
                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                             <td class="px-4 py-3"><input type="checkbox" name="ids[]" value="{{ $vps->id }}" aria-label="Select {{ $vps->name }}" class="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500 bulk-item" form="bulk-form"></td>
-                            <td class="px-6 py-3 font-medium">{{ $vps->name }}</td>
+                            <td class="px-6 py-3 font-medium"><a href="{{ route('vps.show', $vps->id) }}" class="text-indigo-600 dark:text-indigo-400 hover:underline">{{ $vps->name }}</a></td>
+                            <td class="px-6 py-3">
+                                <x-badge variant="{{ $vps->status }}" size="sm">{{ ucfirst($vps->status) }}</x-badge>
+                            </td>
                             <td class="px-6 py-3 text-gray-500">{{ $vps->serviceProvider->name ?? '—' }}</td>
                             <td class="px-6 py-3">
                                 @if($vps->ip_address)
@@ -62,33 +64,54 @@
                                     <span class="text-gray-400">—</span>
                                 @endif
                             </td>
-                            <td class="px-6 py-3">
-                                @if($vps->password)
-                                    <div class="flex items-center gap-2">
-                                        <span class="font-mono text-sm text-gray-400">••••••••</span>
-                                        <x-permission-check :module="$vaultModule" action="reveal">
-                                        <x-copy-button password-route="{{ url('vps') }}/{{ $vps->id }}/password" title="Copy password" />
-                                        </x-permission-check>
-                                    </div>
-                                @else
-                                    <span class="text-gray-400">—</span>
-                                @endif
-                            </td>
-                            <td class="px-6 py-3 text-gray-500">{{ $vps->department ?? '—' }}</td>
-                            <td class="px-6 py-3 text-gray-500">{{ $vps->location ?? '—' }}</td>
+                            <td class="px-6 py-3 text-gray-500 dark:text-gray-400">{{ $vps->expiry_date?->format('Y-m-d') ?? '—' }}</td>
                             <td class="px-6 py-3 text-gray-500">{{ $vps->user->name ?? '—' }}</td>
                             <td class="px-6 py-3 whitespace-nowrap">
-                            <x-action href="{{ route('vps.show', $vps->id) }}" color="indigo" icon="view" label="" title="View" />
-                            <x-permission-check :module="$vps->module" action="update">
-                            <x-action href="{{ route('vps.edit', $vps->id) }}" color="amber" icon="edit" label="" title="Edit" />
-                            </x-permission-check>
-                            <x-permission-check :module="$vps->module" action="delete">
-                            <x-action action="{{ route('vps.destroy', $vps->id) }}" color="red" icon="delete" label="" title="Delete" confirm="Are you sure?" method="DELETE" />
-                            </x-permission-check>
+                            @php
+                                $_canReveal = auth()->user()->hasRole('super-admin') || ($vaultModule && auth()->user()->canOnModule($vaultModule, 'reveal'));
+                                $_hasPassword = (bool)$vps->password;
+                            @endphp
+                            <div x-data="{ open: false, style: '' }" @click.away="open = false" class="relative inline-block">
+                                <button type="button" @click="
+                                    open = !open;
+                                    if (open) {
+                                        $nextTick(() => {
+                                            const r = $el.getBoundingClientRect();
+                                            style = 'position:fixed;left:' + r.left + 'px;top:' + (r.bottom + 4) + 'px;z-index:50';
+                                        });
+                                    }
+                                " @keydown.escape.prevent="open = false" class="inline-flex items-center justify-center w-9 h-9 rounded-xl transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500/40 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-700/50" aria-haspopup="true" :aria-expanded="open.toString()" aria-label="VPS actions" title="VPS actions">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>
+                                </button>
+                                <div x-show="open" :style="style" x-cloak role="menu" x-transition:enter="transition ease-out duration-100" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100" class="bg-gray-50 dark:bg-black rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 py-1 w-48">
+                                    <a href="{{ route('vps.show', $vps->id) }}" class="block px-3 py-2 text-sm text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500/40" role="menuitem">View Details</a>
+
+                                    @if($_hasPassword && $_canReveal)
+                                    <div class="border-t border-gray-100 dark:border-gray-700/50 my-1"></div>
+                                    <div class="flex items-center px-3 py-1.5 gap-2" role="menuitem">
+                                        <span class="flex-1 min-w-0 text-sm text-gray-700 dark:text-white truncate" title="Password">Password</span>
+                                        <x-copy-button password-route="{{ url('vps') }}/{{ $vps->id }}/password" class="shrink-0 w-6 h-6 !p-0 inline-flex items-center justify-center dark:text-gray-300" title="Copy Password" />
+                                    </div>
+                                    <div class="border-t border-gray-100 dark:border-gray-700/50 my-1"></div>
+                                    @endif
+
+                                    <x-permission-check :module="$vps->module" action="update">
+                                    <a href="{{ route('vps.edit', $vps->id) }}" class="block px-3 py-2 text-sm text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500/40" role="menuitem">Edit</a>
+                                    </x-permission-check>
+
+                                    <x-permission-check :module="$vps->module" action="delete">
+                                    <form method="POST" action="{{ route('vps.destroy', $vps->id) }}" class="block">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" data-confirm="Are you sure?" data-confirm-button="Delete" x-on:click="startLoading($el)" class="w-full text-left px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-red-500/40" role="menuitem">Delete</button>
+                                    </form>
+                                    </x-permission-check>
+                                </div>
+                            </div>
                             </td>
                         </tr>
                 @empty
-                    <tr><x-empty-state :colspan="9" icon="server" title="No VPS found." message="Add VPS servers to monitor them." /></tr>
+                    <tr><x-empty-state :colspan="8" icon="server" title="No VPS found." message="Add VPS servers to monitor them." /></tr>
                 @endforelse
             </tbody>
         </x-table>
