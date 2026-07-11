@@ -76,77 +76,93 @@
         <x-stat-card label="Denied Permissions" :value="$summary['denied_permissions']" icon="features" color="rose" />
     </div>
 
+    @php
+        $featureGroups = $modulePermissions->groupBy(fn($mp) => $mp->feature ?? 'Uncategorized');
+        $expandedByDefault = ['Infrastructure', 'Productivity'];
+    @endphp
     <div class="mt-6 bg-white dark:bg-black rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
         <h3 class="text-md font-semibold mb-1">Permission Matrix</h3>
-        <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">Shows all modules with effective permissions. Source indicates where each permission originates.</p>
-        <div class="overflow-x-auto">
-            <table class="w-full text-sm">
-                <thead>
-                    <tr class="border-b border-gray-200 dark:border-gray-700">
-                        <th scope="col" class="text-left px-3 py-2 font-medium text-gray-500 dark:text-gray-400 whitespace-nowrap">Module</th>
-                        <th scope="col" class="text-left px-3 py-2 font-medium text-gray-500 dark:text-gray-400 whitespace-nowrap">Feature</th>
-                        <th scope="col" class="text-center px-2 py-2 font-medium text-gray-500 dark:text-gray-400 text-xs whitespace-nowrap">Read</th>
-                        <th scope="col" class="text-center px-2 py-2 font-medium text-gray-500 dark:text-gray-400 text-xs whitespace-nowrap">Create</th>
-                        <th scope="col" class="text-center px-2 py-2 font-medium text-gray-500 dark:text-gray-400 text-xs whitespace-nowrap">Update</th>
-                        <th scope="col" class="text-center px-2 py-2 font-medium text-gray-500 dark:text-gray-400 text-xs whitespace-nowrap">Delete</th>
-                        <th scope="col" class="text-center px-2 py-2 font-medium text-gray-500 dark:text-gray-400 text-xs whitespace-nowrap">Approve</th>
-                        <th scope="col" class="text-center px-2 py-2 font-medium text-gray-500 dark:text-gray-400 text-xs whitespace-nowrap">Export</th>
-                        <th scope="col" class="text-center px-2 py-2 font-medium text-gray-500 dark:text-gray-400 text-xs whitespace-nowrap">Reveal</th>
-                        <th scope="col" class="text-center px-2 py-2 font-medium text-gray-500 dark:text-gray-400 text-xs whitespace-nowrap">Import</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-                    @forelse ($modulePermissions as $mp)
-                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                        <td class="px-3 py-2.5 font-medium whitespace-nowrap">{{ $mp->module_name }}</td>
-                        <td class="px-3 py-2.5 text-gray-500 dark:text-gray-400 text-xs whitespace-nowrap">{{ $mp->feature ?? '—' }}</td>
-                        @foreach (config('permissions.keys') as $perm)
-                        <td class="px-2 py-2.5 text-center">
-                            @php
-                                $p = $mp->permissions[$perm] ?? ['effective' => false, 'source' => 'None', 'user_override' => null, 'role' => null];
-                                $allowed = $p['effective'];
-                                $source = $p['source'];
-                            @endphp
-                            @if ($allowed)
-                                <span class="text-green-600 dark:text-green-400 font-bold text-sm">&#10003;</span>
-                            @else
-                                <span class="text-red-400 dark:text-red-300 font-bold text-sm">&#10005;</span>
-                            @endif
-                            <span class="block text-[9px] leading-tight mt-0.5
-                                @if ($source === 'Role')
-                                    text-blue-600 dark:text-blue-400
-                                @elseif ($source === 'User Override' && $allowed)
-                                    text-purple-600 dark:text-purple-400
-                                @elseif ($source === 'User Override' && !$allowed)
-                                    text-purple-600 dark:text-purple-400
-                                @elseif ($inspectedIsSuperAdmin)
-                                    text-green-600 dark:text-green-400
-                                @else
-                                    text-gray-400 dark:text-gray-500
-                                @endif
-                            ">
-                                @if ($inspectedIsSuperAdmin)
-                                    Super Admin
-                                @elseif ($source === 'Role')
-                                    Role
-                                @elseif ($source === 'User Override' && $allowed)
-                                    Override Allow
-                                @elseif ($source === 'User Override' && !$allowed)
-                                    Override Deny
-                                @else
-                                    None
-                                @endif
-                            </span>
-                        </td>
-                        @endforeach
-                    </tr>
-                    @empty
-                    <tr>
-                        <td colspan="10" class="px-3 py-8 text-center text-sm text-gray-400 dark:text-gray-500">No modules found.</td>
-                    </tr>
-                    @endforelse
-                </tbody>
-            </table>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">Shows all modules with effective permissions grouped by feature. Expand each group to inspect permissions.</p>
+        <div class="space-y-3">
+            @forelse ($featureGroups as $featureName => $modules)
+                @php $isExpanded = in_array($featureName, $expandedByDefault); @endphp
+                <div x-data="{ expanded: {{ $isExpanded ? 'true' : 'false' }} }" class="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
+                    <button type="button" @click="expanded = !expanded" class="w-full flex items-center justify-between px-4 py-3 text-sm font-semibold text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500/40">
+                        <span>{{ $featureName }}</span>
+                        <svg x-show="!expanded" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                        <svg x-show="expanded" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                    </button>
+                    <div x-show="expanded" x-cloak>
+                        <div class="overflow-x-auto border-t border-gray-200 dark:border-gray-700">
+                            <table class="w-full text-sm">
+                                <thead>
+                                    <tr class="border-b border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/30">
+                                        <th scope="col" class="text-left px-3 py-2 font-medium text-gray-500 dark:text-gray-400 whitespace-nowrap">Module</th>
+                                        <th scope="col" class="text-left px-3 py-2 font-medium text-gray-500 dark:text-gray-400 whitespace-nowrap">Feature</th>
+                                        <th scope="col" class="text-center px-2 py-2 font-medium text-gray-500 dark:text-gray-400 text-xs whitespace-nowrap">Read</th>
+                                        <th scope="col" class="text-center px-2 py-2 font-medium text-gray-500 dark:text-gray-400 text-xs whitespace-nowrap">Create</th>
+                                        <th scope="col" class="text-center px-2 py-2 font-medium text-gray-500 dark:text-gray-400 text-xs whitespace-nowrap">Update</th>
+                                        <th scope="col" class="text-center px-2 py-2 font-medium text-gray-500 dark:text-gray-400 text-xs whitespace-nowrap">Delete</th>
+                                        <th scope="col" class="text-center px-2 py-2 font-medium text-gray-500 dark:text-gray-400 text-xs whitespace-nowrap">Approve</th>
+                                        <th scope="col" class="text-center px-2 py-2 font-medium text-gray-500 dark:text-gray-400 text-xs whitespace-nowrap">Export</th>
+                                        <th scope="col" class="text-center px-2 py-2 font-medium text-gray-500 dark:text-gray-400 text-xs whitespace-nowrap">Reveal</th>
+                                        <th scope="col" class="text-center px-2 py-2 font-medium text-gray-500 dark:text-gray-400 text-xs whitespace-nowrap">Import</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                                    @foreach ($modules as $mp)
+                                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                                        <td class="px-3 py-2.5 font-medium whitespace-nowrap">{{ $mp->module_name }}</td>
+                                        <td class="px-3 py-2.5 text-gray-500 dark:text-gray-400 text-xs whitespace-nowrap">{{ $mp->feature ?? '—' }}</td>
+                                        @foreach (config('permissions.keys') as $perm)
+                                        <td class="px-2 py-2.5 text-center">
+                                            @php
+                                                $p = $mp->permissions[$perm] ?? ['effective' => false, 'source' => 'None', 'user_override' => null, 'role' => null];
+                                                $allowed = $p['effective'];
+                                                $source = $p['source'];
+                                            @endphp
+                                            @if ($allowed)
+                                                <span class="text-green-600 dark:text-green-400 font-bold text-sm">&#10003;</span>
+                                            @else
+                                                <span class="text-red-400 dark:text-red-300 font-bold text-sm">&#10005;</span>
+                                            @endif
+                                            <span class="block text-[9px] leading-tight mt-0.5
+                                                @if ($source === 'Role')
+                                                    text-blue-600 dark:text-blue-400
+                                                @elseif ($source === 'User Override' && $allowed)
+                                                    text-purple-600 dark:text-purple-400
+                                                @elseif ($source === 'User Override' && !$allowed)
+                                                    text-purple-600 dark:text-purple-400
+                                                @elseif ($inspectedIsSuperAdmin)
+                                                    text-green-600 dark:text-green-400
+                                                @else
+                                                    text-gray-400 dark:text-gray-500
+                                                @endif
+                                            ">
+                                                @if ($inspectedIsSuperAdmin)
+                                                    Super Admin
+                                                @elseif ($source === 'Role')
+                                                    Role
+                                                @elseif ($source === 'User Override' && $allowed)
+                                                    Override Allow
+                                                @elseif ($source === 'User Override' && !$allowed)
+                                                    Override Deny
+                                                @else
+                                                    None
+                                                @endif
+                                            </span>
+                                        </td>
+                                        @endforeach
+                                    </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            @empty
+                <p class="text-sm text-gray-400 dark:text-gray-500 text-center py-8">No modules found.</p>
+            @endforelse
         </div>
     </div>
 
