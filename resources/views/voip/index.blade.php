@@ -33,68 +33,61 @@
     <form method="POST" action="{{ route('bulk-action') }}" class="mb-6" id="bulk-form">
         @csrf
         <input type="hidden" name="type" value="voip">
-        <x-bulk-actions type="voip" colspan="12" :actions="$bulkActions" />
+        <x-bulk-actions type="voip" colspan="7" :actions="$bulkActions" />
     </form>
 
         <x-table>
             <x-slot:head>
-                <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Serial</th>
-                <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">EXTENSIONS</th>
-                <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">PASSWORDS</th>
                 <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Name</th>
-                <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">SERVER IP</th>
-                <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Number for Inbound</th>
-                <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Vendor NAME</th>
-                <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Number Status</th>
-                <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Code for OutBound</th>
-                <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Brand Details</th>
+                <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Extension</th>
+                <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Phone Number</th>
+                <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Vendor</th>
+                <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Status</th>
                 <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Actions</th>
             </x-slot:head>
                     @forelse ($voipList as $voip)
                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                             <td class="px-4 py-3"><input type="checkbox" name="ids[]" value="{{ $voip->id }}" aria-label="Select {{ $voip->name }}" class="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500 bulk-item" form="bulk-form"></td>
-                            <td class="px-6 py-3 text-gray-500">{{ $voip->id }}</td>
-                            <td class="px-6 py-3 font-medium">{{ $voip->extensions[0] ?? '—' }}</td>
+                            <td class="px-6 py-3 font-medium"><a href="{{ route('voip.show', $voip->id) }}" class="text-indigo-600 dark:text-indigo-400 hover:underline">{{ $voip->name }}</a></td>
+                            <td class="px-6 py-3 text-gray-500 dark:text-gray-400 font-mono text-xs">{{ $voip->extensions[0] ?? '—' }}</td>
+                            <td class="px-6 py-3 text-gray-500 dark:text-gray-400">{{ $voip->phone_number ?? '—' }}</td>
+                            <td class="px-6 py-3 text-gray-500 dark:text-gray-400">{{ $voip->serviceProvider?->name ?? '—' }}</td>
                             <td class="px-6 py-3">
-                                @if($voip->extension_password)
-                                    <span class="inline-flex items-center gap-1">
-                                        <span class="text-gray-400">••••••••</span>
-                                        <x-permission-check :module="$vaultModule" action="reveal">
-                                        <x-copy-button password-route="{{ url('voip') }}/{{ $voip->id }}/extension-password" title="Copy password" />
-                                        </x-permission-check>
-                                    </span>
-                                @else
-                                    <span class="text-gray-400">—</span>
-                                @endif
+                                <span @class([
+                                    'inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium',
+                                    'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' => $voip->number_status === 'active',
+                                    'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' => $voip->number_status === 'inactive' || $voip->number_status === 'expired',
+                                    'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300' => !$voip->number_status,
+                                ])>{{ $voip->number_status ?? '—' }}</span>
                             </td>
-                            <td class="px-6 py-3 font-medium">{{ $voip->name }}</td>
-                            <td class="px-6 py-3">
-                                @if($voip->server_ip)
-                                    <div class="flex items-center gap-2">
-                                        <span class="font-mono text-sm">{{ $voip->server_ip }}</span>
-                                        <x-copy-button :text="$voip->server_ip" title="Copy server IP" />
-                                    </div>
-                                @else
-                                    <span class="text-gray-400">—</span>
-                                @endif
-                            </td>
-                            <td class="px-6 py-3 text-gray-500">{{ $voip->phone_number ?? '—' }}</td>
-                            <td class="px-6 py-3 text-gray-500">{{ $voip->serviceProvider?->name ?? '—' }}</td>
-                            <td class="px-6 py-3 text-gray-500">{{ $voip->number_status ?? '—' }}</td>
-                            <td class="px-6 py-3 text-gray-500">{{ $voip->outbound_code ?? '—' }}</td>
-                            <td class="px-6 py-3 text-gray-500 max-w-[200px] truncate" title="{{ $voip->team_details }}">{{ $voip->team_details ?? '—' }}</td>
                             <td class="px-6 py-3 whitespace-nowrap">
-                            <x-action href="{{ route('voip.show', $voip->id) }}" color="indigo" icon="view" label="" title="View" />
-                            <x-permission-check :module="$voip->module" action="update">
-                            <x-action href="{{ route('voip.edit', $voip->id) }}" color="amber" icon="edit" label="" title="Edit" />
-                            </x-permission-check>
-                            <x-permission-check :module="$voip->module" action="delete">
-                            <x-action action="{{ route('voip.destroy', $voip->id) }}" color="red" icon="delete" label="" title="Delete" confirm="Are you sure?" method="DELETE" />
-                            </x-permission-check>
+                            @php $_canEdit = auth()->user()->hasRole('super-admin') || ($voip->module && auth()->user()->canOnModule($voip->module, 'update')); @endphp
+                            @php $_canDelete = auth()->user()->hasRole('super-admin') || ($voip->module && auth()->user()->canOnModule($voip->module, 'delete')); @endphp
+                            <div x-data="{ open: false, style: '' }" @click.away="open = false" class="relative inline-block">
+                                <button type="button" @click="
+                                    open = !open;
+                                    if (open) { $nextTick(() => { const r = $el.getBoundingClientRect(); style = 'position:fixed;left:' + r.left + 'px;top:' + (r.bottom + 4) + 'px;z-index:50'; }); }
+                                " @keydown.escape.prevent="open = false" class="inline-flex items-center justify-center w-9 h-9 rounded-xl transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500/40 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-700/50" aria-haspopup="true" :aria-expanded="open.toString()" aria-label="VoIP actions" title="VoIP actions">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>
+                                </button>
+                                <div x-show="open" :style="style" x-cloak role="menu" x-transition:enter="transition ease-out duration-100" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100" class="bg-gray-50 dark:bg-black rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 py-1 w-36">
+                                    <a href="{{ route('voip.show', $voip->id) }}" class="block px-3 py-2 text-sm text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500/40" role="menuitem">View Details</a>
+                                    @if($_canEdit)
+                                    <a href="{{ route('voip.edit', $voip->id) }}" class="block px-3 py-2 text-sm text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500/40" role="menuitem">Edit</a>
+                                    @endif
+                                    @if($_canDelete)
+                                    <form method="POST" action="{{ route('voip.destroy', $voip->id) }}" class="block">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" data-confirm="Are you sure?" x-on:click="startLoading($el)" class="w-full text-left px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-red-500/40" role="menuitem">Delete</button>
+                                    </form>
+                                    @endif
+                                </div>
+                            </div>
                             </td>
                         </tr>
                 @empty
-                    <tr><x-empty-state :colspan="12" icon="server" title="No VoIP entries found." message="Add VoIP services to manage them." /></tr>
+                    <tr><x-empty-state :colspan="7" icon="server" title="No VoIP entries found." message="Add VoIP services to manage them." /></tr>
                     @endforelse
                 </tbody>
         </x-table>
