@@ -65,7 +65,7 @@
                 @forelse ($items as $item)
                     <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                         <td class="px-6 py-3 text-gray-500">{{ $item->type_label }}</td>
-                        <td class="px-6 py-3 font-medium">{{ $item->name }}</td>
+                        <td class="px-6 py-3 font-medium"><a href="{{ route($item->route, $item->id) }}" class="text-indigo-600 dark:text-indigo-400 hover:underline">{{ $item->name }}</a></td>
                         <td class="px-6 py-3 text-gray-500 max-w-[200px] truncate" title="{{ $item->url }}">{{ $item->url }}</td>
                         <td class="px-6 py-3">
                             <span @class([
