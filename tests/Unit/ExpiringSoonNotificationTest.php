@@ -45,7 +45,8 @@ class ExpiringSoonNotificationTest extends TestCase
         $mail = $notification->toMail($user);
 
         $content = $mail->render();
-        $this->assertStringContainsString('Overdue', $mail->subject);
+        $this->assertStringContainsString('[OpsPilot]', $mail->subject);
+        $this->assertStringContainsString('expired', $content);
         $this->assertStringContainsString('3 day(s) ago', $content);
     }
 
@@ -65,7 +66,7 @@ class ExpiringSoonNotificationTest extends TestCase
         $mail = $notification->toMail($user);
 
         $content = $mail->render();
-        $this->assertStringContainsString('Expiring Soon', $mail->subject);
+        $this->assertStringContainsString('[OpsPilot]', $mail->subject);
         $this->assertStringContainsString('5 day(s)', $content);
     }
 

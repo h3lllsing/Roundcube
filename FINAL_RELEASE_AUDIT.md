@@ -228,3 +228,18 @@ Root holds 20 active `.md` files. 200+ historical records are organized in `docs
 | 2026-07-10 | Improvement Batch 1 | DomainEmailController edit/destroy: `->with('module')` for N+1 | ✅ |
 | 2026-07-10 | Improvement Batch 1 | domains/index.blade.php: stray `</tbody>` removed | ✅ |
 | 2026-07-10 | Improvement Batch 1 | Docs: stale `config('tyro.super_admin_email')` refs updated in 4 files | ✅ |
+| 2026-07-11 | SMTP & Notification Clarity | `MonitorCheckFailed` event: added `?int $itemId` | ✅ |
+| 2026-07-11 | SMTP & Notification Clarity | `MonitorCheckFailed` notification: `[OpsPilot]` prefix, itemId, ROUTE_MAP, recipient reason | ✅ |
+| 2026-07-11 | SMTP & Notification Clarity | `NotifyMonitorFailure` listener: passes itemId to notification | ✅ |
+| 2026-07-11 | SMTP & Notification Clarity | `ExpiringSoon` notification: `[OpsPilot]`, ROUTE_MAP, status, recipient reason | ✅ |
+| 2026-07-11 | SMTP & Notification Clarity | `TaskOverdue` notification created (separate class, task terminology only) | ✅ |
+| 2026-07-11 | SMTP & Notification Clarity | `CheckOverdueTasks` uses `TaskOverdue` instead of `ExpiringSoon` | ✅ |
+| 2026-07-11 | SMTP & Notification Clarity | `MonitorCheck` dispatches itemId with MonitorCheckFailed event | ✅ |
+| 2026-07-11 | SMTP & Notification Clarity | `ExpiryTrackerReminder` Mailable: trackable data, recipientType, isTest | ✅ |
+| 2026-07-11 | SMTP & Notification Clarity | Email template rewritten: standard format + test banner | ✅ |
+| 2026-07-11 | SMTP & Notification Clarity | `RenewalNotificationService`: buildMailable unified for preview/send, test email support | ✅ |
+| 2026-07-11 | SMTP & Notification Clarity | `SmtpProfileController` test: "accepted by SMTP server" phrasing | ✅ |
+| 2026-07-11 | SMTP & Notification Clarity | `ExpiryTrackerController` preview: includes testRecipient in JSON | ✅ |
+| 2026-07-11 | SMTP & Notification Clarity | Notification form + SMTP profile views: confirmation dialogs with recipient info | ✅ |
+| 2026-07-11 | SMTP & Notification Clarity | Tests: 63 notification/SMTP tests (ExpiryReminderMailTest, RenewalNotificationServiceTest, NotifyMonitorFailureTest, TaskOverdueNotificationTest) | ✅ |
+| 2026-07-11 | SMTP & Notification Clarity | **Live email verification**: PENDING — SMTP server unreachable from local dev environment. Deploy to production and verify on live server. | ⏳ |

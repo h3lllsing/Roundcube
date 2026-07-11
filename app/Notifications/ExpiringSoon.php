@@ -11,6 +11,26 @@ class ExpiringSoon extends Notification
 {
     use Queueable;
 
+    private const ROUTE_MAP = [
+        'App\Models\Hosting' => 'hostings.show',
+        'App\Models\Domain' => 'domains.show',
+        'App\Models\Vps' => 'vps.show',
+        'App\Models\Voip' => 'voip.show',
+        'App\Models\ServiceProvider' => 'service-providers.show',
+        'App\Models\DomainEmail' => 'domain-emails.show',
+        'App\Models\OtherService' => 'other-services.show',
+    ];
+
+    private const HUMAN_LABELS = [
+        'App\Models\Hosting' => 'Hosting',
+        'App\Models\Domain' => 'Domain',
+        'App\Models\Vps' => 'VPS',
+        'App\Models\Voip' => 'VoIP',
+        'App\Models\ServiceProvider' => 'Service Provider',
+        'App\Models\DomainEmail' => 'Domain Email',
+        'App\Models\OtherService' => 'Other Service',
+    ];
+
     public function __construct(
         private readonly string $itemType,
         private readonly int $itemId,
@@ -21,45 +41,54 @@ class ExpiringSoon extends Notification
         private readonly int $daysRemaining,
     ) {}
 
-    /** @return array<int, string> */
     public function via(object $notifiable): array
     {
         return ['database', 'mail'];
     }
 
-    /** @param User $notifiable */
     public function toMail(object $notifiable): MailMessage
     {
-        $subject = $this->daysRemaining < 0
-            ? "Overdue: {$this->entityType} — {$this->name}"
-            : "Expiring Soon: {$this->entityType} — {$this->name}";
+        $urgency = match (true) {
+            $this->daysRemaining < 0 => 'expired ' . abs($this->daysRemaining) . ' days ago',
+            $this->daysRemaining === 0 => 'expires today',
+            $this->daysRemaining === 1 => 'expires tomorrow',
+            default => 'expires in ' . $this->daysRemaining . ' days',
+        };
 
-        $lines = [
-            "This is a notification regarding **{$this->name}** ({$this->entityType}).",
-        ];
+        $subject = "[OpsPilot] {$this->entityType} {$urgency} — {$this->name}";
 
-        if ($this->daysRemaining < 0) {
-            $lines[] = 'This item expired **'.abs($this->daysRemaining)." day(s) ago** on {$this->expiryDate}.";
-        } elseif ($this->daysRemaining === 0) {
-            $lines[] = "This item **expires today** ({$this->expiryDate}).";
-        } else {
-            $lines[] = "This item will expire in **{$this->daysRemaining} day(s)** on {$this->expiryDate}.";
+        $routeName = self::ROUTE_MAP[$this->itemType] ?? null;
+        $url = url('/');
+        if ($routeName) {
+            try {
+                $url = route($routeName, $this->itemId);
+            } catch (\Exception) {
+                $url = url('/');
+            }
         }
-
-        $lines[] = 'Please take the necessary action to renew or update the status.';
 
         $mail = (new MailMessage)
             ->subject($subject)
-            ->greeting('Hello '.$notifiable->name.',');
+            ->greeting('Hello ' . $notifiable->name . ',');
 
-        foreach ($lines as $line) {
-            $mail->line($line);
+        $mail->line("This is a notification regarding **{$this->name}** ({$this->entityType}).");
+
+        if ($this->daysRemaining < 0) {
+            $mail->line('This item expired **' . abs($this->daysRemaining) . " day(s) ago** on {$this->expiryDate}.");
+        } elseif ($this->daysRemaining === 0) {
+            $mail->line("This item **expires today** ({$this->expiryDate}).");
+        } else {
+            $mail->line("This item will expire in **{$this->daysRemaining} day(s)** on {$this->expiryDate}.");
         }
 
-        return $mail->action('View Item', url('/'));
+        $mail->line("**Resource Type:** {$this->entityType}");
+        $mail->line("**Status:** active");
+
+        $mail->line("You received this because you are the assigned user for this resource.");
+
+        return $mail->action('View Resource', $url);
     }
 
-    /** @return array<string, mixed> */
     public function toArray(object $notifiable): array
     {
         return [

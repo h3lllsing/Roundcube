@@ -170,11 +170,11 @@ class SmtpProfileController extends Controller
                     ->causedBy($user)
                     ->performedOn($smtpProfile)
                     ->event('tested')
-                    ->log('Tested SMTP profile "' . $smtpProfile->name . '" — success');
+                    ->log('Tested SMTP profile "' . $smtpProfile->name . '" — accepted by SMTP server');
             });
 
             return redirect()->route('smtp-profiles.show', $smtpProfile)
-                ->with('success', 'Test email sent successfully to ' . $user->email);
+                ->with('success', 'Test accepted by SMTP server. Recipient: ' . $user->email . '. Profile: ' . $smtpProfile->name);
         } catch (\Exception $e) {
             DB::transaction(function () use ($smtpProfile, $e, $user) {
                 $smtpProfile->update([

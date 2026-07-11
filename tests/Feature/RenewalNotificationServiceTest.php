@@ -81,8 +81,8 @@ class RenewalNotificationServiceTest extends TestCase
         $this->assertArrayHasKey('profileName', $result);
         $this->assertArrayHasKey('senderEmail', $result);
         $this->assertArrayHasKey('senderName', $result);
-        $this->assertStringContainsString('Renewal Reminder', $result['subject']);
-        $this->assertStringContainsString('Renewal Reminder', $result['html']);
+        $this->assertStringContainsString('[OpsPilot]', $result['subject']);
+        $this->assertStringContainsString('Resource Type:', $result['html']);
         $this->assertStringContainsString('Default System SMTP', $result['profileName']);
     }
 
@@ -287,5 +287,94 @@ class RenewalNotificationServiceTest extends TestCase
     {
         $mailer = $this->service->resolveMailer(null);
         $this->assertNotNull($mailer);
+    }
+
+    public function test_test_email_recipient_is_admin(): void
+    {
+        Mail::fake();
+        $tracker = $this->createTracker();
+
+        $this->service->sendTest($tracker, $this->admin);
+
+        Mail::assertSent(ExpiryTrackerReminder::class, function ($mail) {
+            return $mail->hasTo($this->admin->email);
+        });
+    }
+
+    public function test_test_email_is_marked_as_test(): void
+    {
+        Mail::fake();
+        $tracker = $this->createTracker();
+
+        $this->service->sendTest($tracker, $this->admin);
+
+        Mail::assertSent(ExpiryTrackerReminder::class, function ($mail) {
+            return $mail->isTest === true && $mail->recipientType === 'test';
+        });
+    }
+
+    public function test_send_now_passes_recipient_type(): void
+    {
+        Mail::fake();
+        $tracker = $this->createTracker([
+            'notify_assigned_user' => true,
+            'notify_admins' => false,
+        ]);
+
+        $this->service->sendNow($tracker);
+
+        Mail::assertSent(ExpiryTrackerReminder::class, function ($mail) {
+            return $mail->recipientType === 'assigned_user';
+        });
+    }
+
+    public function test_duplicate_recipients_are_deduplicated(): void
+    {
+        Mail::fake();
+        $tracker = $this->createTracker([
+            'notify_assigned_user' => true,
+            'notify_admins' => true,
+            'notify_custom_emails' => [$this->assignedUser->email],
+        ]);
+
+        $recipients = $this->service->buildRecipients($tracker);
+        $emails = array_column($recipients, 'email');
+
+        $this->assertCount(3, $recipients, 'Should dedupe assigned user from custom emails (including TyroSeeder admin)');
+        $this->assertEquals(1, count(array_filter($emails, fn ($e) => $e === $this->assignedUser->email)));
+    }
+
+    public function test_preview_and_send_use_same_build_method(): void
+    {
+        Mail::fake();
+        $tracker = $this->createTracker();
+
+        $preview = $this->service->previewEmail($tracker);
+
+        $mailable = new ExpiryTrackerReminder($tracker, 15, $this->assignedUser->email);
+        $sendSubject = $mailable->envelope()->subject;
+
+        $this->assertNotNull($preview['subject']);
+        $this->assertNotNull($preview['html']);
+    }
+
+    public function test_sensitive_fields_not_in_notification_history(): void
+    {
+        Mail::fake();
+        Mail::shouldReceive('mailer->to->send')->andThrow(
+            new \Exception('SMTP connection to mail.example.com:587 failed')
+        );
+
+        $tracker = $this->createTracker();
+
+        $this->service->sendNow($tracker);
+
+        $record = ExpiryTrackerNotification::where('expiry_tracker_id', $tracker->id)
+            ->where('status', 'failed')
+            ->first();
+
+        $this->assertNotNull($record);
+        $this->assertStringNotContainsString('secret123', $record->error_message);
+        $this->assertStringNotContainsString('password', $record->error_message);
     }
 }

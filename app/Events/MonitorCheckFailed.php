@@ -14,5 +14,6 @@ class MonitorCheckFailed
         public Model $item,
         public string $type,
         public string $error,
+        public ?int $itemId = null,
     ) {}
 }

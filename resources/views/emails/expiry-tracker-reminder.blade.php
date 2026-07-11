@@ -1,23 +1,48 @@
 <x-mail::message>
-# Renewal Reminder
+@if($isTest)
+# 🔬 TEST EMAIL — Sample Data
 
-Hello,
+**This is a test email.** The data shown is from the selected tracker for verification purposes.
 
-This is a renewal reminder for:
+---
 
-**Title:** {{ $title }}  
-**Expires:** {{ $expiryDate }}  
-**Days Left:** {{ $daysLeft >= 0 ? $daysLeft : 'Overdue by ' . abs($daysLeft) . ' day(s)' }}  
-**Type:** {{ $type }}  
-**Cost:** {{ $cost }}  
-**Provider:** {{ $provider }}  
-**Assigned to:** {{ $assignedUser }}
+@endif
+# @if($daysLeft < 0)Expired — @elseif($daysLeft === 0)Expires Today — @else Renewal Reminder — @endif {{ $title }}
+
+**Resource Type:** {{ $resourceType }}  
+**Resource Name:** {{ $title }}
+@if($relatedDomain)
+**Related Domain:** {{ $relatedDomain }}
+@endif
+@if($relatedHosting)
+**Related Hosting:** {{ $relatedHosting }}
+@endif
+@if($provider)
+**Provider:** {{ $provider }}
+@endif
+@if($expiryDate)
+**Expiry Date:** {{ $expiryDate }}
+@endif
+@if($daysLeft >= 0)
+**Days Remaining:** {{ $daysLeft }}
+@else
+**Days Overdue:** {{ abs($daysLeft) }}
+@endif
+@if($status)
+**Current Status:** {{ ucfirst($status) }}
+@endif
+@if($assignedUser)
+**Assigned User:** {{ $assignedUser }}
+@endif
+@if($cost)
+**Cost:** {{ $cost }}
+@endif
+
+{{ $recipientReason }}
 
 <x-mail::button :url="$portalLink">
-View in Portal
+View in OpsPilot
 </x-mail::button>
-
-Please take the necessary action to renew or update the status.
 
 Thanks,<br>
 {{ config('app.name') }}

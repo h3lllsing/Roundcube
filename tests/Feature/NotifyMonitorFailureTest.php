@@ -77,4 +77,38 @@ class NotifyMonitorFailureTest extends TestCase
             return $data['resource_name'] === 'test@example.com';
         });
     }
+
+    public function test_notification_stores_item_id(): void
+    {
+        Notification::fake();
+
+        $admin = User::factory()->create();
+        $admin->assignRole(Role::where('slug', 'super-admin')->firstOrFail());
+
+        $domain = Domain::factory()->create(['monitoring_url' => 'https://fail.com', 'name' => 'My Domain']);
+        MonitorCheckFailed::dispatch($domain, 'Domain', 'Connection timeout');
+
+        Notification::assertSentTo($admin, MonitorCheckFailedNotification::class, function ($notification) {
+            $data = $notification->toArray(new User);
+
+            return isset($data['item_id']) && $data['item_id'] > 0;
+        });
+    }
+
+    public function test_subject_includes_opsilot_prefix(): void
+    {
+        Notification::fake();
+
+        $admin = User::factory()->create();
+        $admin->assignRole(Role::where('slug', 'super-admin')->firstOrFail());
+
+        $domain = Domain::factory()->create(['monitoring_url' => 'https://fail.com', 'name' => 'My Domain']);
+        MonitorCheckFailed::dispatch($domain, 'Domain', 'Connection timeout');
+
+        Notification::assertSentTo($admin, MonitorCheckFailedNotification::class, function ($notification) use ($admin) {
+            $mail = $notification->toMail($admin);
+
+            return str_starts_with($mail->subject, '[OpsPilot]');
+        });
+    }
 }

@@ -4,6 +4,45 @@ All notable changes to OpsPilot are documented in this file.
 
 ---
 
+## [1.7.2] — 2026-07-11 — SMTP & Notification Clarity
+
+### Email Subjects
+- **All emails prefixed with `[OpsPilot]`**: Subjects now follow `[OpsPilot]{[TEST]} {ResourceType} {Urgency} — {Name}` format
+- **Task overdue uses task terminology**: `[OpsPilot] Task Overdue — {name}` — no "expiry"/"renewal" language
+- **Monitor failure subjects include type + name**: `[OpsPilot] {type} DOWN — {name}`
+
+### Email Content
+- **Resource type from actual trackable model**: Hosting, Domain, VPS, VoIP, ServiceProvider, DomainEmail, OtherService — mapped via polymorphic `trackable` relationship; standalone trackers fall back to module label
+- **Related domain/hosting shown**: Hosting shows its `domain`, DomainEmail shows its parent Domain, etc. — omitted when not applicable
+- **Status, cost, assigned user added** to all renewal reminder emails
+- **Recipient reason line**: "You received this because you are the assigned user / an administrator / a custom recipient"
+- **Test banner**: Yellow warning header on test emails (`[TEST]` prefix in subject + "TEST EMAIL" banner)
+- **Portal links per entity type**: Route map resolves `hostings.show`, `domains.show`, etc.; invalid types fall back to `/dashboard`
+- **Sensitive data excluded**: Passwords, SMTP credentials, vault secrets, tokens, recovery codes never in email
+
+### New Notifications
+- **`TaskOverdue` notification**: Separate class (`app/Notifications/TaskOverdue.php`) using `['database', 'mail']` channels — task terminology only (Due Date, Days Overdue, Task Status), links to `tasks.show` route
+- **`MonitorCheckFailed` event updated**: Added `?int $itemId` property; passed from command through listener to notification
+- **`ExpiringSoon` notification updated**: `[OpsPilot]` prefix, `ROUTE_MAP`, status field, recipient reason line, portal links
+
+### Mailable & Template
+- **`ExpiryTrackerReminder` Mailable** (`app/Mail/ExpiryTrackerReminder.php`): Added `recipientType`, `isTest` parameters; `buildViewData()` loads trackable, resolves resource type, passes domain/hosting, status, recipient reason
+- **Email template rewritten** (`resources/views/emails/expiry-tracker-reminder.blade.php`): Standard format with Resource Type, Resource Name, Domain/Hosting, Provider, Expiry Date, Days Remaining/Overdue, Status, Assigned User, Cost, Recipient Reason, portal button; TEST banner when `$isTest` is true
+
+### Services & Commands
+- **`CheckOverdueTasks` uses `TaskOverdue`** instead of `ExpiringSoon`
+- **`MonitorCheck` dispatches `itemId`** with `MonitorCheckFailed` event
+- **`RenewalNotificationService`** (`app/Services/RenewalNotificationService.php`): `buildMailable()` accepts `$recipientType` + `$isTest`, loads trackable relation; `sendTest()` passes `'test'` type; `previewEmail()` uses same `buildMailable()` as send; `testSmtpProfile()` passes `isTest=true`
+
+### UI & Controller Improvements
+- **SMTP test success/error messages**: Controller now says "Test accepted by SMTP server. Recipient: ..." instead of "sent successfully"; activity log matches
+- **Test email confirmation dialogs**: "Send Test Email" button shows recipient email + subject before sending; "Send Reminder Now" shows recipient list
+- **Preview endpoint returns `testRecipient`**: `ExpiryTrackerController::previewEmail()` includes authenticated user email in JSON response
+
+### Test Suite Expansion
+- **63 tests total** (was ~48 for this area): New `TaskOverdueNotificationTest` (9 tests), 27 `ExpiryReminderMailTest` tests, updated `RenewalNotificationServiceTest`, updated `NotifyMonitorFailureTest`
+- **Key coverage**: OpsPilot prefix, TEST prefix, urgency levels, all trackable types, standalone fallback, status, recipient reasons, test banner, portal links, cost/provider/preview/send parity, related domain/hosting, dedup, sensitive data safety, task-only terminology
+
 ## [1.7.1] — 2026-07-10 — Improvement Batch 1
 
 ### Security & Data Protection

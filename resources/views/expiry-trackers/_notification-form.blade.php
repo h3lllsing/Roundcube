@@ -174,20 +174,53 @@ document.addEventListener('DOMContentLoaded', function() {
 
     if (testBtn) {
         testBtn.addEventListener('click', function() {
-            if (confirm('Send a test email to your address?')) {
-                var form = document.createElement('form');
-                form.method = 'POST';
-                form.action = this.getAttribute('data-url');
-                form.innerHTML = '@csrf';
-                document.body.appendChild(form);
-                form.submit();
+            var url = previewBtn ? previewBtn.getAttribute('data-url') : '';
+            var msg = 'Send a test email to ' + '{{ Auth::user()->email }}' + '?';
+
+            if (url) {
+                fetch(url)
+                    .then(function(r) { return r.json(); })
+                    .then(function(data) {
+                        msg = 'Send test email to:\n  Recipient: ' + data.testRecipient + '\n  Subject: ' + data.subject + '\n\nProceed?';
+                        if (confirm(msg)) {
+                            var form = document.createElement('form');
+                            form.method = 'POST';
+                            form.action = testBtn.getAttribute('data-url');
+                            form.innerHTML = '@csrf';
+                            document.body.appendChild(form);
+                            form.submit();
+                        }
+                    })
+                    .catch(function() {
+                        if (confirm('Send a test email to {{ Auth::user()->email }}?')) {
+                            var form = document.createElement('form');
+                            form.method = 'POST';
+                            form.action = testBtn.getAttribute('data-url');
+                            form.innerHTML = '@csrf';
+                            document.body.appendChild(form);
+                            form.submit();
+                        }
+                    });
+            } else {
+                if (confirm(msg)) {
+                    var form = document.createElement('form');
+                    form.method = 'POST';
+                    form.action = testBtn.getAttribute('data-url');
+                    form.innerHTML = '@csrf';
+                    document.body.appendChild(form);
+                    form.submit();
+                }
             }
         });
     }
 
     if (reminderBtn) {
         reminderBtn.addEventListener('click', function() {
-            if (confirm('Send reminder now to all configured recipients?')) {
+            var recipients = '{{ implode(', ', array_column($recipientPreview ?? [], 'email')) }}';
+            var msg = recipients
+                ? 'Send reminder now to:\n  ' + recipients.split(', ').join('\n  ') + '\n\nProceed?'
+                : 'Send reminder now to all configured recipients?';
+            if (confirm(msg)) {
                 var form = document.createElement('form');
                 form.method = 'POST';
                 form.action = this.getAttribute('data-url');

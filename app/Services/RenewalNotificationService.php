@@ -77,7 +77,7 @@ class RenewalNotificationService
                         );
 
                         try {
-                            $this->sendEmail($tracker, $matchedDay, $recipient['email']);
+                            $this->sendEmail($tracker, $matchedDay, $recipient['email'], $recipient['type']);
                             $notification->update(['status' => 'sent', 'sent_at' => now()]);
                         } catch (\Exception $e) {
                             $notification->update([
@@ -138,7 +138,7 @@ class RenewalNotificationService
             );
 
             try {
-                $this->sendEmail($tracker, $matchedDay, $recipient['email']);
+                $this->sendEmail($tracker, $matchedDay, $recipient['email'], $recipient['type']);
                 $notification->update(['status' => 'sent', 'sent_at' => now()]);
                 $sent++;
             } catch (\Exception $e) {
@@ -185,7 +185,7 @@ class RenewalNotificationService
         );
 
         try {
-            $this->sendEmail($tracker, $daysLeft, $recipient->email);
+            $this->sendEmail($tracker, $daysLeft, $recipient->email, 'test', true);
             $notification->update(['status' => 'sent', 'sent_at' => now()]);
         } catch (\Exception $e) {
             $notification->update([
@@ -202,14 +202,14 @@ class RenewalNotificationService
 
     public function previewEmail(ExpiryTracker $tracker): array
     {
-        $tracker->load(['user', 'module', 'serviceProvider', 'smtpProfile']);
+        $tracker->load(['user', 'module', 'serviceProvider', 'smtpProfile', 'trackable']);
 
         $daysLeft = (int) Carbon::today()->startOfDay()->diffInDays(
             Carbon::parse($tracker->expiry_date)->startOfDay(),
             false
         );
 
-        $mailable = $this->buildMailable($tracker, $daysLeft, $tracker->user?->email ?? '');
+        $mailable = $this->buildMailable($tracker, $daysLeft, $tracker->user?->email ?? '', 'assigned_user', false);
 
         $subject = $mailable->envelope()->subject;
         $html = $mailable->renderPreview();
@@ -220,13 +220,19 @@ class RenewalNotificationService
         return compact('subject', 'html', 'profileName', 'senderEmail', 'senderName');
     }
 
-    public function buildMailable(ExpiryTracker $tracker, int $daysLeft, string $recipientEmail): ExpiryTrackerReminder
+    public function buildMailable(ExpiryTracker $tracker, int $daysLeft, string $recipientEmail, string $recipientType = 'assigned_user', bool $isTest = false): ExpiryTrackerReminder
     {
+        if (! $tracker->relationLoaded('trackable')) {
+            $tracker->load('trackable');
+        }
+
         return new ExpiryTrackerReminder(
             $tracker,
             $daysLeft,
             $recipientEmail,
             $tracker->smtpProfile,
+            $recipientType,
+            $isTest,
         );
     }
 
@@ -326,10 +332,10 @@ class RenewalNotificationService
             ->exists();
     }
 
-    private function sendEmail(ExpiryTracker $tracker, int $matchedDay, string $email): void
+    private function sendEmail(ExpiryTracker $tracker, int $matchedDay, string $email, string $recipientType = 'assigned_user', bool $isTest = false): void
     {
         $mailer = $this->resolveMailer($tracker->smtpProfile);
-        $mailable = $this->buildMailable($tracker, $matchedDay, $email);
+        $mailable = $this->buildMailable($tracker, $matchedDay, $email, $recipientType, $isTest);
 
         $mailer->to($email)->send($mailable);
     }
@@ -394,13 +400,16 @@ class RenewalNotificationService
         $dummy = ExpiryTracker::make([
             'name' => 'Test SMTP Profile',
             'expiry_date' => now()->addDays(7),
+            'status' => 'active',
         ]);
 
         $mailable = new ExpiryTrackerReminder(
             $dummy,
             7,
             $recipient->email,
-            $profile
+            $profile,
+            'test',
+            true,
         );
 
         $mailer->to($recipient->email)->send($mailable);

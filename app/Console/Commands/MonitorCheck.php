@@ -45,7 +45,7 @@ class MonitorCheck extends Command
                 if ($result['ping']['success']) {
                     $success++;
                 } else {
-                    MonitorCheckFailed::dispatch($item, class_basename($modelClass), $result['ping']['error'] ?? 'Unknown error');
+                    MonitorCheckFailed::dispatch($item, class_basename($modelClass), $result['ping']['error'] ?? 'Unknown error', $item->getKey());
                 }
 
                 $item->last_ping_at = now();

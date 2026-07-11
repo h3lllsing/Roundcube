@@ -7,7 +7,8 @@
 <div class="max-w-3xl mx-auto">
     <x-page-header title="{{ $smtpProfile->name }}" back-url="{{ route('smtp-profiles.index') }}" back-label="Back to SMTP Profiles">
         <x-slot:actions>
-            <form action="{{ route('smtp-profiles.test', $smtpProfile) }}" method="POST" class="inline">
+            <form action="{{ route('smtp-profiles.test', $smtpProfile) }}" method="POST" class="inline"
+                  onsubmit="return confirm('Send test email via SMTP profile \'{{ $smtpProfile->name }}\' to {{ Auth::user()->email }}?\n\nA sample email will be sent with clearly labelled test data.');">
                 @csrf
                 <x-button type="submit" variant="success" size="sm">Test SMTP</x-button>
             </form>

@@ -208,12 +208,13 @@ class ExpiryTrackerController extends Controller
     public function previewEmail(int $id, RenewalNotificationService $service): JsonResponse
     {
         $this->userOwnedFilter();
-        $tracker = ExpiryTracker::with(['user', 'module', 'serviceProvider', 'smtpProfile'])->findOrFail($id);
+        $tracker = ExpiryTracker::with(['user', 'module', 'serviceProvider', 'smtpProfile', 'trackable'])->findOrFail($id);
 
         $user = Auth::user();
         abort_unless($user->hasRole('super-admin') || ($tracker->module && $user->canOnModule($tracker->module, 'update')), 403);
 
         $preview = $service->previewEmail($tracker);
+        $preview['testRecipient'] = $user->email;
 
         return response()->json($preview);
     }
