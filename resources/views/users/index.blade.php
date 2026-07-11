@@ -20,21 +20,9 @@
     </x-page-header>
 
     <form method="GET" class="flex flex-wrap gap-3 mb-6">
-        <input type="text" name="search" value="{{ request('search') }}" placeholder="Search users..."
-            class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl input-focus outline-none">
-        <select name="role"
-            class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm bg-white dark:bg-black text-gray-900 dark:text-white input-focus outline-none">
-            <option value="">All roles</option>
-            <option value="super-admin" @selected(request('role') === 'super-admin')>Super Admin</option>
-            <option value="admin" @selected(request('role') === 'admin')>Admin</option>
-            <option value="user" @selected(request('role') === 'user')>User</option>
-        </select>
-        <select name="status"
-            class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm bg-white dark:bg-black text-gray-900 dark:text-white input-focus outline-none">
-            <option value="">All statuses</option>
-            <option value="active" @selected(request('status') === 'active')>Active</option>
-            <option value="suspended" @selected(request('status') === 'suspended')>Suspended</option>
-        </select>
+        <x-filter-input name="search" placeholder="Search users..." />
+        <x-filter-select name="role" placeholder="All roles" :options="['super-admin' => 'Super Admin', 'admin' => 'Admin', 'user' => 'User']" />
+        <x-filter-select name="status" placeholder="All statuses" :options="['active' => 'Active', 'suspended' => 'Suspended']" />
         <input type="date" name="date_from" value="{{ request('date_from') }}" placeholder="From"
             class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl input-focus outline-none">
         <input type="date" name="date_to" value="{{ request('date_to') }}" placeholder="To"
@@ -61,7 +49,6 @@
                     <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Roles</th>
                     <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Status</th>
                     <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Last Login</th>
-                    <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Created</th>
                     <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Actions</th>
                 </tr>
             </thead>
@@ -69,7 +56,7 @@
                 @forelse ($users as $user)
                     <tr class="{{ $user->suspended_at ? 'bg-red-50 dark:bg-red-900/10 hover:bg-red-100 dark:hover:bg-red-900/20' : 'hover:bg-gray-50 dark:hover:bg-gray-700/50' }}">
                         <td class="px-4 py-3"><input type="checkbox" name="ids[]" value="{{ $user->id }}" aria-label="Select {{ $user->name }}" class="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500 bulk-item" form="bulk-form"></td>
-                        <td class="px-6 py-3 font-medium">{{ $user->name }}</td>
+                        <td class="px-6 py-3 font-medium"><a href="{{ route('users.show', $user->id) }}" class="text-indigo-600 dark:text-indigo-400 hover:underline">{{ $user->name }}</a></td>
                         <td class="px-6 py-3 text-gray-500">{{ $user->email }}</td>
                         <td class="px-6 py-3">
                             <div class="flex flex-wrap gap-1">
@@ -91,30 +78,55 @@
                             @if ($user->last_login_at)
                                 <span title="{{ $user->last_login_at }}">{{ \Carbon\Carbon::parse($user->last_login_at)->diffForHumans() }}</span>
                             @else
-                                <span class="text-gray-400 dark:text-gray-500">Never</span>
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400">Never</span>
                             @endif
                         </td>
-                        <td class="px-6 py-3 text-gray-500">{{ $user->created_at->format('Y-m-d') }}</td>
                         <td class="px-6 py-3 whitespace-nowrap">
-                            <x-action href="{{ route('users.show', $user->id) }}" color="indigo" icon="view" label="View" />
-                            <x-action href="{{ route('users.permissions.edit', $user->id) }}" color="purple" icon="shield" label="Permissions" />
-                            <x-action href="{{ route('users.clone', $user->id) }}" color="sky" icon="clone" label="Clone" />
                             <x-action href="{{ route('users.edit', $user->id) }}" color="amber" icon="edit" label="Edit" />
-                            @if ($user->suspended_at)
-                                <x-action action="{{ route('users.unsuspend', $user->id) }}" color="green" label="Unsuspend" confirm="Unsuspend this user?" confirm-button="Unsuspend" method="PATCH" />
-                            @else
-                                <x-action action="{{ route('users.suspend', $user->id) }}" color="orange" label="Suspend" confirm="Suspend this user?" confirm-button="Suspend" method="PATCH" />
-                            @endif
-                            <x-action action="{{ route('users.destroy', $user->id) }}" color="red" icon="delete" label="Delete" confirm="Are you sure?" method="DELETE" />
+                            <div x-data="{ open: false, style: '' }" @click.away="open = false" class="relative inline-block">
+                                <button type="button" @click="
+                                    open = !open;
+                                    if (open) {
+                                        $nextTick(() => {
+                                            const r = $el.getBoundingClientRect();
+                                            style = 'position:fixed;left:' + r.left + 'px;top:' + (r.bottom + 4) + 'px;z-index:50';
+                                        });
+                                    }
+                                " @keydown.escape.prevent="open = false" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-medium transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500/40 text-gray-600 dark:text-white bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-700/50" aria-haspopup="true" :aria-expanded="open.toString()" aria-label="More actions" title="More actions">
+                                    <span>More</span>
+                                    <svg class="w-3 h-3" :class="{ 'rotate-180': open }" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                                </button>
+                                <div x-show="open" :style="style" x-cloak role="menu" x-transition:enter="transition ease-out duration-100" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100" class="bg-gray-50 dark:bg-black rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 py-1 w-48">
+                                    <a href="{{ route('users.permissions.edit', $user->id) }}" class="block px-3 py-2 text-sm text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500/40" role="menuitem">Permissions</a>
+                                    <a href="{{ route('users.clone', $user->id) }}" class="block px-3 py-2 text-sm text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500/40" role="menuitem">Clone</a>
+                                    @if ($user->suspended_at)
+                                        <form method="POST" action="{{ route('users.unsuspend', $user->id) }}" class="block">
+                                            @csrf
+                                            @method('PATCH')
+                                            <button type="submit" data-confirm="Unsuspend this user?" data-confirm-button="Unsuspend" x-on:click="startLoading($el)" class="w-full text-left px-3 py-2 text-sm text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-green-500/40" role="menuitem">Unsuspend</button>
+                                        </form>
+                                    @else
+                                        <form method="POST" action="{{ route('users.suspend', $user->id) }}" class="block">
+                                            @csrf
+                                            @method('PATCH')
+                                            <button type="submit" data-confirm="Suspend this user?" data-confirm-button="Suspend" x-on:click="startLoading($el)" class="w-full text-left px-3 py-2 text-sm text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-orange-500/40" role="menuitem">Suspend</button>
+                                        </form>
+                                    @endif
+                                    <form method="POST" action="{{ route('users.destroy', $user->id) }}" class="block">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" data-confirm="Are you sure?" data-confirm-button="Delete" x-on:click="startLoading($el)" class="w-full text-left px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-red-500/40" role="menuitem">Delete</button>
+                                    </form>
+                                </div>
+                            </div>
                         </td>
                     </tr>
                 @empty
-                    <tr><x-empty-state :colspan="8" icon="user" title="No users found." message="Invite users to get started." /></tr>
+                    <tr><x-empty-state :colspan="7" icon="user" title="No users found." message="Invite users to get started." /></tr>
                 @endforelse
             </tbody>
         </table>
     </div>
-
 
     <div class="mt-4">{{ $users->links() }}</div>
 </div>
