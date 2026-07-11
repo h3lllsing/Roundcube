@@ -24,26 +24,7 @@
     </div>
     @endif
 
-    @if (!empty($operations['upcoming_expiries']))
-    <div class="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700/50">
-        <p class="text-[11px] font-semibold uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-3">Upcoming Expiries</p>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            @foreach ($operations['upcoming_expiries'] as $type => $items)
-            <div class="bg-gray-50 dark:bg-black/50 rounded-xl p-3">
-                <p class="text-[10px] font-semibold text-gray-600 dark:text-gray-400 mb-2 uppercase tracking-wider">{{ $type }}</p>
-                <ul class="space-y-1.5">
-                    @foreach ($items as $item)
-                    <li class="text-xs text-gray-500 dark:text-gray-400 flex justify-between items-center py-1 px-2 rounded-lg hover:bg-white dark:hover:bg-gray-800 transition-colors">
-                        <span class="truncate font-medium">{{ $item['name'] }}</span>
-                        <span class="shrink-0 ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-[10px] font-semibold">{{ $item['expiry'] }} ({{ $item['days_left'] }}d)</span>
-                    </li>
-                    @endforeach
-                </ul>
-            </div>
-            @endforeach
-        </div>
-    </div>
-    @endif
+
     @else
     <div class="flex flex-col items-center justify-center py-8 text-center">
         <svg class="w-10 h-10 text-gray-300 dark:text-gray-600 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2"/></svg>
