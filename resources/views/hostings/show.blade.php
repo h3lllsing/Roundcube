@@ -8,21 +8,38 @@
     <x-page-header title="{{ $hosting->name }}" back-url="{{ route('hostings.index') }}" back-label="Back to Hostings">
         <x-slot:actions>
             <x-monitor-button type="hostings" :id="$hosting->id" />
-            <x-permission-check :module="$hosting->module" action="update">
-            <x-button href="{{ route('hostings.edit', $hosting->id) }}" variant="primary" size="sm">Edit</x-button>
-            </x-permission-check>
-            <x-permission-check :module="$hosting->module" action="delete">
-            <form action="{{ route('hostings.destroy', $hosting->id) }}" method="POST">
-                @csrf
-                @method('DELETE')
-                <x-button type="submit" variant="danger" size="sm" data-confirm="Are you sure?">Delete</x-button>
-            </form>
-            </x-permission-check>
+
+            @php
+                $_showActions = auth()->user()->hasRole('super-admin') || ($hosting->module && (auth()->user()->canOnModule($hosting->module, 'update') || auth()->user()->canOnModule($hosting->module, 'delete')));
+            @endphp
+            @if($_showActions)
+            <div x-data="{ open: false, style: '' }" @click.away="open = false" class="relative inline-block">
+                <button type="button" @click="
+                    open = !open;
+                    if (open) { $nextTick(() => { const r = $el.getBoundingClientRect(); style = 'position:fixed;left:' + r.left + 'px;top:' + (r.bottom + 4) + 'px;z-index:50'; }); }
+                " @keydown.escape.prevent="open = false" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-medium transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500/40 text-gray-600 dark:text-white bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-700/50" aria-haspopup="true" :aria-expanded="open.toString()" aria-label="Actions" title="Actions">
+                    <span class="hidden sm:inline">Actions</span>
+                    <svg class="w-3 h-3" :class="{ 'rotate-180': open }" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </button>
+                <div x-show="open" :style="style" x-cloak role="menu" x-transition:enter="transition ease-out duration-100" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100" class="bg-gray-50 dark:bg-black rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 py-1 w-36">
+                    <x-permission-check :module="$hosting->module" action="update">
+                    <a href="{{ route('hostings.edit', $hosting->id) }}" class="block px-3 py-2 text-sm text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500/40" role="menuitem">Edit</a>
+                    </x-permission-check>
+                    <x-permission-check :module="$hosting->module" action="delete">
+                    <form method="POST" action="{{ route('hostings.destroy', $hosting->id) }}" class="block">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit" data-confirm="Are you sure?" class="w-full text-left px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-red-500/40" role="menuitem">Delete</button>
+                    </form>
+                    </x-permission-check>
+                </div>
+            </div>
+            @endif
         </x-slot:actions>
     </x-page-header>
 
     <x-card>
-        {{-- OVERVIEW --}}
+        {{-- 1. OVERVIEW --}}
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <x-field label="Name" value="{{ $hosting->name }}" />
             <x-field label="Provider">
@@ -36,15 +53,26 @@
             <x-field label="Domain" value="{{ $hosting->domain ?? '—' }}" />
         </div>
 
-        {{-- ACCESS --}}
+        {{-- 2. STATUS & OWNERSHIP --}}
+        <hr class="my-4 border-gray-200 dark:border-gray-700">
+        <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Status &amp; Ownership</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <x-field label="Status">
+                <x-badge :variant="$hosting->status">{{ ucfirst($hosting->status) }}</x-badge>
+            </x-field>
+            <x-field label="Module" value="{{ $hosting->module->name ?? '—' }}" />
+            <x-field label="User" value="{{ $hosting->user->name ?? '—' }}" />
+        </div>
+
+        {{-- 3. ACCESS --}}
         <hr class="my-4 border-gray-200 dark:border-gray-700">
         <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Access</h3>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <x-field label="cPanel URL">
                 @if($hosting->cpanel_url && Str::startsWith($hosting->cpanel_url, ['http://', 'https://']))
-                    <div class="flex items-center gap-2">
-                        <a href="{{ $hosting->cpanel_url }}" target="_blank" class="text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 underline">{{ $hosting->cpanel_url }}</a>
-                        <x-copy-button :text="$hosting->cpanel_url" title="Copy URL" />
+                    <div class="flex items-center gap-2 min-w-0">
+                        <a href="{{ $hosting->cpanel_url }}" target="_blank" class="truncate text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 underline" title="{{ $hosting->cpanel_url }}">{{ $hosting->cpanel_url }}</a>
+                        <x-copy-button :text="$hosting->cpanel_url" class="shrink-0" title="Copy URL" />
                     </div>
                 @else
                     —
@@ -75,37 +103,13 @@
             </x-field>
         </div>
 
-        {{-- RELATIONSHIPS: Linked Domain Emails --}}
+        {{-- 4. LINKED RESOURCES --}}
         @php $hostingDomainEmails = $hosting->domains->flatMap->domainEmails->filter(); @endphp
-        @if($hostingDomainEmails->count())
+        @if($hosting->domains->count() || $hostingDomainEmails->count())
         <hr class="my-4 border-gray-200 dark:border-gray-700">
-        <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Linked Domain Emails</h3>
-        <div class="space-y-2">
-            @foreach($hostingDomainEmails as $email)
-                <div class="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50">
-                    <div class="flex items-center gap-2">
-                        <a href="{{ route('domain-emails.show', $email->id) }}" class="font-medium text-indigo-600 dark:text-indigo-400 hover:underline">{{ $email->email }}</a>
-                        <x-copy-button :text="$email->email" title="Copy email" />
-                    </div>
-                    <span class="text-xs text-gray-500">{{ $email->domain?->name ?? '—' }}</span>
-                </div>
-            @endforeach
-        </div>
-        @endif
+        <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Linked Resources</h3>
 
-        {{-- TECHNICAL --}}
-        <hr class="my-4 border-gray-200 dark:border-gray-700">
-        <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Technical</h3>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <x-field label="Domain IP" value="{{ $hosting->domain_ip ?? '—' }}" />
-            <x-field label="Mail Domain IP" value="{{ $hosting->mail_domain_ip ?? '—' }}" />
-            <x-field label="cPanel IP" value="{{ $hosting->cpanel_ip ?? '—' }}" />
-        </div>
-
-        {{-- RELATIONSHIPS --}}
         @if($hosting->domains->count())
-        <hr class="my-4 border-gray-200 dark:border-gray-700">
-        <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Linked Domains</h3>
         <div class="space-y-2">
             @foreach($hosting->domains as $domain)
                 <div class="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50">
@@ -116,7 +120,7 @@
                             <span class="text-xs text-green-600 dark:text-green-400 ml-1">· CF: {{ Str::title($domain->cloudflare_status) }}</span>
                         @endif
                     </div>
-                    <div class="flex items-center gap-2">
+                    <div class="flex items-center gap-2 shrink-0">
                         @php $emailCount = $domain->domainEmails->count(); @endphp
                         @if($emailCount)
                             <span class="text-xs text-gray-500">{{ $emailCount }} {{ Str::plural('email', $emailCount) }}</span>
@@ -126,12 +130,76 @@
                 </div>
             @endforeach
         </div>
+        @if(!$hostingDomainEmails->count())
         <div class="mt-2">
             <a href="{{ route('domains.index') }}?search={{ urlencode($hosting->name) }}" class="text-xs text-indigo-600 dark:text-indigo-400 hover:underline">View all domains →</a>
         </div>
         @endif
+        @endif
 
-        {{-- FINANCIAL --}}
+        @if($hostingDomainEmails->count())
+        <div class="space-y-2 {{ $hosting->domains->count() ? 'mt-4' : '' }}">
+            @foreach($hostingDomainEmails as $email)
+                <div class="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50">
+                    <div class="flex items-center gap-2">
+                        <a href="{{ route('domain-emails.show', $email->id) }}" class="font-medium text-indigo-600 dark:text-indigo-400 hover:underline">{{ $email->email }}</a>
+                        <x-copy-button :text="$email->email" title="Copy email" />
+                    </div>
+                    <span class="text-xs text-gray-500 shrink-0">{{ $email->domain?->name ?? '—' }}</span>
+                </div>
+            @endforeach
+        </div>
+        @if($hosting->domains->count())
+        <div class="mt-2">
+            <a href="{{ route('domains.index') }}?search={{ urlencode($hosting->name) }}" class="text-xs text-indigo-600 dark:text-indigo-400 hover:underline">View all domains →</a>
+        </div>
+        @endif
+        @endif
+        @endif
+
+        {{-- 5. DATES & RENEWALS --}}
+        <hr class="my-4 border-gray-200 dark:border-gray-700">
+        <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Dates &amp; Renewals</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <x-field label="Start Date">
+                @if($hosting->start_date)
+                    <x-date :value="$hosting->start_date" />
+                @else
+                    —
+                @endif
+            </x-field>
+            <x-field label="Expiry Date">
+                @if($hosting->expiry_date)
+                    <x-date :value="$hosting->expiry_date" />
+                @else
+                    —
+                @endif
+            </x-field>
+        </div>
+        @if($renewals->count())
+        <div class="space-y-2 mt-4">
+            @foreach($renewals as $renewal)
+                <div class="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50">
+                    <div>
+                        <a href="{{ route('expiry-trackers.show', $renewal->id) }}" class="font-medium text-indigo-600 dark:text-indigo-400 hover:underline">{{ $renewal->name }}</a>
+                        <span class="text-xs text-gray-500 ml-2">Expires: {{ $renewal->expiry_date?->format('Y-m-d') ?? '—' }}</span>
+                    </div>
+                    <x-badge :variant="$renewal->status">{{ $renewal->status }}</x-badge>
+                </div>
+            @endforeach
+        </div>
+        @endif
+
+        {{-- 6. TECHNICAL --}}
+        <hr class="my-4 border-gray-200 dark:border-gray-700">
+        <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Technical</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <x-field label="Domain IP" value="{{ $hosting->domain_ip ?? '—' }}" />
+            <x-field label="Mail Domain IP" value="{{ $hosting->mail_domain_ip ?? '—' }}" />
+            <x-field label="cPanel IP" value="{{ $hosting->cpanel_ip ?? '—' }}" />
+        </div>
+
+        {{-- 7. FINANCIAL --}}
         <hr class="my-4 border-gray-200 dark:border-gray-700">
         <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Financial</h3>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -151,55 +219,7 @@
             </x-field>
         </div>
 
-        {{-- DATES --}}
-        <hr class="my-4 border-gray-200 dark:border-gray-700">
-        <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Dates</h3>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <x-field label="Start Date">
-                @if($hosting->start_date)
-                    <x-date :value="$hosting->start_date" />
-                @else
-                    —
-                @endif
-            </x-field>
-            <x-field label="Expiry Date">
-                @if($hosting->expiry_date)
-                    <x-date :value="$hosting->expiry_date" />
-                @else
-                    —
-                @endif
-            </x-field>
-        </div>
-
-        {{-- STATUS --}}
-        <hr class="my-4 border-gray-200 dark:border-gray-700">
-        <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Status</h3>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <x-field label="Status">
-                <x-badge :variant="$hosting->status">{{ ucfirst($hosting->status) }}</x-badge>
-            </x-field>
-            <x-field label="Module" value="{{ $hosting->module->name ?? '—' }}" />
-            <x-field label="User" value="{{ $hosting->user->name ?? '—' }}" />
-        </div>
-
-        {{-- RENEWALS --}}
-        @if($renewals->count())
-        <hr class="my-4 border-gray-200 dark:border-gray-700">
-        <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Renewals</h3>
-        <div class="space-y-2">
-            @foreach($renewals as $renewal)
-                <div class="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50">
-                    <div>
-                        <a href="{{ route('expiry-trackers.show', $renewal->id) }}" class="font-medium text-indigo-600 dark:text-indigo-400 hover:underline">{{ $renewal->name }}</a>
-                        <span class="text-xs text-gray-500 ml-2">Expires: {{ $renewal->expiry_date?->format('Y-m-d') ?? '—' }}</span>
-                    </div>
-                    <x-badge :variant="$renewal->status">{{ $renewal->status }}</x-badge>
-                </div>
-            @endforeach
-        </div>
-        @endif
-
-        {{-- NOTES --}}
+        {{-- 8. NOTES --}}
         @if($hosting->description)
         <hr class="my-4 border-gray-200 dark:border-gray-700">
         <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Notes</h3>
