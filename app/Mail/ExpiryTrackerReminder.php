@@ -100,7 +100,7 @@ class ExpiryTrackerReminder extends Mailable
             'provider' => $this->tracker->serviceProvider?->name,
             'assignedUser' => $this->tracker->user?->name,
             'status' => $this->tracker->status,
-            'portalLink' => $this->tracker->id ? route('expiry-trackers.show', $this->tracker->id) : '#',
+            'portalLink' => $this->tracker->id ? route('expiry-trackers.show', $this->tracker->id) : url('/'),
             'isTest' => $this->isTest,
             'recipientReason' => self::RECIPIENT_REASONS[$this->recipientType] ?? 'You are a notification recipient.',
             'relatedDomain' => $relatedDomain,

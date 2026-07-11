@@ -230,6 +230,26 @@ class ExpiryReminderMailTest extends TestCase
         $html = $mailable->render();
 
         $this->assertStringContainsString(route('expiry-trackers.show', $this->tracker->id), $html);
+        $this->assertStringNotContainsString('href="#"', $html);
+        $this->assertStringNotContainsString('href=""', $html);
+        $this->assertStringNotContainsString('javascript:void(0)', $html);
+    }
+
+    public function test_portal_link_fallback_when_no_id(): void
+    {
+        $dummy = ExpiryTracker::make([
+            'name' => 'Dummy Tracker',
+            'expiry_date' => now()->addDays(7),
+            'status' => 'active',
+        ]);
+
+        $mailable = new ExpiryTrackerReminder($dummy, 7, 'test@example.com');
+        $html = $mailable->render();
+
+        $this->assertStringContainsString(config('app.url'), $html);
+        $this->assertStringNotContainsString('href="#"', $html);
+        $this->assertStringNotContainsString('href=""', $html);
+        $this->assertStringNotContainsString('javascript:void(0)', $html);
     }
 
     public function test_renders_cost_and_provider(): void
