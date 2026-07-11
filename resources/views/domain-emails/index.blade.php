@@ -33,15 +33,12 @@
 
     <x-table :bulk="false">
         <x-slot:head>
-            <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Serial</th>
             <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Domain</th>
             <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Email</th>
-            <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Password</th>
             <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Actions</th>
         </x-slot:head>
                 @forelse ($emails as $email)
                     <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                        <td class="px-6 py-3 text-gray-500">{{ $email->id }}</td>
                         <td class="px-6 py-3">
                             @if($email->domain)
                             <a href="{{ route('domain-emails.index', ['domain_id' => $email->domain_id]) }}" class="text-indigo-600 dark:text-indigo-400 hover:underline font-medium">
@@ -52,35 +49,37 @@
                             @endif
                         </td>
                         <td class="px-6 py-3">
-                            <div class="flex items-center gap-2">
-                                <span class="font-medium">{{ $email->email }}</span>
-                                <x-copy-button :text="$email->email" title="Copy email" />
-                            </div>
-                        </td>
-                        <td class="px-6 py-3">
-                            @if($email->password)
-                                <div class="flex items-center gap-2">
-                                    <span class="font-mono text-sm text-gray-400">••••••••</span>
-                                    <x-permission-check :module="$email->module" action="reveal">
-                                    <x-copy-button password-route="{{ url('domain-emails') }}/{{ $email->id }}/password" title="Copy password" />
-                                    </x-permission-check>
-                                </div>
-                            @else
-                                <span class="text-gray-400">—</span>
-                            @endif
+                            <a href="{{ route('domain-emails.show', $email->id) }}" class="text-indigo-600 dark:text-indigo-400 hover:underline font-medium">{{ $email->email }}</a>
+                            <x-copy-button :text="$email->email" title="Copy email" />
                         </td>
                         <td class="px-6 py-3 whitespace-nowrap">
-                            <x-action href="{{ route('domain-emails.show', $email->id) }}" color="indigo" icon="view" label="" title="View" />
-                            <x-permission-check :module="$email->module" action="update">
-                            <x-action href="{{ route('domain-emails.edit', $email->id) }}" color="amber" icon="edit" label="" title="Edit" />
-                            </x-permission-check>
-                            <x-permission-check :module="$email->module" action="delete">
-                            <x-action action="{{ route('domain-emails.destroy', $email->id) }}" color="red" icon="delete" label="" title="Delete" confirm="Are you sure?" method="DELETE" />
-                            </x-permission-check>
+                            @php $_canEdit = auth()->user()->hasRole('super-admin') || ($email->module && auth()->user()->canOnModule($email->module, 'update')); @endphp
+                            @php $_canDelete = auth()->user()->hasRole('super-admin') || ($email->module && auth()->user()->canOnModule($email->module, 'delete')); @endphp
+                            <div x-data="{ open: false, style: '' }" @click.away="open = false" class="relative inline-block">
+                                <button type="button" @click="
+                                    open = !open;
+                                    if (open) { $nextTick(() => { const r = $el.getBoundingClientRect(); style = 'position:fixed;left:' + r.left + 'px;top:' + (r.bottom + 4) + 'px;z-index:50'; }); }
+                                " @keydown.escape.prevent="open = false" class="inline-flex items-center justify-center w-9 h-9 rounded-xl transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500/40 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-700/50" aria-haspopup="true" :aria-expanded="open.toString()" aria-label="Email actions" title="Email actions">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>
+                                </button>
+                                <div x-show="open" :style="style" x-cloak role="menu" x-transition:enter="transition ease-out duration-100" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100" class="bg-gray-50 dark:bg-black rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 py-1 w-36">
+                                    <a href="{{ route('domain-emails.show', $email->id) }}" class="block px-3 py-2 text-sm text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500/40" role="menuitem">View Details</a>
+                                    @if($_canEdit)
+                                    <a href="{{ route('domain-emails.edit', $email->id) }}" class="block px-3 py-2 text-sm text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500/40" role="menuitem">Edit</a>
+                                    @endif
+                                    @if($_canDelete)
+                                    <form method="POST" action="{{ route('domain-emails.destroy', $email->id) }}" class="block">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" data-confirm="Are you sure?" x-on:click="startLoading($el)" class="w-full text-left px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-red-500/40" role="menuitem">Delete</button>
+                                    </form>
+                                    @endif
+                                </div>
+                            </div>
                         </td>
                     </tr>
                 @empty
-                    <tr><x-empty-state :colspan="5" icon="box" title="No email credentials yet." message="Add your first email account to store its password." /></tr>
+                    <tr><x-empty-state :colspan="3" icon="box" title="No email credentials yet." message="Add your first email account to store its password." /></tr>
                 @endforelse
             </tbody>
     </x-table>

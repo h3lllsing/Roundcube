@@ -50,7 +50,6 @@
                     <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Email</th>
                     <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Event</th>
                     <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">IP Address</th>
-                    <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">User Agent</th>
                     <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Date</th>
                 </tr>
             </thead>
@@ -67,12 +66,11 @@
                                 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' => $audit->event === 'login_failed',
                             ])>{{ str_replace('_', ' ', $audit->event) }}</span>
                         </td>
-                        <td class="px-6 py-3 text-gray-500 font-mono text-xs">{{ $audit->ip_address }}</td>
-                        <td class="px-6 py-3 text-gray-500 max-w-xs truncate">{{ $audit->user_agent ?? '—' }}</td>
-                        <td class="px-6 py-3 text-gray-500 text-nowrap">{{ $audit->created_at->format('Y-m-d H:i') }}</td>
+                        <td class="px-6 py-3 text-gray-500 dark:text-gray-400 font-mono text-xs">{{ $audit->ip_address }}</td>
+                        <td class="px-6 py-3 text-gray-500 dark:text-gray-400 text-nowrap">{{ $audit->created_at->format('Y-m-d H:i') }}</td>
                     </tr>
                 @empty
-                    <tr><x-empty-state :colspan="7" icon="user" title="No login audits found." message="Login attempts will appear here." /></tr>
+                    <tr><x-empty-state :colspan="6" icon="user" title="No login audits found." message="Login attempts will appear here." /></tr>
                 @endforelse
             </tbody>
         </table>
