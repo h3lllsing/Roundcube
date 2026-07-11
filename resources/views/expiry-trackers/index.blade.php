@@ -76,7 +76,7 @@
     <form method="POST" action="{{ route('bulk-action') }}" class="mb-6" id="bulk-form">
         @csrf
         <input type="hidden" name="type" value="expiry-trackers">
-        <x-bulk-actions type="expiry-trackers" colspan="9" :actions="$bulkActions" />
+        <x-bulk-actions type="expiry-trackers" colspan="6" :actions="$bulkActions" />
     </form>
 
         <div class="bg-white dark:bg-black rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-x-auto w-full">
@@ -85,11 +85,9 @@
                     <tr class="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-black/50">
                         <th scope="col" class="text-left px-4 py-3 w-10"><input type="checkbox" class="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500 bulk-select-all" data-bulk-select-all></th>
                         <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Name / Source</th>
-                        <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Service Provider</th>
-                        <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Cost</th>
                         <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Expiry</th>
-                        <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Renewal</th>
                         <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Status</th>
+                        <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Renew</th>
                         <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Actions</th>
                     </tr>
                 </thead>
@@ -99,7 +97,7 @@
                             <td class="px-4 py-3"><input type="checkbox" name="ids[]" value="{{ $tracker->id }}" aria-label="Select {{ $tracker->name }}" class="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500 bulk-item" form="bulk-form"></td>
                             <td class="px-6 py-3">
                                 <div class="flex items-center gap-2">
-                                    <span class="font-medium">{{ $tracker->name }}</span>
+                                    <a href="{{ route('expiry-trackers.show', $tracker->id) }}" class="font-medium text-indigo-600 dark:text-indigo-400 hover:underline">{{ $tracker->name }}</a>
                                     @if($tracker->trackable_type)
                                         <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-lime-100 text-lime-700 dark:bg-lime-900/30 dark:text-lime-300">Auto-synced</span>
                                     @else
@@ -110,10 +108,7 @@
                                     <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{{ $sourceTypeLabels[$tracker->trackable_type] ?? $tracker->trackable_type }}</p>
                                 @endif
                             </td>
-                            <td class="px-6 py-3 text-gray-500">{{ $tracker->serviceProvider?->name ?? '—' }}</td>
-                            <td class="px-6 py-3 text-gray-500">{{ $tracker->cost ? '$' . number_format($tracker->cost, 2) : '—' }}</td>
-                            <td class="px-6 py-3 text-gray-500">{{ $tracker->expiry_date?->format('Y-m-d') ?? '—' }}</td>
-                            <td class="px-6 py-3 text-gray-500">{{ $tracker->renewal_date?->format('Y-m-d') ?? '—' }}</td>
+                            <td class="px-6 py-3 text-gray-500 dark:text-gray-400">{{ $tracker->expiry_date?->format('Y-m-d') ?? '—' }}</td>
                             <td class="px-6 py-3">
                                 <span @class([
                                     'inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium',
@@ -122,23 +117,41 @@
                                     'bg-gray-100 text-gray-700 dark:bg-black/30 dark:text-gray-300' => $tracker->status === 'cancelled',
                                 ])>{{ $tracker->status }}</span>
                             </td>
+                            <td class="px-6 py-3">
+                                @if($tracker->status !== 'cancelled')
+                                <x-permission-check :module="$tracker->module" action="update">
+                                <x-action action="{{ route('expiry-trackers.renew', $tracker->id) }}" color="emerald" icon="refresh" label="Renew" confirm="Renew this item? Expiry date will be extended by 1 year." confirm-button="Renew" method="POST" />
+                                </x-permission-check>
+                                @endif
+                            </td>
                             <td class="px-6 py-3 whitespace-nowrap">
-                            <x-action href="{{ route('expiry-trackers.show', $tracker->id) }}" color="indigo" icon="view" label="View" />
-                            <x-permission-check :module="$tracker->module" action="update">
-                            <x-action href="{{ route('expiry-trackers.edit', $tracker->id) }}" color="amber" icon="edit" label="Edit" />
-                            </x-permission-check>
-                            @if($tracker->status !== 'cancelled')
-                            <x-permission-check :module="$tracker->module" action="update">
-                            <x-action action="{{ route('expiry-trackers.renew', $tracker->id) }}" color="emerald" icon="refresh" label="Renew" confirm="Renew this item? Expiry date will be extended by 1 year." confirm-button="Renew" method="POST" />
-                            </x-permission-check>
-                            @endif
-                            <x-permission-check :module="$tracker->module" action="delete">
-                            <x-action action="{{ route('expiry-trackers.destroy', $tracker->id) }}" color="red" icon="delete" label="Delete" confirm="Are you sure?" method="DELETE" />
-                            </x-permission-check>
+                            @php $_canEdit = auth()->user()->hasRole('super-admin') || ($tracker->module && auth()->user()->canOnModule($tracker->module, 'update')); @endphp
+                            @php $_canDelete = auth()->user()->hasRole('super-admin') || ($tracker->module && auth()->user()->canOnModule($tracker->module, 'delete')); @endphp
+                            <div x-data="{ open: false, style: '' }" @click.away="open = false" class="relative inline-block">
+                                <button type="button" @click="
+                                    open = !open;
+                                    if (open) { $nextTick(() => { const r = $el.getBoundingClientRect(); style = 'position:fixed;left:' + r.left + 'px;top:' + (r.bottom + 4) + 'px;z-index:50'; }); }
+                                " @keydown.escape.prevent="open = false" class="inline-flex items-center justify-center w-9 h-9 rounded-xl transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500/40 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-700/50" aria-haspopup="true" :aria-expanded="open.toString()" aria-label="Renewal actions" title="Renewal actions">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>
+                                </button>
+                                <div x-show="open" :style="style" x-cloak role="menu" x-transition:enter="transition ease-out duration-100" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100" class="bg-gray-50 dark:bg-black rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 py-1 w-36">
+                                    <a href="{{ route('expiry-trackers.show', $tracker->id) }}" class="block px-3 py-2 text-sm text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500/40" role="menuitem">View Details</a>
+                                    @if($_canEdit)
+                                    <a href="{{ route('expiry-trackers.edit', $tracker->id) }}" class="block px-3 py-2 text-sm text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500/40" role="menuitem">Edit</a>
+                                    @endif
+                                    @if($_canDelete)
+                                    <form method="POST" action="{{ route('expiry-trackers.destroy', $tracker->id) }}" class="block">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" data-confirm="Are you sure?" x-on:click="startLoading($el)" class="w-full text-left px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-red-500/40" role="menuitem">Delete</button>
+                                    </form>
+                                    @endif
+                                </div>
+                            </div>
                             </td>
                         </tr>
                 @empty
-                    <tr><x-empty-state :colspan="9" icon="clock" title="No renewals found." message="Add standalone renewal items or link services to track renewals." /></tr>
+                    <tr><x-empty-state :colspan="6" icon="clock" title="No renewals found." message="Add standalone renewal items or link services to track renewals." /></tr>
                     @endforelse
                 </tbody>
             </table>
