@@ -95,6 +95,10 @@ abstract class BaseResourceController extends Controller
 
     public function index(Request $request): View
     {
+        $user = Auth::user();
+        $module = $this->resolveModule();
+        abort_unless($user->hasRole('super-admin') || ($module && $user->canOnModule($module, 'read')), 403);
+
         $this->userOwnedFilter();
         $modelClass = $this->modelClass();
         $query = $modelClass::with($this->indexWith());
@@ -103,8 +107,6 @@ abstract class BaseResourceController extends Controller
 
         $records = $query->select($this->indexSelect())->latest()->paginate(20);
 
-        $user = Auth::user();
-        $module = $this->resolveModule();
         $isSuperAdmin = $user->hasRole('super-admin');
         $canCreate = $isSuperAdmin || ($module && $user->canOnModule($module, 'create'));
         $canExport = $isSuperAdmin;
