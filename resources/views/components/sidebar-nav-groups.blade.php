@@ -101,8 +101,6 @@
         <div class="nav-group-content space-y-0.5 ml-1 overflow-hidden transition-all duration-200">
             <x-nav-link href="{{ route('users.index') }}" :active="request()->routeIs('users.*')">Users</x-nav-link>
             <x-nav-link href="{{ route('roles.index') }}" :active="request()->routeIs('roles.*')">Roles</x-nav-link>
-            <x-nav-link href="{{ route('role-templates.index') }}" :active="request()->routeIs('role-templates.*')">Role Templates</x-nav-link>
-            <x-nav-link href="{{ route('privileges.index') }}" :active="request()->routeIs('privileges.*')">Privileges</x-nav-link>
             <x-nav-link href="{{ route('modules.index') }}" :active="request()->routeIs('modules.*')">Modules</x-nav-link>
             <x-nav-link href="{{ route('module-permissions.index') }}" :active="request()->routeIs('module-permissions.*')">Permissions</x-nav-link>
             <x-nav-link href="{{ route('features.index') }}" :active="request()->routeIs('features.*')">Features</x-nav-link>
@@ -113,6 +111,18 @@
             <x-nav-link href="{{ route('attachments.index') }}" :active="request()->routeIs('attachments.*')">Attachments</x-nav-link>
             <x-nav-link href="{{ route('webhooks.index') }}" :active="request()->routeIs('webhooks.*')">Integrations</x-nav-link>
             <x-nav-link href="{{ route('tokens.index') }}" :active="request()->routeIs('tokens.*')">API Access</x-nav-link>
+        </div>
+    </div>
+    @endhasrole
+
+    @hasrole('super-admin')
+    <div class="nav-group" data-group="advanced-access">
+        <button type="button" class="nav-group-header flex items-center gap-3 w-full px-3 py-1.5 rounded-lg text-xs font-semibold uppercase tracking-widest text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors group" aria-expanded="false" data-nav-key="nav_advanced_access">
+            <svg class="nav-chevron w-3.5 h-3.5 text-gray-400 dark:text-gray-500 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+            <span>Advanced Access Control</span>
+        </button>
+        <div class="nav-group-content space-y-0.5 ml-1 overflow-hidden transition-all duration-200">
+            <x-nav-link href="{{ route('role-templates.index') }}" :active="request()->routeIs('role-templates.*')">Role Templates</x-nav-link>
         </div>
     </div>
     @endhasrole
