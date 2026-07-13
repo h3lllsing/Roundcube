@@ -59,9 +59,9 @@
                                 $_canDelete = auth()->user()->hasRole('super-admin') || ($provider->module && auth()->user()->canOnModule($provider->module, 'delete'));
                                 $_canReveal = auth()->user()->hasRole('super-admin') || ($vaultModule && auth()->user()->canOnModule($vaultModule, 'reveal'));
                                 $_hasPassword = (bool)$provider->password;
-                                $_hasEmail = (bool)$provider->email;
+                                $_hasLoginId = (bool)$provider->login_id;
                                 $_hasWebsite = (bool)$provider->website;
-                                $_hasOperationalShortcuts = $_hasEmail || $_hasWebsite;
+                                $_hasOperationalShortcuts = $_hasLoginId || $_hasWebsite;
                             @endphp
                             <div x-data="{ open: false, style: '' }" @click.away="open = false" class="relative inline-block">
                                 <button type="button" @click="
@@ -77,10 +77,10 @@
                                     <div class="border-t border-gray-100 dark:border-gray-700/50 my-1"></div>
                                     @endif
 
-                                    @if($_hasEmail)
+                                    @if($_hasLoginId)
                                     <div class="flex items-center px-3 py-1.5 gap-2" role="menuitem">
-                                        <span class="flex-1 min-w-0 text-sm text-gray-700 dark:text-white truncate" title="Email">Email</span>
-                                        <x-copy-button :text="$provider->email" class="shrink-0 w-6 h-6 !p-0 inline-flex items-center justify-center dark:text-gray-300" title="Copy Email" />
+                                        <span class="flex-1 min-w-0 text-sm text-gray-700 dark:text-white truncate" title="Login ID">Login ID</span>
+                                        <x-copy-button :text="$provider->login_id" class="shrink-0 w-6 h-6 !p-0 inline-flex items-center justify-center dark:text-gray-300" title="Copy Login ID" />
                                     </div>
                                     @endif
 
