@@ -36,7 +36,7 @@ class VpsController extends BaseResourceController
 
     protected function indexSelect(): array
     {
-        return ['id', 'module_id', 'name', 'ip_address', 'plan', 'cost', 'expiry_date', 'status', 'department', 'location', 'user_id', 'service_provider_id'];
+        return ['id', 'module_id', 'name', 'ip_address', 'plan', 'cost', 'expiry_date', 'status', 'department', 'location', 'user_id', 'service_provider_id', 'password'];
     }
 
     protected function indexVariable(): string

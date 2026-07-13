@@ -97,6 +97,7 @@ Route::middleware(['auth', 'suspended'])->group(function () {
     Route::delete('/assets/{id}/force-delete', [AssetController::class, 'forceDelete'])->name('assets.force-delete');
     Route::post('/assets/{id}/assign', [AssetController::class, 'assign'])->name('assets.assign');
     Route::post('/assets/{id}/return', [AssetController::class, 'returnAsset'])->name('assets.return');
+    Route::get('/assets/{id}/anydesk-password', [AssetController::class, 'getAnyDeskPassword'])->name('assets.anydesk-password')->middleware('throttle:10,1');
 
     Route::get('/domains', [DomainController::class, 'index'])->name('domains.index');
     Route::get('/domains/create', [DomainController::class, 'create'])->name('domains.create');
@@ -171,6 +172,7 @@ Route::middleware(['auth', 'suspended'])->group(function () {
     Route::patch('/vault/{id}/restore', [VaultController::class, 'restore'])->name('vault.restore')->where('id', '[0-9]+');
     Route::delete('/vault/{id}/force-delete', [VaultController::class, 'forceDelete'])->name('vault.force-delete')->where('id', '[0-9]+');
     Route::post('/vault/{id}/reveal', [VaultController::class, 'reveal'])->name('vault.reveal')->where('id', '[0-9]+')->middleware('throttle:10,1');
+    Route::get('/vault/{id}/password', [VaultController::class, 'getPassword'])->name('vault.password')->where('id', '[0-9]+')->middleware('throttle:10,1');
     Route::get('/notes', [NoteController::class, 'index'])->name('notes.index');
     Route::get('/notes/create', [NoteController::class, 'create'])->name('notes.create');
     Route::post('/notes', [NoteController::class, 'store'])->name('notes.store');

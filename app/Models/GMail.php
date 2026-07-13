@@ -14,6 +14,8 @@ class GMail extends Model
 {
     use HasFactory, LogsActivity, SoftDeletes;
 
+    protected $hidden = ['password'];
+
     protected $fillable = [
         'user_id', 'module_id',
         'status', 'user_name', 'pseudo', 'emails_address', 'password',

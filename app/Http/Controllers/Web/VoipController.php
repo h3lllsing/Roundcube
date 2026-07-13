@@ -35,7 +35,7 @@ class VoipController extends BaseResourceController
 
     protected function indexSelect(): array
     {
-        return ['id', 'module_id', 'extensions', 'name', 'phone_number', 'server_ip', 'direction', 'number_status', 'outbound_code', 'cost', 'team_details', 'service_provider_id'];
+        return ['id', 'module_id', 'extensions', 'name', 'phone_number', 'server_ip', 'direction', 'number_status', 'outbound_code', 'cost', 'team_details', 'service_provider_id', 'password', 'extension_password'];
     }
 
     protected function indexVariable(): string

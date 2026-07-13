@@ -11,6 +11,7 @@ use App\Models\Module;
 use App\Models\User;
 use App\Models\VaultEntry;
 use App\Services\VaultService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -59,7 +60,7 @@ class VaultController extends Controller
             $query->where('service_name', 'like', '%'.$request->search.'%');
         }
 
-        $entries = $query->select(['id', 'module_id', 'service_name', 'service_url', 'username', 'created_at'])->latest()->paginate(20);
+        $entries = $query->select(['id', 'module_id', 'service_name', 'service_url', 'username', 'created_at', 'encrypted_password'])->latest()->paginate(20);
 
         $user = Auth::user();
         $module = ModuleCache::findBySlug($this->moduleSlug());
@@ -219,5 +220,18 @@ class VaultController extends Controller
 
         return redirect()->route('vault.show', $entry->id)
             ->with('revealed_password', $password);
+    }
+
+    public function getPassword(int $id, VaultService $vaultService): JsonResponse
+    {
+        $this->userOwnedFilter();
+        $entry = VaultEntry::with('module')->findOrFail($id);
+
+        $user = Auth::user();
+        abort_unless($user->hasRole('super-admin') || ($entry->module && $user->canOnModule($entry->module, 'reveal')), 403);
+
+        $password = $vaultService->reveal($entry, $user);
+
+        return response()->json(['password' => $password]);
     }
 }

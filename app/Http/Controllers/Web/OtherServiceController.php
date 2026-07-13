@@ -35,7 +35,7 @@ class OtherServiceController extends BaseResourceController
 
     protected function indexSelect(): array
     {
-        return ['id', 'module_id', 'name', 'service_type', 'cost', 'expiry_date', 'status', 'login_url'];
+        return ['id', 'module_id', 'name', 'service_type', 'cost', 'expiry_date', 'status', 'password', 'login_url'];
     }
 
     protected function indexVariable(): string

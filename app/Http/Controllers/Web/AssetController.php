@@ -10,6 +10,7 @@ use App\Models\Asset;
 use App\Models\Module;
 use App\Models\VaultEntry;
 use App\Services\AssetService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -250,5 +251,23 @@ class AssetController extends Controller
         app(AssetService::class)->returnAsset($asset, $validated);
 
         return redirect()->route('assets.show', $asset->id)->with('success', 'Asset returned successfully.');
+    }
+
+    public function getAnyDeskPassword(int $id): JsonResponse
+    {
+        $user = Auth::user();
+        $assetModule = \App\Helpers\ModuleCache::findBySlug($this->moduleSlug());
+        abort_unless($user->hasRole('super-admin') || ($assetModule && $user->canOnModule($assetModule, 'read')), 403);
+        $this->userOwnedFilter();
+        $asset = Asset::findOrFail($id);
+        $vaultModule = \App\Helpers\ModuleCache::findBySlug('vault');
+        abort_unless($user->hasRole('super-admin') || ($vaultModule && $user->canOnModule($vaultModule, 'reveal')), 403);
+        activity()->event('revealed')
+            ->performedOn($asset)
+            ->causedBy($user)
+            ->withProperties(['type' => 'asset_anydesk_password'])
+            ->log('AnyDesk Password revealed for Asset: '.$asset->asset_tag);
+
+        return response()->json(['password' => $asset->anydesk_password]);
     }
 }
