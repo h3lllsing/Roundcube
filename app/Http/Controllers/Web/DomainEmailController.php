@@ -39,7 +39,7 @@ class DomainEmailController extends Controller
         abort_unless($user->hasRole('super-admin') || ($module && $user->canOnModule($module, 'read')), 403);
 
         $this->userOwnedFilter();
-        $query = DomainEmail::with(['domain', 'module']);
+        $query = DomainEmail::with(['domain', 'module', 'serviceProvider']);
 
         if ($request->filled('status')) {
             $query->where('status', $request->status);
@@ -55,15 +55,16 @@ class DomainEmailController extends Controller
             });
         }
 
-        $emails = $query->select(['id', 'module_id', 'email', 'domain_id'])->latest()->paginate(20);
+        $emails = $query->select(['id', 'module_id', 'email', 'domain_id', 'status', 'service_provider_id', 'password'])->latest()->paginate(20);
 
         $isSuperAdmin = $user->hasRole('super-admin');
         $canCreate = $isSuperAdmin || ($module && $user->canOnModule($module, 'create'));
         $canExport = $isSuperAdmin;
 
         $domains = Domain::orderBy('name')->pluck('name', 'id');
+        $vaultModule = \App\Helpers\ModuleCache::findBySlug('vault');
 
-        return view('domain-emails.index', compact('emails', 'canCreate', 'canExport', 'domains'));
+        return view('domain-emails.index', compact('emails', 'canCreate', 'canExport', 'domains', 'vaultModule'));
     }
 
     public function create(): View

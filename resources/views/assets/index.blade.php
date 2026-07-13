@@ -44,6 +44,7 @@ $badgeMap = ['available' => 'success', 'assigned' => 'primary', 'lost' => 'dange
                 <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Asset ID</th>
                 <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Brand</th>
                 <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Model</th>
+                <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">AnyDesk ID</th>
                 <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Assigned To</th>
                 <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Status</th>
                 <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Actions</th>
@@ -54,13 +55,18 @@ $badgeMap = ['available' => 'success', 'assigned' => 'primary', 'lost' => 'dange
                         <td class="px-6 py-3 font-medium"><a href="{{ route('assets.show', $asset->id) }}" class="text-indigo-600 dark:text-indigo-400 hover:underline">{{ $asset->asset_tag }}</a></td>
                         <td class="px-6 py-3 text-gray-500 dark:text-gray-400">{{ $asset->brand ?? '—' }}</td>
                         <td class="px-6 py-3 text-gray-500 dark:text-gray-400">{{ $asset->model ?? '—' }}</td>
+                        <td class="px-6 py-3 font-mono text-sm text-gray-500 dark:text-gray-400">{{ $asset->anydesk_id ?? '—' }}</td>
                         <td class="px-6 py-3 text-gray-500 dark:text-gray-400">{{ $asset->assigned_user_name ?? '—' }}</td>
                         <td class="px-6 py-3">
                             <x-badge :variant="$badgeMap[$asset->status] ?? 'default'">{{ ucfirst($asset->status) }}</x-badge>
                         </td>
                         <td class="px-6 py-3 whitespace-nowrap">
-                            @php $_canEdit = auth()->user()->hasRole('super-admin') || ($asset->module && auth()->user()->canOnModule($asset->module, 'update')); @endphp
-                            @php $_canDelete = auth()->user()->hasRole('super-admin') || ($asset->module && auth()->user()->canOnModule($asset->module, 'delete')); @endphp
+                            @php
+                                $_canEdit = auth()->user()->hasRole('super-admin') || ($asset->module && auth()->user()->canOnModule($asset->module, 'update'));
+                                $_canDelete = auth()->user()->hasRole('super-admin') || ($asset->module && auth()->user()->canOnModule($asset->module, 'delete'));
+                                $_vaultModule = \App\Helpers\ModuleCache::findBySlug('vault');
+                                $_canReveal = auth()->user()->hasRole('super-admin') || ($_vaultModule && auth()->user()->canOnModule($_vaultModule, 'reveal'));
+                            @endphp
                             <div x-data="{ open: false, style: '' }" @click.away="open = false" class="relative inline-block">
                                 <button type="button" @click="
                                     open = !open;
@@ -68,9 +74,19 @@ $badgeMap = ['available' => 'success', 'assigned' => 'primary', 'lost' => 'dange
                                 " @keydown.escape.prevent="open = false" class="inline-flex items-center justify-center w-9 h-9 rounded-xl transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500/40 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-700/50" aria-haspopup="true" :aria-expanded="open.toString()" aria-label="Asset actions" title="Asset actions">
                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>
                                 </button>
-                                <div x-show="open" :style="style" x-cloak role="menu" x-transition:enter="transition ease-out duration-100" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100" class="bg-gray-50 dark:bg-black rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 py-1 w-36">
+                                <div x-show="open" :style="style" x-cloak role="menu" x-transition:enter="transition ease-out duration-100" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100" class="bg-gray-50 dark:bg-black rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 py-1 w-48">
                                     <a href="{{ route('assets.show', $asset->id) }}" class="block px-3 py-2 text-sm text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500/40" role="menuitem">View Details</a>
+
+                                    @if($_canReveal && $asset->anydesk_id)
+                                    <div class="border-t border-gray-100 dark:border-gray-700/50 my-1"></div>
+                                    <div class="flex items-center px-3 py-1.5 gap-2" role="menuitem">
+                                        <span class="flex-1 min-w-0 text-sm text-gray-700 dark:text-white truncate" title="AnyDesk Password">AnyDesk Password</span>
+                                        <x-copy-button :passwordRoute="route('assets.anydesk-password', $asset->id)" class="shrink-0 w-6 h-6 !p-0 inline-flex items-center justify-center dark:text-gray-300" title="Copy AnyDesk Password" />
+                                    </div>
+                                    @endif
+
                                     @if($_canEdit)
+                                    <div class="border-t border-gray-100 dark:border-gray-700/50 my-1"></div>
                                     <a href="{{ route('assets.edit', $asset->id) }}" class="block px-3 py-2 text-sm text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500/40" role="menuitem">Edit</a>
                                     @endif
                                     @if($_canDelete)
@@ -85,7 +101,7 @@ $badgeMap = ['available' => 'success', 'assigned' => 'primary', 'lost' => 'dange
                         </td>
                     </tr>
                 @empty
-                    <tr><x-empty-state :colspan="7" icon="server" title="No assets found." message="Add IT assets to start tracking them." /></tr>
+                    <tr><x-empty-state :colspan="8" icon="server" title="No assets found." message="Add IT assets to start tracking them." /></tr>
                 @endforelse
         </x-table>
 

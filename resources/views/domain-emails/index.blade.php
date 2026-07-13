@@ -33,12 +33,18 @@
 
     <x-table :bulk="false">
         <x-slot:head>
-            <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Domain</th>
             <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Email</th>
+            <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Domain</th>
+            <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Status</th>
+            <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Provider</th>
             <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Actions</th>
         </x-slot:head>
                 @forelse ($emails as $email)
                     <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                        <td class="px-6 py-3">
+                            <a href="{{ route('domain-emails.show', $email->id) }}" class="text-indigo-600 dark:text-indigo-400 hover:underline font-medium">{{ $email->email }}</a>
+                            <x-copy-button :text="$email->email" title="Copy email" />
+                        </td>
                         <td class="px-6 py-3">
                             @if($email->domain)
                             <a href="{{ route('domain-emails.index', ['domain_id' => $email->domain_id]) }}" class="text-indigo-600 dark:text-indigo-400 hover:underline font-medium">
@@ -49,9 +55,13 @@
                             @endif
                         </td>
                         <td class="px-6 py-3">
-                            <a href="{{ route('domain-emails.show', $email->id) }}" class="text-indigo-600 dark:text-indigo-400 hover:underline font-medium">{{ $email->email }}</a>
-                            <x-copy-button :text="$email->email" title="Copy email" />
+                            @if($email->status)
+                            <x-badge :variant="['active' => 'success', 'expired' => 'danger', 'suspended' => 'warning'][$email->status] ?? 'default'">{{ ucfirst($email->status) }}</x-badge>
+                            @else
+                            <span class="text-gray-400">—</span>
+                            @endif
                         </td>
+                        <td class="px-6 py-3 text-gray-500 dark:text-gray-400">{{ $email->serviceProvider->name ?? '—' }}</td>
                         <td class="px-6 py-3 whitespace-nowrap">
                             @php
                                 $_canEdit = auth()->user()->hasRole('super-admin') || ($email->module && auth()->user()->canOnModule($email->module, 'update'));
@@ -93,7 +103,7 @@
                         </td>
                     </tr>
                 @empty
-                    <tr><x-empty-state :colspan="3" icon="box" title="No email credentials yet." message="Add your first email account to store its password." /></tr>
+                    <tr><x-empty-state :colspan="5" icon="box" title="No email credentials yet." message="Add your first email account to store its password." /></tr>
                 @endforelse
             </tbody>
     </x-table>
