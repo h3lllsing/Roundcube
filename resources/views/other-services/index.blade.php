@@ -62,6 +62,8 @@
                                     $_canDelete = auth()->user()->hasRole('super-admin') || ($service->module && auth()->user()->canOnModule($service->module, 'delete'));
                                     $_canReveal = auth()->user()->hasRole('super-admin') || ($vaultModule && auth()->user()->canOnModule($vaultModule, 'reveal'));
                                     $_hasPassword = (bool)$service->password;
+                                    $_hasLoginUrl = (bool)$service->login_url;
+                                    $_hasOperationalShortcuts = $_hasLoginUrl;
                                 @endphp
                                 <div x-data="{ open: false, style: '' }" @click.away="open = false" class="relative inline-block">
                                     <button type="button" @click="
@@ -73,16 +75,23 @@
                                     <div x-show="open" :style="style" x-cloak role="menu" x-transition:enter="transition ease-out duration-100" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100" class="bg-gray-50 dark:bg-black rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 py-1 w-48">
                                         <a href="{{ route('other-services.show', $service->id) }}" class="block px-3 py-2 text-sm text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500/40" role="menuitem">View Details</a>
 
-                                        @if($_hasPassword && $_canReveal)
+                                        @if($_hasOperationalShortcuts || ($_hasPassword && $_canReveal))
                                         <div class="border-t border-gray-100 dark:border-gray-700/50 my-1"></div>
+                                        @endif
+
+                                        @if($_hasLoginUrl)
+                                        <a href="{{ $service->login_url }}" target="_blank" rel="noopener noreferrer" class="block px-3 py-2 text-sm text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500/40" role="menuitem">Open Login Page</a>
+                                        @endif
+
+                                        @if($_hasPassword && $_canReveal)
                                         <div class="flex items-center px-3 py-1.5 gap-2" role="menuitem">
                                             <span class="flex-1 min-w-0 text-sm text-gray-700 dark:text-white truncate" title="Password">Password</span>
                                             <x-copy-button :passwordRoute="route('other-services.password', $service->id)" class="shrink-0 w-6 h-6 !p-0 inline-flex items-center justify-center dark:text-gray-300" title="Copy Password" />
                                         </div>
-                                        <div class="border-t border-gray-100 dark:border-gray-700/50 my-1"></div>
                                         @endif
 
                                         @if($_canEdit)
+                                        <div class="border-t border-gray-100 dark:border-gray-700/50 my-1"></div>
                                         <a href="{{ route('other-services.edit', $service->id) }}" class="block px-3 py-2 text-sm text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500/40" role="menuitem">Edit</a>
                                         @endif
                                         @if($_canDelete)
