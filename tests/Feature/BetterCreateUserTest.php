@@ -375,4 +375,56 @@ class BetterCreateUserTest extends TestCase
 
         $this->assertNull($override, 'Row should be deleted when all values are null');
     }
+
+    public function test_super_admin_cannot_be_assigned_through_create(): void
+    {
+        $superRole = Role::where('slug', 'super-admin')->firstOrFail();
+
+        $this->actingAs($this->superAdmin)
+            ->post(route('users.store'), [
+                'name' => 'Hacker Admin',
+                'email' => 'hacker-admin@example.com',
+                'password' => 'Pass12345',
+                'password_confirmation' => 'Pass12345',
+                'status' => 'active',
+                'roles' => [$superRole->id],
+            ])
+            ->assertForbidden();
+    }
+
+    public function test_create_user_with_role_assigns_role(): void
+    {
+        $userRole = Role::where('slug', 'user')->firstOrFail();
+
+        $this->actingAs($this->superAdmin)
+            ->post(route('users.store'), [
+                'name' => 'Role Assigned',
+                'email' => 'role-assigned@example.com',
+                'password' => 'Pass12345',
+                'password_confirmation' => 'Pass12345',
+                'status' => 'active',
+                'roles' => [$userRole->id],
+            ])
+            ->assertSessionHas('success');
+
+        $user = User::where('email', 'role-assigned@example.com')->firstOrFail();
+        $this->assertTrue($user->roles->contains($userRole->id), 'Selected role should be assigned to the created user.');
+        $this->assertCount(1, $user->roles, 'User should have exactly one role.');
+    }
+
+    public function test_create_user_with_no_role_creates_without_roles(): void
+    {
+        $this->actingAs($this->superAdmin)
+            ->post(route('users.store'), [
+                'name' => 'No Role User',
+                'email' => 'norole@example.com',
+                'password' => 'Pass12345',
+                'password_confirmation' => 'Pass12345',
+                'status' => 'active',
+            ])
+            ->assertSessionHas('success');
+
+        $user = User::where('email', 'norole@example.com')->firstOrFail();
+        $this->assertCount(0, $user->roles, 'User created without role selection should have no roles.');
+    }
 }

@@ -74,10 +74,10 @@
                 <div class="fg">
                     <div class="f">
                         <label for="role">Primary Role</label>
-                        <select name="role_id" id="role" class="w-full rounded-xl border bg-white dark:bg-black text-gray-900 dark:text-gray-100 px-3 py-2.5 text-sm input-focus outline-none border-gray-300 dark:border-gray-600">
+                        <select name="roles[]" id="role" class="w-full rounded-xl border bg-white dark:bg-black text-gray-900 dark:text-gray-100 px-3 py-2.5 text-sm input-focus outline-none border-gray-300 dark:border-gray-600">
                             <option value="">— Select a role —</option>
                             @foreach ($roles ?? [] as $role)
-                                <option value="{{ $role->id }}" {{ old('role_id') == $role->id ? 'selected' : '' }}>{{ $role->name }}</option>
+                                <option value="{{ $role->id }}" {{ in_array($role->id, old('roles', [])) ? 'selected' : '' }}>{{ $role->name }}</option>
                             @endforeach
                         </select>
                         <span class="ht">The role determines baseline module permissions. Customize after creation.</span>
@@ -110,6 +110,14 @@
                 pwFields.querySelectorAll('input').forEach(function(i) { i.removeAttribute('required'); });
             }
         });
+    });
+
+    // Disable role select when placeholder selected so empty value is not submitted
+    document.querySelector('form').addEventListener('submit', function() {
+        var roleSelect = document.getElementById('role');
+        if (roleSelect && roleSelect.value === '') {
+            roleSelect.disabled = true;
+        }
     });
 </script>
 @endpush
