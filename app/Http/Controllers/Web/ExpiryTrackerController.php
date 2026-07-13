@@ -37,6 +37,11 @@ class ExpiryTrackerController extends Controller
 
     public function index(Request $request): View
     {
+        $user = Auth::user();
+        $slug = $this->moduleSlug();
+        $module = ModuleCache::findBySlug($slug);
+        abort_unless($user->hasRole('super-admin') || ($module && $user->canOnModule($module, 'read')), 403);
+
         $this->userOwnedFilter();
 
         $filters = $request->only(['status', 'search', 'expiring_soon', 'expired', 'date_from', 'date_to', 'sync_type', 'source_type']);
@@ -55,10 +60,7 @@ class ExpiryTrackerController extends Controller
             'service_provider' => [],
         ]);
 
-        $user = Auth::user();
         $isSuperAdmin = $user->hasRole('super-admin');
-        $slug = $this->moduleSlug();
-        $module = ModuleCache::findBySlug($slug);
         $canCreate = $isSuperAdmin || ($module && $user->canOnModule($module, 'create'));
         $canExport = $isSuperAdmin;
         $canBulkDelete = $isSuperAdmin || ($module && $user->canOnModule($module, 'delete'));

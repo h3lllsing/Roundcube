@@ -51,3 +51,5 @@ _tmp_*
 # Empty docs directories (keep gitignore for structure)
 docs/analysis/
 docs/proposals/
+
+.env.testing

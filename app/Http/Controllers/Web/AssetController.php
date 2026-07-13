@@ -59,6 +59,10 @@ class AssetController extends Controller
 
     public function index(Request $request): View
     {
+        $user = Auth::user();
+        $module = \App\Helpers\ModuleCache::findBySlug($this->moduleSlug());
+        abort_unless($user->hasRole('super-admin') || ($module && $user->canOnModule($module, 'read')), 403);
+
         $this->userOwnedFilter();
         $query = Asset::query();
 
@@ -71,8 +75,6 @@ class AssetController extends Controller
 
         $assets = $query->select(['id', 'asset_tag', 'brand', 'model', 'assigned_user_name', 'status', 'premises', 'anydesk_id', 'module_id'])->with('module')->latest()->paginate(20);
 
-        $user = Auth::user();
-        $module = \App\Helpers\ModuleCache::findBySlug($this->moduleSlug());
         $isSuperAdmin = $user->hasRole('super-admin');
         $canCreate = $isSuperAdmin || ($module && $user->canOnModule($module, 'create'));
         $canExport = $isSuperAdmin;

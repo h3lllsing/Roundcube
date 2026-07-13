@@ -32,6 +32,10 @@ class VaultController extends Controller
 
     public function index(Request $request): View
     {
+        $user = Auth::user();
+        $module = ModuleCache::findBySlug($this->moduleSlug());
+        abort_unless($user->hasRole('super-admin') || ($module && $user->canOnModule($module, 'read')), 403);
+
         $this->userOwnedFilter();
 
         return $this->renderVaultIndex($request);

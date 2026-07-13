@@ -34,6 +34,10 @@ class DomainEmailController extends Controller
 
     public function index(Request $request): View
     {
+        $user = Auth::user();
+        $module = ModuleCache::findBySlug($this->moduleSlug());
+        abort_unless($user->hasRole('super-admin') || ($module && $user->canOnModule($module, 'read')), 403);
+
         $this->userOwnedFilter();
         $query = DomainEmail::with(['domain', 'module']);
 
@@ -53,8 +57,6 @@ class DomainEmailController extends Controller
 
         $emails = $query->select(['id', 'module_id', 'email', 'domain_id'])->latest()->paginate(20);
 
-        $user = Auth::user();
-        $module = ModuleCache::findBySlug($this->moduleSlug());
         $isSuperAdmin = $user->hasRole('super-admin');
         $canCreate = $isSuperAdmin || ($module && $user->canOnModule($module, 'create'));
         $canExport = $isSuperAdmin;
