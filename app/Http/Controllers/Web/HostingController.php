@@ -34,7 +34,7 @@ class HostingController extends BaseResourceController
 
     protected function indexSelect(): array
     {
-        return ['id', 'module_id', 'name', 'username', 'cpanel_url', 'expiry_date', 'status', 'domain_ip', 'mail_domain_ip', 'cpanel_ip', 'service_provider_id'];
+        return ['id', 'module_id', 'name', 'username', 'cpanel_url', 'expiry_date', 'status', 'domain_ip', 'mail_domain_ip', 'cpanel_ip', 'service_provider_id', 'plan'];
     }
 
     protected function indexVariable(): string

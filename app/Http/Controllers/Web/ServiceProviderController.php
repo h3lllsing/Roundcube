@@ -34,7 +34,7 @@ class ServiceProviderController extends BaseResourceController
 
     protected function indexSelect(): array
     {
-        return ['id', 'module_id', 'name', 'type', 'provider', 'email', 'website', 'login_id', 'password', 'status', 'description'];
+        return ['id', 'module_id', 'name', 'type', 'provider', 'email', 'website', 'login_id', 'password', 'status', 'description', 'expiry_date'];
     }
 
     protected function indexVariable(): string

@@ -33,12 +33,13 @@
     <form method="POST" action="{{ route('bulk-action') }}" class="mb-6" id="bulk-form">
         @csrf
         <input type="hidden" name="type" value="hostings">
-        <x-bulk-actions type="hostings" colspan="6" :actions="$bulkActions" />
+        <x-bulk-actions type="hostings" colspan="7" :actions="$bulkActions" />
     </form>
 
         <x-table>
             <x-slot:head>
                 <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Domain</th>
+                <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Plan</th>
                 <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Status</th>
                 <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Provider</th>
                 <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Expiry</th>
@@ -48,6 +49,7 @@
                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                             <td class="px-4 py-3"><input type="checkbox" name="ids[]" value="{{ $hosting->id }}" aria-label="Select {{ $hosting->name }}" class="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500 bulk-item" form="bulk-form"></td>
                             <td class="px-6 py-3 font-medium">{{ $hosting->name }}</td>
+                            <td class="px-6 py-3 text-gray-500 dark:text-gray-400">{{ $hosting->plan ?? '—' }}</td>
                             <td class="px-6 py-3">
                                 <x-badge variant="{{ $hosting->status }}" size="sm">{{ ucfirst($hosting->status) }}</x-badge>
                             </td>
@@ -119,7 +121,7 @@
                             </td>
                         </tr>
                 @empty
-                    <tr><x-empty-state :colspan="6" icon="server" title="No hostings found." message="Add hosting accounts to manage them." /></tr>
+                    <tr><x-empty-state :colspan="7" icon="server" title="No hostings found." message="Add hosting accounts to manage them." /></tr>
                 @endforelse
             </tbody>
         </x-table>

@@ -50,7 +50,7 @@ class OtherServiceController extends BaseResourceController
 
     protected function indexWith(): array
     {
-        return ['module'];
+        return ['module', 'serviceProvider'];
     }
 
     protected function showWith(): array

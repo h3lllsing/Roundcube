@@ -34,13 +34,14 @@
     <form method="POST" action="{{ route('bulk-action') }}" class="mb-6" id="bulk-form">
         @csrf
         <input type="hidden" name="type" value="other-services">
-        <x-bulk-actions type="other-services" colspan="6" :actions="$bulkActions" />
+        <x-bulk-actions type="other-services" colspan="7" :actions="$bulkActions" />
     </form>
 
         <x-table>
             <x-slot:head>
                 <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Name</th>
                 <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Type</th>
+                <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Provider</th>
                 <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Expiry</th>
                 <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Status</th>
                 <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Actions</th>
@@ -50,6 +51,7 @@
                             <td class="px-4 py-3"><input type="checkbox" name="ids[]" value="{{ $service->id }}" aria-label="Select {{ $service->name }}" class="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500 bulk-item" form="bulk-form"></td>
                             <td class="px-6 py-3 font-medium"><a href="{{ route('other-services.show', $service->id) }}" class="text-indigo-600 dark:text-indigo-400 hover:underline">{{ $service->name }}</a></td>
                             <td class="px-6 py-3 text-gray-500 dark:text-gray-400">{{ ucfirst($service->service_type ?? '—') }}</td>
+                            <td class="px-6 py-3 text-gray-500 dark:text-gray-400">{{ $service->serviceProvider?->name ?? '—' }}</td>
                             <td class="px-6 py-3 text-gray-500 dark:text-gray-400">@if($service->expiry_date)<x-date :value="$service->expiry_date" />@else<span class="text-gray-400">—</span>@endif</td>
                             <td class="px-6 py-3">
                                 <x-badge :variant="$service->status">{{ $service->status }}</x-badge>
@@ -95,7 +97,7 @@
                             </td>
                         </tr>
                 @empty
-                    <tr><x-empty-state :colspan="6" icon="box" title="No other services found." message="Add other services to manage everything in one place." /></tr>
+                    <tr><x-empty-state :colspan="7" icon="box" title="No other services found." message="Add other services to manage everything in one place." /></tr>
                     @endforelse
                 </tbody>
         </x-table>

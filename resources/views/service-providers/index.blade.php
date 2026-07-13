@@ -33,7 +33,7 @@
     <form method="POST" action="{{ route('bulk-action') }}" class="mb-6" id="bulk-form">
         @csrf
         <input type="hidden" name="type" value="service-providers">
-        <x-bulk-actions type="service-providers" colspan="5" :actions="$bulkActions" />
+        <x-bulk-actions type="service-providers" colspan="6" :actions="$bulkActions" />
     </form>
 
         <x-table>
@@ -41,6 +41,7 @@
                 <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Name</th>
                 <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Type</th>
                 <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Status</th>
+                <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Expiry</th>
                 <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Actions</th>
             </x-slot:head>
                     @forelse ($providers as $provider)
@@ -51,6 +52,7 @@
                             <td class="px-6 py-3">
                                 <x-badge :variant="$provider->status">{{ $provider->status }}</x-badge>
                             </td>
+                            <td class="px-6 py-3 text-gray-500 dark:text-gray-400">@if($provider->expiry_date)<x-date :value="$provider->expiry_date" />@else<span class="text-gray-400">—</span>@endif</td>
                             <td class="px-6 py-3 whitespace-nowrap">
                             @php
                                 $_canEdit = auth()->user()->hasRole('super-admin') || ($provider->module && auth()->user()->canOnModule($provider->module, 'update'));
@@ -92,7 +94,7 @@
                             </td>
                         </tr>
                 @empty
-                    <tr><x-empty-state :colspan="5" icon="box" title="No service providers found." message="Add service providers to keep track of vendors." /></tr>
+                    <tr><x-empty-state :colspan="6" icon="box" title="No service providers found." message="Add service providers to keep track of vendors." /></tr>
                     @endforelse
         </x-table>
 
