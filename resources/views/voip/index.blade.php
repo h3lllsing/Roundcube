@@ -61,8 +61,12 @@
                                 ])>{{ $voip->number_status ?? '—' }}</span>
                             </td>
                             <td class="px-6 py-3 whitespace-nowrap">
-                            @php $_canEdit = auth()->user()->hasRole('super-admin') || ($voip->module && auth()->user()->canOnModule($voip->module, 'update')); @endphp
-                            @php $_canDelete = auth()->user()->hasRole('super-admin') || ($voip->module && auth()->user()->canOnModule($voip->module, 'delete')); @endphp
+                            @php
+                                $_canEdit = auth()->user()->hasRole('super-admin') || ($voip->module && auth()->user()->canOnModule($voip->module, 'update'));
+                                $_canDelete = auth()->user()->hasRole('super-admin') || ($voip->module && auth()->user()->canOnModule($voip->module, 'delete'));
+                                $_canReveal = auth()->user()->hasRole('super-admin') || ($vaultModule && auth()->user()->canOnModule($vaultModule, 'reveal'));
+                                $_hasExtPassword = (bool)$voip->extension_password;
+                            @endphp
                             <div x-data="{ open: false, style: '' }" @click.away="open = false" class="relative inline-block">
                                 <button type="button" @click="
                                     open = !open;
@@ -70,8 +74,18 @@
                                 " @keydown.escape.prevent="open = false" class="inline-flex items-center justify-center w-9 h-9 rounded-xl transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500/40 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-700/50" aria-haspopup="true" :aria-expanded="open.toString()" aria-label="VoIP actions" title="VoIP actions">
                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>
                                 </button>
-                                <div x-show="open" :style="style" x-cloak role="menu" x-transition:enter="transition ease-out duration-100" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100" class="bg-gray-50 dark:bg-black rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 py-1 w-36">
+                                <div x-show="open" :style="style" x-cloak role="menu" x-transition:enter="transition ease-out duration-100" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100" class="bg-gray-50 dark:bg-black rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 py-1 w-48">
                                     <a href="{{ route('voip.show', $voip->id) }}" class="block px-3 py-2 text-sm text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500/40" role="menuitem">View Details</a>
+
+                                    @if($_hasExtPassword && $_canReveal)
+                                    <div class="border-t border-gray-100 dark:border-gray-700/50 my-1"></div>
+                                    <div class="flex items-center px-3 py-1.5 gap-2" role="menuitem">
+                                        <span class="flex-1 min-w-0 text-sm text-gray-700 dark:text-white truncate" title="Extension Password">Ext. Password</span>
+                                        <x-copy-button :passwordRoute="route('voip.extension-password', $voip->id)" class="shrink-0 w-6 h-6 !p-0 inline-flex items-center justify-center dark:text-gray-300" title="Copy Extension Password" />
+                                    </div>
+                                    <div class="border-t border-gray-100 dark:border-gray-700/50 my-1"></div>
+                                    @endif
+
                                     @if($_canEdit)
                                     <a href="{{ route('voip.edit', $voip->id) }}" class="block px-3 py-2 text-sm text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500/40" role="menuitem">Edit</a>
                                     @endif
