@@ -25,29 +25,7 @@
     </div>
     @endif
 
-    @if(!empty($monitoring['ssl_expiring_items']))
-    @php
-        $now = now();
-    @endphp
-    <div class="mb-3 pt-2 border-t border-gray-100 dark:border-gray-700/50">
-        <p class="text-xs font-semibold text-amber-600 dark:text-amber-400 mb-1.5">SSL Expiring Soon (top 5)</p>
-        @foreach($monitoring['ssl_expiring_items'] as $item)
-        @php
-            $daysLeft = $now->diffInDays($item->ssl_expires_at, false);
-            $badge = $daysLeft <= 7 ? 'red' : ($daysLeft <= 14 ? 'amber' : 'yellow');
-        @endphp
-        <a href="{{ route($item->route, $item->id) }}" class="flex items-center justify-between py-1 text-xs hover:bg-amber-50 dark:hover:bg-amber-900/10 -mx-1 px-1 rounded transition-colors">
-            <span class="text-gray-700 dark:text-gray-300 truncate">{{ $item->type }}: {{ $item->name }}</span>
-            <span class="shrink-0 ml-2 px-1.5 py-0.5 rounded font-medium {{ $badge === 'red' ? 'text-red-700 bg-red-100 dark:text-red-300 dark:bg-red-900/30' : ($badge === 'amber' ? 'text-amber-700 bg-amber-100 dark:text-amber-300 dark:bg-amber-900/30' : 'text-yellow-700 bg-yellow-100 dark:text-yellow-300 dark:bg-yellow-900/30') }}">{{ $daysLeft }}d</span>
-        </a>
-        @endforeach
-    </div>
-    @endif
-
-    <div class="flex items-center justify-between text-xs pt-3 border-t border-gray-100 dark:border-gray-700/50">
-        <span class="text-gray-500 dark:text-gray-400">
-            SSL ≤30d: <span class="font-semibold {{ $monitoring['ssl_expiring_30d'] > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-600 dark:text-gray-300' }}">{{ $monitoring['ssl_expiring_30d'] }}</span>
-        </span>
+    <div class="flex items-center justify-end text-xs pt-3 border-t border-gray-100 dark:border-gray-700/50">
         <a href="{{ route('monitoring.index') }}" class="text-indigo-500 hover:text-indigo-600 font-medium hover:underline">View All &rarr;</a>
     </div>
 </x-card>

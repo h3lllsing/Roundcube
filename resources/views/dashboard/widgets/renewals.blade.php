@@ -8,10 +8,10 @@
 
     @if ($renewals['total_trackers'] > 0)
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-        <x-stat-card label="Trackers" :value="$renewals['total_trackers']" icon="clock" color="amber" />
-        <x-stat-card label="Manual Today" :value="$renewals['manual_sends_today']" icon="tasks" color="emerald" />
-        <x-stat-card label="Auto Today" :value="$renewals['automatic_sends_today']" icon="tasks" color="sky" />
-        <x-stat-card label="Failed Today" :value="$renewals['failed_today']" icon="bell" color="rose" />
+        <x-stat-card label="Trackers" :value="$renewals['total_trackers']" color="amber" />
+        <x-stat-card label="Manual Today" :value="$renewals['manual_sends_today']" color="emerald" />
+        <x-stat-card label="Auto Today" :value="$renewals['automatic_sends_today']" color="sky" />
+        <x-stat-card label="Failed Today" :value="$renewals['failed_today']" color="rose" />
     </div>
 
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">

@@ -21,7 +21,7 @@
     @endphp
 
     @if($_kpi)
-    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
         @if(!empty($renewals))
         <div class="rounded-xl bg-gradient-to-br from-amber-500/10 to-orange-500/5 dark:from-amber-500/15 dark:to-orange-500/5 border border-amber-200/50 dark:border-amber-800/30 p-3.5">
             <p class="text-[10px] font-semibold uppercase tracking-widest text-gray-500 dark:text-gray-400">Failed Today</p>
@@ -52,12 +52,7 @@
             <p class="text-xl font-bold {{ $vault['total_reveals_30d'] > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-gray-900 dark:text-white' }}">{{ $vault['total_reveals_30d'] }}</p>
         </div>
         @endif
-        @if(!empty($monitoring))
-        <div class="rounded-xl bg-gradient-to-br from-amber-500/10 to-yellow-500/5 dark:from-amber-500/15 dark:to-yellow-500/5 border border-amber-200/50 dark:border-amber-800/30 p-3.5">
-            <p class="text-[10px] font-semibold uppercase tracking-widest text-gray-500 dark:text-gray-400">SSL ≤30d</p>
-            <p class="text-xl font-bold {{ $monitoring['ssl_expiring_30d'] > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-gray-900 dark:text-white' }}">{{ $monitoring['ssl_expiring_30d'] }}</p>
-        </div>
-        @endif
+
     </div>
     @endif
 

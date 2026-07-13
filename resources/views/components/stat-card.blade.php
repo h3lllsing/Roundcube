@@ -28,8 +28,8 @@ $icons = [
 @endphp
 
 <div class="stat-card rounded-xl bg-gradient-to-br {{ $accent }} border p-5 card-hover">
-    <div class="flex items-start justify-between">
-        <div class="min-w-0 flex-1">
+    <div class="grid grid-cols-[1fr_auto] items-start gap-2">
+        <div class="min-w-0 overflow-hidden">
             <p class="text-[11px] font-semibold uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-1.5">{{ $label }}</p>
             <p class="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">
                 @if ($numeric !== null)
@@ -40,7 +40,7 @@ $icons = [
             </p>
         </div>
         @if ($icon && isset($icons[$icon]))
-        <div class="w-9 h-9 rounded-xl bg-white/60 dark:bg-black/40 flex items-center justify-center shrink-0 ml-3 shadow-xs">
+        <div class="w-9 h-9 rounded-xl bg-white/60 dark:bg-black/40 flex items-center justify-center shrink-0 shadow-xs">
             {!! $icons[$icon] !!}
         </div>
         @endif
