@@ -154,9 +154,11 @@ class ServiceProviderController extends BaseResourceController
 
     public function getPassword(int $id): JsonResponse
     {
+        $user = Auth::user();
+        $providerModule = \App\Helpers\ModuleCache::findBySlug($this->moduleSlug());
+        abort_unless($user->hasRole('super-admin') || ($providerModule && $user->canOnModule($providerModule, 'read')), 403);
         $this->userOwnedFilter();
         $provider = ServiceProvider::findOrFail($id);
-        $user = Auth::user();
         $vaultModule = \App\Helpers\ModuleCache::findBySlug('vault');
         abort_unless($user->hasRole('super-admin') || ($vaultModule && $user->canOnModule($vaultModule, 'reveal')), 403);
         activity()->event('revealed')

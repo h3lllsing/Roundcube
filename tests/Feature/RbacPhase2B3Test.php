@@ -7,9 +7,9 @@ use App\Models\Hosting;
 use App\Models\Module;
 use App\Models\ModuleRolePermission;
 use App\Models\OtherService;
+use App\Models\UserModulePermission;
 use App\Models\ServiceProvider;
 use App\Models\User;
-use App\Models\UserModulePermission;
 use App\Models\VaultEntry;
 use App\Models\Voip;
 use App\Models\Vps;
@@ -266,15 +266,171 @@ class RbacPhase2B3Test extends TestCase
         ]);
     }
 
-    // ─── NO MODULE (deny unless super-admin) ─────────────────────────
+    // ─── RESOURCE READ REQUIRED ───────────────────────────────────
 
-    public function test_reveal_without_module_denied_for_non_super_admin(): void
+    private function makeUserWithVaultRevealButNoHostingsRead(): User
     {
-        $hosting = Hosting::factory()->create(['module_id' => null, 'user_id' => $this->admin->id]);
+        $user = User::factory()->create();
+        $user->assignRole($this->userRole);
+        UserModulePermission::create([
+            'user_id' => $user->id, 'module_id' => $this->vaultModule->id,
+            'can_reveal' => true,
+        ]);
+        UserModulePermission::create([
+            'user_id' => $user->id, 'module_id' => $this->hostingsModule->id,
+            'can_read' => false,
+        ]);
+
+        return $user;
+    }
+
+    public function test_reveal_denied_without_resource_read_even_with_reveal(): void
+    {
+        $user = $this->makeUserWithVaultRevealButNoHostingsRead();
+        $hosting = Hosting::factory()->create(['module_id' => $this->hostingsModule->id, 'user_id' => $user->id]);
+
+        $response = $this->actingAs($user)->get(route('hostings.password', $hosting->id));
+        $response->assertForbidden();
+    }
+
+    public function test_reveal_denied_without_resource_read_on_vps(): void
+    {
+        $user = User::factory()->create();
+        $user->assignRole($this->userRole);
+        UserModulePermission::create([
+            'user_id' => $user->id, 'module_id' => $this->vaultModule->id,
+            'can_reveal' => true,
+        ]);
+        UserModulePermission::create([
+            'user_id' => $user->id, 'module_id' => $this->vpsModule->id,
+            'can_read' => false,
+        ]);
+        $vps = Vps::factory()->create(['module_id' => $this->vpsModule->id, 'user_id' => $user->id]);
+
+        $response = $this->actingAs($user)->get(route('vps.password', $vps->id));
+        $response->assertForbidden();
+    }
+
+    public function test_reveal_denied_without_resource_read_on_voip(): void
+    {
+        $user = User::factory()->create();
+        $user->assignRole($this->userRole);
+        UserModulePermission::create([
+            'user_id' => $user->id, 'module_id' => $this->vaultModule->id,
+            'can_reveal' => true,
+        ]);
+        UserModulePermission::create([
+            'user_id' => $user->id, 'module_id' => $this->voipModule->id,
+            'can_read' => false,
+        ]);
+        $voip = Voip::factory()->create(['module_id' => $this->voipModule->id, 'user_id' => $user->id]);
+
+        $response = $this->actingAs($user)->get(route('voip.password', $voip->id));
+        $response->assertForbidden();
+    }
+
+    public function test_reveal_denied_without_resource_read_on_service_provider(): void
+    {
+        $user = User::factory()->create();
+        $user->assignRole($this->userRole);
+        UserModulePermission::create([
+            'user_id' => $user->id, 'module_id' => $this->vaultModule->id,
+            'can_reveal' => true,
+        ]);
+        UserModulePermission::create([
+            'user_id' => $user->id, 'module_id' => $this->serviceProvidersModule->id,
+            'can_read' => false,
+        ]);
+        $provider = ServiceProvider::factory()->create(['module_id' => $this->serviceProvidersModule->id, 'user_id' => $user->id]);
+
+        $response = $this->actingAs($user)->get(route('service-providers.password', $provider->id));
+        $response->assertForbidden();
+    }
+
+    public function test_reveal_denied_without_resource_read_on_domain_email(): void
+    {
+        $user = User::factory()->create();
+        $user->assignRole($this->userRole);
+        UserModulePermission::create([
+            'user_id' => $user->id, 'module_id' => $this->vaultModule->id,
+            'can_reveal' => true,
+        ]);
+        UserModulePermission::create([
+            'user_id' => $user->id, 'module_id' => $this->domainEmailsModule->id,
+            'can_read' => false,
+        ]);
+        $email = DomainEmail::factory()->create(['module_id' => $this->domainEmailsModule->id, 'user_id' => $user->id]);
+
+        $response = $this->actingAs($user)->get(route('domain-emails.password', $email->id));
+        $response->assertForbidden();
+    }
+
+    public function test_reveal_denied_without_resource_read_on_other_service(): void
+    {
+        $user = User::factory()->create();
+        $user->assignRole($this->userRole);
+        UserModulePermission::create([
+            'user_id' => $user->id, 'module_id' => $this->vaultModule->id,
+            'can_reveal' => true,
+        ]);
+        UserModulePermission::create([
+            'user_id' => $user->id, 'module_id' => $this->otherServicesModule->id,
+            'can_read' => false,
+        ]);
+        $service = OtherService::factory()->create(['module_id' => $this->otherServicesModule->id, 'user_id' => $user->id]);
+
+        $response = $this->actingAs($user)->get(route('other-services.password', $service->id));
+        $response->assertForbidden();
+    }
+
+    public function test_copy_denied_without_resource_read(): void
+    {
+        $user = $this->makeUserWithVaultRevealButNoHostingsRead();
+        $hosting = Hosting::factory()->create(['module_id' => $this->hostingsModule->id, 'user_id' => $user->id]);
+
+        $response = $this->actingAs($user)->post(route('hostings.password.copy', $hosting->id));
+        $response->assertForbidden();
+    }
+
+    public function test_copy_denied_without_resource_read_on_voip(): void
+    {
+        $user = User::factory()->create();
+        $user->assignRole($this->userRole);
+        UserModulePermission::create([
+            'user_id' => $user->id, 'module_id' => $this->vaultModule->id,
+            'can_reveal' => true,
+        ]);
+        UserModulePermission::create([
+            'user_id' => $user->id, 'module_id' => $this->voipModule->id,
+            'can_read' => false,
+        ]);
+        $voip = Voip::factory()->create(['module_id' => $this->voipModule->id, 'user_id' => $user->id]);
+
+        $response = $this->actingAs($user)->post(route('voip.password.copy', $voip->id));
+        $response->assertForbidden();
+    }
+
+    // ─── RESOURCE READ + REVEAL ALLOWED ───────────────────────────
+
+    public function test_reveal_allowed_with_resource_read_and_reveal(): void
+    {
+        $hosting = Hosting::factory()->create(['module_id' => $this->hostingsModule->id, 'user_id' => $this->admin->id]);
 
         $response = $this->actingAs($this->admin)->get(route('hostings.password', $hosting->id));
-        $response->assertNotFound();
+        $response->assertOk();
+        $response->assertJson(['password' => $hosting->password]);
     }
+
+    public function test_copy_allowed_with_resource_read_and_reveal(): void
+    {
+        $hosting = Hosting::factory()->create(['module_id' => $this->hostingsModule->id, 'user_id' => $this->admin->id]);
+
+        $response = $this->actingAs($this->admin)->post(route('hostings.password.copy', $hosting->id));
+        $response->assertOk();
+        $response->assertJson(['status' => 'logged']);
+    }
+
+    // ─── NO MODULE (deny unless super-admin) ─────────────────────────
 
     public function test_reveal_without_module_allowed_for_super_admin(): void
     {

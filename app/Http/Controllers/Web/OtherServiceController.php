@@ -133,9 +133,11 @@ class OtherServiceController extends BaseResourceController
 
     public function getPassword(int $id): JsonResponse
     {
+        $user = Auth::user();
+        $serviceModule = \App\Helpers\ModuleCache::findBySlug($this->moduleSlug());
+        abort_unless($user->hasRole('super-admin') || ($serviceModule && $user->canOnModule($serviceModule, 'read')), 403);
         $this->userOwnedFilter();
         $service = OtherService::findOrFail($id);
-        $user = Auth::user();
         $vaultModule = \App\Helpers\ModuleCache::findBySlug('vault');
         abort_unless($user->hasRole('super-admin') || ($vaultModule && $user->canOnModule($vaultModule, 'reveal')), 403);
         activity()->event('revealed')
@@ -149,9 +151,11 @@ class OtherServiceController extends BaseResourceController
 
     public function logPasswordCopy(int $id): JsonResponse
     {
+        $user = Auth::user();
+        $serviceModule = \App\Helpers\ModuleCache::findBySlug($this->moduleSlug());
+        abort_unless($user->hasRole('super-admin') || ($serviceModule && $user->canOnModule($serviceModule, 'read')), 403);
         $this->userOwnedFilter();
         $service = OtherService::findOrFail($id);
-        $user = Auth::user();
         $vaultModule = \App\Helpers\ModuleCache::findBySlug('vault');
         abort_unless($user->hasRole('super-admin') || ($vaultModule && $user->canOnModule($vaultModule, 'reveal')), 403);
         activity()->event('copied')

@@ -163,10 +163,12 @@ class DomainEmailController extends Controller
 
     public function getPassword(int $id): JsonResponse
     {
+        $user = Auth::user();
+        $emailModule = \App\Helpers\ModuleCache::findBySlug($this->moduleSlug());
+        abort_unless($user->hasRole('super-admin') || ($emailModule && $user->canOnModule($emailModule, 'read')), 403);
         $this->userOwnedFilter();
         $email = DomainEmail::findOrFail($id);
 
-        $user = Auth::user();
         $vaultModule = \App\Helpers\ModuleCache::findBySlug('vault');
         abort_unless($user->hasRole('super-admin') || ($vaultModule && $user->canOnModule($vaultModule, 'reveal')), 403);
 

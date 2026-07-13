@@ -119,9 +119,11 @@ class HostingController extends BaseResourceController
 
     public function getPassword(int $id): \Illuminate\Http\JsonResponse
     {
+        $user = Auth::user();
+        $hostingModule = \App\Helpers\ModuleCache::findBySlug($this->moduleSlug());
+        abort_unless($user->hasRole('super-admin') || ($hostingModule && $user->canOnModule($hostingModule, 'read')), 403);
         $this->userOwnedFilter();
         $hosting = Hosting::findOrFail($id);
-        $user = Auth::user();
         $vaultModule = \App\Helpers\ModuleCache::findBySlug('vault');
         abort_unless($user->hasRole('super-admin') || ($vaultModule && $user->canOnModule($vaultModule, 'reveal')), 403);
         activity()->event('revealed')
@@ -135,9 +137,11 @@ class HostingController extends BaseResourceController
 
     public function logPasswordCopy(int $id): \Illuminate\Http\JsonResponse
     {
+        $user = Auth::user();
+        $hostingModule = \App\Helpers\ModuleCache::findBySlug($this->moduleSlug());
+        abort_unless($user->hasRole('super-admin') || ($hostingModule && $user->canOnModule($hostingModule, 'read')), 403);
         $this->userOwnedFilter();
         $hosting = Hosting::findOrFail($id);
-        $user = Auth::user();
         $vaultModule = \App\Helpers\ModuleCache::findBySlug('vault');
         abort_unless($user->hasRole('super-admin') || ($vaultModule && $user->canOnModule($vaultModule, 'reveal')), 403);
         activity()->event('copied')

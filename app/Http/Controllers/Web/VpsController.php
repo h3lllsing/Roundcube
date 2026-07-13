@@ -138,9 +138,11 @@ class VpsController extends BaseResourceController
 
     public function getPassword(int $id): JsonResponse
     {
+        $user = Auth::user();
+        $vpsModule = \App\Helpers\ModuleCache::findBySlug($this->moduleSlug());
+        abort_unless($user->hasRole('super-admin') || ($vpsModule && $user->canOnModule($vpsModule, 'read')), 403);
         $this->userOwnedFilter();
         $vps = Vps::findOrFail($id);
-        $user = Auth::user();
         $vaultModule = \App\Helpers\ModuleCache::findBySlug('vault');
         abort_unless($user->hasRole('super-admin') || ($vaultModule && $user->canOnModule($vaultModule, 'reveal')), 403);
         activity()->event('revealed')
@@ -154,9 +156,11 @@ class VpsController extends BaseResourceController
 
     public function logPasswordCopy(int $id): JsonResponse
     {
+        $user = Auth::user();
+        $vpsModule = \App\Helpers\ModuleCache::findBySlug($this->moduleSlug());
+        abort_unless($user->hasRole('super-admin') || ($vpsModule && $user->canOnModule($vpsModule, 'read')), 403);
         $this->userOwnedFilter();
         $vps = Vps::findOrFail($id);
-        $user = Auth::user();
         $vaultModule = \App\Helpers\ModuleCache::findBySlug('vault');
         abort_unless($user->hasRole('super-admin') || ($vaultModule && $user->canOnModule($vaultModule, 'reveal')), 403);
         activity()->event('copied')

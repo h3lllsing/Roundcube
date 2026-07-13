@@ -134,9 +134,11 @@ class VoipController extends BaseResourceController
 
     public function getPassword(int $id): JsonResponse
     {
+        $user = Auth::user();
+        $voipModule = \App\Helpers\ModuleCache::findBySlug($this->moduleSlug());
+        abort_unless($user->hasRole('super-admin') || ($voipModule && $user->canOnModule($voipModule, 'read')), 403);
         $this->userOwnedFilter();
         $voip = Voip::findOrFail($id);
-        $user = Auth::user();
         $vaultModule = \App\Helpers\ModuleCache::findBySlug('vault');
         abort_unless($user->hasRole('super-admin') || ($vaultModule && $user->canOnModule($vaultModule, 'reveal')), 403);
         activity()->event('revealed')
@@ -150,9 +152,11 @@ class VoipController extends BaseResourceController
 
     public function getExtensionPassword(int $id): JsonResponse
     {
+        $user = Auth::user();
+        $voipModule = \App\Helpers\ModuleCache::findBySlug($this->moduleSlug());
+        abort_unless($user->hasRole('super-admin') || ($voipModule && $user->canOnModule($voipModule, 'read')), 403);
         $this->userOwnedFilter();
         $voip = Voip::findOrFail($id);
-        $user = Auth::user();
         $vaultModule = \App\Helpers\ModuleCache::findBySlug('vault');
         abort_unless($user->hasRole('super-admin') || ($vaultModule && $user->canOnModule($vaultModule, 'reveal')), 403);
         activity()->event('revealed')
@@ -166,9 +170,11 @@ class VoipController extends BaseResourceController
 
     public function logPasswordCopy(int $id): JsonResponse
     {
+        $user = Auth::user();
+        $voipModule = \App\Helpers\ModuleCache::findBySlug($this->moduleSlug());
+        abort_unless($user->hasRole('super-admin') || ($voipModule && $user->canOnModule($voipModule, 'read')), 403);
         $this->userOwnedFilter();
         $voip = Voip::findOrFail($id);
-        $user = Auth::user();
         $vaultModule = \App\Helpers\ModuleCache::findBySlug('vault');
         abort_unless($user->hasRole('super-admin') || ($vaultModule && $user->canOnModule($vaultModule, 'reveal')), 403);
         activity()->event('copied')
@@ -182,9 +188,11 @@ class VoipController extends BaseResourceController
 
     public function logExtensionPasswordCopy(int $id): JsonResponse
     {
+        $user = Auth::user();
+        $voipModule = \App\Helpers\ModuleCache::findBySlug($this->moduleSlug());
+        abort_unless($user->hasRole('super-admin') || ($voipModule && $user->canOnModule($voipModule, 'read')), 403);
         $this->userOwnedFilter();
         $voip = Voip::findOrFail($id);
-        $user = Auth::user();
         $vaultModule = \App\Helpers\ModuleCache::findBySlug('vault');
         abort_unless($user->hasRole('super-admin') || ($vaultModule && $user->canOnModule($vaultModule, 'reveal')), 403);
         activity()->event('copied')

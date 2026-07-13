@@ -107,10 +107,12 @@ class GMailController extends BaseResourceController
 
     public function getPassword(int $id): JsonResponse
     {
+        $user = Auth::user();
+        $gMailModule = ModuleCache::findBySlug($this->moduleSlug());
+        abort_unless($user->hasRole('super-admin') || ($gMailModule && $user->canOnModule($gMailModule, 'read')), 403);
         $this->userOwnedFilter();
         $gMail = GMail::findOrFail($id);
 
-        $user = Auth::user();
         $vaultModule = ModuleCache::findBySlug('vault');
         abort_unless($user->hasRole('super-admin') || ($vaultModule && $user->canOnModule($vaultModule, 'reveal')), 403);
 
