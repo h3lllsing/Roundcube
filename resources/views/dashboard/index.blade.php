@@ -23,15 +23,17 @@
     @if($_kpi)
     <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
         @if(!empty($renewals))
-        <div class="rounded-xl bg-gradient-to-br from-amber-500/10 to-orange-500/5 dark:from-amber-500/15 dark:to-orange-500/5 border border-amber-200/50 dark:border-amber-800/30 p-3.5">
+        @php $_ft = $renewals['failed_today'] > 0; @endphp
+        <div class="rounded-xl bg-gradient-to-br border p-3.5 {{ $_ft ? 'from-rose-500/20 to-pink-500/10 dark:from-rose-500/25 dark:to-pink-500/15 border-rose-300/60 dark:border-rose-700/50 ring-1 ring-rose-400/20' : 'from-amber-500/10 to-orange-500/5 dark:from-amber-500/15 dark:to-orange-500/5 border-amber-200/50 dark:border-amber-800/30' }}">
             <p class="text-[10px] font-semibold uppercase tracking-widest text-gray-500 dark:text-gray-400">Failed Today</p>
-            <p class="text-xl font-bold {{ $renewals['failed_today'] > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-gray-900 dark:text-white' }}">{{ $renewals['failed_today'] }}</p>
+            <p class="text-xl font-bold {{ $_ft ? 'text-rose-600 dark:text-rose-400' : 'text-gray-900 dark:text-white' }}">{{ $renewals['failed_today'] }}</p>
         </div>
         @endif
         @if(!empty($monitoring))
-        <div class="rounded-xl bg-gradient-to-br from-rose-500/10 to-pink-500/5 dark:from-rose-500/15 dark:to-pink-500/5 border border-rose-200/50 dark:border-rose-800/30 p-3.5">
+        @php $_off = $monitoring['offline'] > 0; @endphp
+        <div class="rounded-xl bg-gradient-to-br border p-3.5 {{ $_off ? 'from-rose-500/25 to-pink-500/15 dark:from-rose-500/30 dark:to-pink-500/20 border-rose-300/70 dark:border-rose-700/60 ring-1 ring-rose-400/30' : 'from-rose-500/10 to-pink-500/5 dark:from-rose-500/15 dark:to-pink-500/5 border-rose-200/50 dark:border-rose-800/30' }}">
             <p class="text-[10px] font-semibold uppercase tracking-widest text-gray-500 dark:text-gray-400">Offline</p>
-            <p class="text-xl font-bold {{ $monitoring['offline'] > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-gray-900 dark:text-white' }}">{{ $monitoring['offline'] }}</p>
+            <p class="text-xl font-bold {{ $_off ? 'text-rose-600 dark:text-rose-400' : 'text-gray-900 dark:text-white' }}">{{ $monitoring['offline'] }}</p>
         </div>
         @endif
         @if(!empty($tasks))
