@@ -53,3 +53,25 @@ docs/analysis/
 docs/proposals/
 
 .env.testing
+
+# ============================================================
+# Development-only & debug scripts (root-level) — NOT for production
+# ============================================================
+/brute.php
+/brute2.php
+/check_hash.php
+/create_test_db.php
+/fix_mysql*.php
+/restore_db.cmd
+/test_*.php
+/test_conn*.php
+/test_env*.php
+/test_mysql*.php
+
+# ============================================================
+# Playwright generated/runtime artifacts — NOT source code
+# ============================================================
+e2e/auth-state.json
+e2e/playwright-report/
+e2e/screenshots/
+test-results/
