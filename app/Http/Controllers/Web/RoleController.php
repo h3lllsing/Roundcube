@@ -48,8 +48,9 @@ class RoleController extends Controller
         abort_unless(Auth::user()->hasRole('super-admin'), 403);
         $role = $this->roleService->find($id);
         $allPrivileges = $this->roleService->getAllPrivileges();
+        $moduleAccess = $this->roleService->getModuleAccessSummary($id);
 
-        return view('roles.show', compact('role', 'allPrivileges'));
+        return view('roles.show', compact('role', 'allPrivileges', 'moduleAccess'));
     }
 
     public function edit(int $id): View

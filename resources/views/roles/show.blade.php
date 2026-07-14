@@ -34,7 +34,13 @@
             </div>
         </div>
         <div class="flex items-center gap-3 pt-6 mt-6 border-t border-gray-200 dark:border-gray-700">
-            <x-button href="{{ route('roles.edit', $role->id) }}" variant="primary" size="sm">Edit</x-button>
+            @if (!in_array($role->slug, ['super-admin']))
+            <x-button href="{{ route('module-permissions.index', ['role_id' => $role->id]) }}" variant="primary" size="sm">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                Configure Permissions
+            </x-button>
+            @endif
+            <x-button href="{{ route('roles.edit', $role->id) }}" variant="outline" size="sm">Edit</x-button>
             @if (!in_array($role->slug, ['admin', 'super-admin']))
             <form action="{{ route('roles.destroy', $role->id) }}" method="POST">
                 @csrf
@@ -43,6 +49,41 @@
             </form>
             @endif
         </div>
+    </div>
+
+    <div class="mt-6 bg-white dark:bg-black rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+        <h3 class="text-md font-semibold mb-4">Module Access Summary</h3>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-500 dark:text-gray-400">Total Modules</label>
+                <p class="mt-1 text-2xl font-semibold text-gray-900 dark:text-gray-100">{{ $moduleAccess['total_modules'] }}</p>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-500 dark:text-gray-400">With Access</label>
+                <p class="mt-1 text-2xl font-semibold text-green-600 dark:text-green-400">{{ $moduleAccess['accessible_modules'] }}</p>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-500 dark:text-gray-400">No Access</label>
+                <p class="mt-1 text-2xl font-semibold text-gray-400 dark:text-gray-500">{{ $moduleAccess['no_access_modules'] }}</p>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-500 dark:text-gray-400">Sensitive Granted</label>
+                <p class="mt-1 text-2xl font-semibold {{ $moduleAccess['sensitive_count'] > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-gray-400 dark:text-gray-500' }}">{{ $moduleAccess['sensitive_count'] }}</p>
+            </div>
+        </div>
+        @if ($moduleAccess['sensitive_count'] > 0)
+        <div class="mt-3 text-xs text-gray-500 dark:text-gray-400">
+            <span class="font-medium">Sensitive permissions granted:</span>
+            @foreach ($moduleAccess['sensitive_granted'] as $sg)
+                <span class="inline-block bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 px-2 py-0.5 rounded-full ml-1">{{ $sg['module'] }} — {{ $sg['permission'] }}</span>
+            @endforeach
+        </div>
+        @endif
+        @if (!in_array($role->slug, ['super-admin']))
+        <div class="mt-3">
+            <a href="{{ route('module-permissions.index', ['role_id' => $role->id]) }}" class="text-indigo-600 dark:text-indigo-400 hover:underline text-sm">View and edit module permissions →</a>
+        </div>
+        @endif
     </div>
 
     <div class="mt-6 bg-white dark:bg-black rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">

@@ -1,9 +1,49 @@
 @extends('layouts.admin')
 
-@section('title', 'Module Permissions')
+@section('title', $focusedRole ? "Permissions — {$focusedRole->name}" : 'Module Permissions')
 
 @section('content')
 <div class="max-w-7xl mx-auto">
+    @if ($focusedRole)
+    <div class="mb-6">
+        <a href="{{ route('roles.show', $focusedRole->id) }}" class="text-sm text-indigo-600 dark:text-indigo-400 hover:underline">&larr; Back to {{ $focusedRole->name }}</a>
+    </div>
+    <div class="bg-white dark:bg-black rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <h2 class="text-xl font-semibold text-gray-900 dark:text-gray-100">Role: {{ $focusedRole->name }}</h2>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Configure module access permissions for this role.</p>
+            </div>
+            <div class="text-right text-sm">
+                <a href="{{ route('module-permissions.index') }}" class="text-indigo-600 dark:text-indigo-400 hover:underline">View all roles</a>
+            </div>
+        </div>
+        @php
+            $accessibleCount = 0;
+            $noAccessCount = 0;
+        @endphp
+        @foreach ($modules as $module)
+            @php
+                $perm = $module->rolePermissions->firstWhere('role_id', $focusedRole->id);
+                if ($perm && $perm->can_read) { $accessibleCount++; } else { $noAccessCount++; }
+            @endphp
+        @endforeach
+        <div class="grid grid-cols-3 gap-4 mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <div>
+                <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Modules with Access</span>
+                <p class="text-lg font-semibold text-green-600 dark:text-green-400">{{ $accessibleCount }}</p>
+            </div>
+            <div>
+                <span class="text-xs font-medium text-gray-500 dark:text-gray-400">No Access</span>
+                <p class="text-lg font-semibold text-gray-400 dark:text-gray-500">{{ $noAccessCount }}</p>
+            </div>
+            <div>
+                <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Total Modules</span>
+                <p class="text-lg font-semibold text-gray-900 dark:text-gray-100">{{ $modules->count() }}</p>
+            </div>
+        </div>
+    </div>
+    @else
     <x-page-header title="Module Permissions" subtitle="Configure module access permissions.">
         <x-slot:actions>
             <x-button href="{{ route('roles.create') }}" variant="primary" size="sm">
@@ -12,7 +52,7 @@
             </x-button>
         </x-slot:actions>
     </x-page-header>
-
+    @endif
 
     <div class="bg-white dark:bg-black rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-x-auto w-full">
         <table class="w-full text-sm">

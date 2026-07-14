@@ -17,12 +17,26 @@ class ModulePermissionController extends Controller
         private readonly ModulePermissionService $permissionService
     ) {}
 
-    public function index(): View
+    public function index(Request $request): View
     {
-        $modules = Module::with(['feature', 'rolePermissions.role'])->orderBy('name')->get();
-        $roles = Role::whereNotIn('slug', ['*'])->orderBy('name')->get();
+        $roleId = $request->integer('role_id');
+        $focusedRole = null;
 
-        return view('module-permissions.index', compact('modules', 'roles'));
+        $modules = Module::with(['feature', 'rolePermissions.role'])
+            ->orderBy('name')
+            ->get();
+
+        if ($roleId) {
+            $focusedRole = Role::findOrFail($roleId);
+            if (in_array($focusedRole->slug, ['super-admin', '*'])) {
+                abort(404);
+            }
+            $roles = collect([$focusedRole]);
+        } else {
+            $roles = Role::whereNotIn('slug', ['*'])->orderBy('name')->get();
+        }
+
+        return view('module-permissions.index', compact('modules', 'roles', 'focusedRole'));
     }
 
     public function update(Request $request): RedirectResponse
@@ -66,7 +80,7 @@ class ModulePermissionController extends Controller
             ])
             ->log('Module permissions updated for role: '.($role?->getAttribute('name') ?? $validated['role_id']).' on module: '.$module->name);
 
-        return redirect()->route('module-permissions.index')
+        return redirect()->route('module-permissions.index', ['role_id' => $validated['role_id']])
             ->with('success', 'Permissions updated successfully.');
     }
 
@@ -91,7 +105,7 @@ class ModulePermissionController extends Controller
             ])
             ->log('Module permissions removed for role: '.($role?->getAttribute('name') ?? $validated['role_id']).' on module: '.$module->name);
 
-        return redirect()->route('module-permissions.index')
+        return redirect()->route('module-permissions.index', ['role_id' => $validated['role_id']])
             ->with('success', 'Permissions removed successfully.');
     }
 }

@@ -3,6 +3,9 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use App\Models\Module;
+use App\Models\ModuleRolePermission;
+use Database\Seeders\FeatureModuleSeeder;
 use HasinHayder\Tyro\Database\Seeders\TyroSeeder;
 use HasinHayder\Tyro\Models\Privilege;
 use HasinHayder\Tyro\Models\Role;
@@ -150,5 +153,38 @@ class RoleTest extends TestCase
     {
         $this->get(route('roles.index'))->assertRedirect(route('login'));
         $this->get(route('roles.create'))->assertRedirect(route('login'));
+    }
+
+    public function test_show_displays_configure_permissions_link(): void
+    {
+        $this->seed(FeatureModuleSeeder::class);
+        $role = Role::create(['name' => 'TestRole', 'slug' => 'test-role']);
+        $this->actingAs($this->admin);
+        $response = $this->get(route('roles.show', $role->id));
+        $response->assertStatus(200);
+        $response->assertSee('Configure Permissions');
+        $response->assertSee(route('module-permissions.index', ['role_id' => $role->id]));
+    }
+
+    public function test_show_displays_module_access_summary(): void
+    {
+        $this->seed(FeatureModuleSeeder::class);
+        $role = Role::create(['name' => 'SummaryRole', 'slug' => 'summary-role']);
+        $module = Module::firstOrFail();
+        ModuleRolePermission::create([
+            'module_id' => $module->id,
+            'role_id' => $role->id,
+            'can_read' => true,
+        ]);
+        $totalModules = Module::count();
+
+        $this->actingAs($this->admin);
+        $response = $this->get(route('roles.show', $role->id));
+        $response->assertStatus(200);
+        $response->assertSee('Module Access Summary');
+        $response->assertSee((string) $totalModules);
+        $response->assertSee('With Access');
+        $response->assertSee('No Access');
+        $response->assertSee('Sensitive Granted');
     }
 }

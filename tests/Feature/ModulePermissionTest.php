@@ -306,4 +306,40 @@ class ModulePermissionTest extends TestCase
         $targetModule = $modulePerms->firstWhere('module_id', $this->module->id);
         $this->assertFalse($targetModule['can_read'] ?? false);
     }
+
+    public function test_web_index_loads_global_matrix(): void
+    {
+        $this->actingAs($this->admin);
+        $response = $this->get(route('module-permissions.index'));
+        $response->assertStatus(200);
+        $response->assertSee('Module Permissions');
+        $response->assertSee($this->module->name);
+        $response->assertSee($this->userRole->name);
+        $response->assertDontSee('Back to');
+    }
+
+    public function test_web_index_with_role_id_filters_focused_mode(): void
+    {
+        $this->actingAs($this->admin);
+        $response = $this->get(route('module-permissions.index', ['role_id' => $this->userRole->id]));
+        $response->assertStatus(200);
+        $response->assertSee('Permissions');
+        $response->assertSee($this->userRole->name);
+        $response->assertSee('Back to');
+    }
+
+    public function test_web_index_with_invalid_role_id_returns_404(): void
+    {
+        $this->actingAs($this->admin);
+        $this->get(route('module-permissions.index', ['role_id' => 99999]))
+            ->assertStatus(404);
+    }
+
+    public function test_web_index_with_super_admin_role_returns_404(): void
+    {
+        $superAdminRole = Role::where('slug', 'super-admin')->firstOrFail();
+        $this->actingAs($this->admin);
+        $this->get(route('module-permissions.index', ['role_id' => $superAdminRole->id]))
+            ->assertStatus(404);
+    }
 }

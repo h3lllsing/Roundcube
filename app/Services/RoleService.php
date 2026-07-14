@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Module;
 use App\Models\Privilege;
 use App\Models\Role;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -133,5 +134,46 @@ class RoleService
             ->log('Privilege "'.$privilege->name.'" detached from role: '.$role->name);
 
         return null;
+    }
+
+    public function getModuleAccessSummary(int $roleId): array
+    {
+        $modules = Module::with(['feature', 'rolePermissions' => function ($q) use ($roleId) {
+            $q->where('role_id', $roleId);
+        }])->orderBy('name')->get();
+
+        $sensitiveSlugs = config('permissions.sensitive_modules', []);
+        $sensitivePermKeys = config('permissions.sensitive_permissions', []);
+
+        $accessibleCount = 0;
+        $noAccessCount = 0;
+        $sensitiveGranted = [];
+
+        foreach ($modules as $module) {
+            $rp = $module->rolePermissions->first();
+            if ($rp && $rp->can_read) {
+                $accessibleCount++;
+                if (in_array($module->slug, $sensitiveSlugs)) {
+                    foreach ($sensitivePermKeys as $key) {
+                        if ($rp->$key) {
+                            $sensitiveGranted[] = [
+                                'module' => $module->name,
+                                'permission' => $key,
+                            ];
+                        }
+                    }
+                }
+            } else {
+                $noAccessCount++;
+            }
+        }
+
+        return [
+            'total_modules' => $modules->count(),
+            'accessible_modules' => $accessibleCount,
+            'no_access_modules' => $noAccessCount,
+            'sensitive_count' => count($sensitiveGranted),
+            'sensitive_granted' => $sensitiveGranted,
+        ];
     }
 }
