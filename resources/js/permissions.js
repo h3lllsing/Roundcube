@@ -27,12 +27,16 @@ export default function (initData = {}) {
         userRole: '',
         userId: null,
         sensitivePermNames: ['can_delete', 'can_reveal', 'can_approve', 'can_import'],
+        isSimple: true,
+        filterOverrideOnly: false,
 
         init() {
             this.toggleToColumn = initData.toggleToColumn || defaultToggleToColumn;
             this.columnToToggle = Object.fromEntries(Object.entries(this.toggleToColumn).map(([k, v]) => [v, k]));
             this.loadFromServer(initData);
             this.setupBeforeUnload();
+            const stored = localStorage.getItem('perm_mode');
+            if (stored === 'advanced') this.isSimple = false;
         },
 
         loadFromServer(data) {
@@ -101,6 +105,14 @@ export default function (initData = {}) {
             this.summaryOpen = !this.summaryOpen;
         },
 
+        toggleSimpleMode(enterSimple) {
+            this.isSimple = enterSimple;
+            localStorage.setItem('perm_mode', enterSimple ? 'simple' : 'advanced');
+            this.searchQuery = '';
+            this.activeFilter = 'all';
+            this.filterOverrideOnly = false;
+        },
+
         closeEditor() {
             this.openEditor = null;
             this.editorPerms = {};
@@ -120,6 +132,14 @@ export default function (initData = {}) {
             else if (t.view && !t.create && !t.edit && !t.delete && !t.approve && !t.export && !t.reveal && !t.import) { mod.preset = 1; }
             else if (t.view && t.create && t.edit && !t.delete && !t.approve && !t.reveal && !t.import) { mod.preset = 2; }
             else { mod.preset = 3; }
+        },
+
+        resetModuleToBaseline(modId) {
+            const mod = this.modules[modId];
+            if (!mod) return;
+            mod.preset = mod.baseline;
+            this.markUnsaved();
+            this.closeEditor();
         },
 
         markUnsaved() {
@@ -361,6 +381,20 @@ export default function (initData = {}) {
 
         get sensitiveChanges() {
             return this.changes.filter(c => c.isSensitive);
+        },
+
+        get overridesCount() {
+            return this.modList.filter(m => m.preset !== m.baseline).length;
+        },
+
+        get simpleModuleList() {
+            if (this.filterOverrideOnly) {
+                return this.modList.filter(m => m.preset !== m.baseline);
+            }
+            const q = this.searchQuery.toLowerCase().trim();
+            return this.modList.filter(mod => {
+                return !q || mod.name.toLowerCase().includes(q);
+            });
         },
     };
 }

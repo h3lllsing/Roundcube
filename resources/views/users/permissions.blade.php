@@ -141,6 +141,24 @@
     {{-- Role changed warning --}}
     <x-permissions.role-warning />
 
+    {{-- Mode Toggle Tabs --}}
+    <div class="mode-tabs" role="tablist">
+        <button
+            class="mode-tab"
+            :class="{ active: isSimple }"
+            role="tab"
+            :aria-selected="isSimple"
+            @click="toggleSimpleMode(true)"
+        >Simple</button>
+        <button
+            class="mode-tab"
+            :class="{ active: !isSimple }"
+            role="tab"
+            :aria-selected="!isSimple"
+            @click="toggleSimpleMode(false)"
+        >Advanced</button>
+    </div>
+
     {{-- Main card --}}
     <div class="card">
         <div class="ch">
@@ -153,47 +171,134 @@
         </div>
         <div class="cb">
 
-            {{-- Stats bar --}}
-            <x-permissions.stats-bar />
+            {{-- ═══ SIMPLE MODE ═══ --}}
+            <div x-show="isSimple" x-cloak>
+                <div class="sm-stats">
+                    <span class="sm-stat" x-show="overridesCount > 0">
+                        <strong x-text="overridesCount"></strong> module<span x-text="overridesCount !== 1 ? 's' : ''"></span> with custom permissions
+                    </span>
+                    <span class="sm-stat" x-show="overridesCount === 0">
+                        No custom permissions — <strong>all inherited</strong> from role
+                    </span>
+                    <span class="sm-stat text-xs text-slate-400">Baseline: {{ $roleName }}</span>
+                </div>
 
-            {{-- Sensitive criteria --}}
-            <x-permissions.sensitive-criteria />
+                <div class="sm-controls">
+                    <label class="sm-toggle">
+                        <input type="checkbox" x-model="filterOverrideOnly" @change="searchQuery = ''">
+                        <span>Show only overridden modules</span>
+                    </label>
+                    <div class="sw sm-search">
+                        <i class="ic" aria-hidden="true">🔍</i>
+                        <input
+                            class="si"
+                            type="text"
+                            placeholder="Search modules..."
+                            x-model="searchQuery"
+                            @input="filterOverrideOnly = false"
+                            aria-label="Search modules"
+                        >
+                    </div>
+                </div>
 
-            {{-- Search + Filters --}}
-            <div class="filters" role="tablist" aria-label="Permission filters">
-                <x-permissions.filter-chip filter="all" label="All" />
-                <x-permissions.filter-chip filter="modified" label="Modified" />
-                <x-permissions.filter-chip filter="sensitive" label="Sensitive" />
-                <x-permissions.filter-chip filter="2" label="Manage" />
-                <x-permissions.filter-chip filter="3" label="Custom" />
-                <x-permissions.filter-chip filter="inherited" label="Inherited" />
-                <div class="sw">
-                    <i class="ic" aria-hidden="true">🔍</i>
-                    <input
-                        class="si"
-                        type="text"
-                        placeholder="Search modules..."
-                        x-model="searchQuery"
-                        aria-label="Search modules"
-                    >
+                {{-- Inline editor (shared with Advanced mode) --}}
+                <x-permissions.inline-editor />
+
+                {{-- Zero-overrides empty state --}}
+                <div x-show="overridesCount === 0 && !searchQuery" class="sm-empty" x-cloak>
+                    <div class="sm-empty-icon">⚙</div>
+                    <h3 class="sm-empty-title">No custom permissions yet</h3>
+                    <p class="sm-empty-desc">
+                        This user inherits all module permissions from their role (<strong>{{ $roleName }}</strong>).
+                        Override specific modules to grant or restrict access.
+                    </p>
+                    <button class="btn btn-p" @click="filterOverrideOnly = false; $nextTick(() => { searchQuery = ''; })">Browse All Modules</button>
+                </div>
+
+                {{-- Simple mode module rows --}}
+                <div x-show="!(overridesCount === 0 && !searchQuery)" x-cloak>
+                    <template x-for="mod in simpleModuleList" :key="mod.id">
+                        <div class="sm-row" :class="{ 'sm-overridden': mod.preset !== mod.baseline }">
+                            <div class="sm-info">
+                                <span class="sm-name" x-text="mod.name"></span>
+                                <span x-show="mod.isSensitive" class="sen-tag" data-tip="Contains sensitive permissions">sensitive</span>
+                                <span class="sm-baseline">
+                                    Role: <span x-text="presetLabels[mod.baseline] || 'No Access'"></span>
+                                </span>
+                            </div>
+                            <div class="sm-setting">
+                                <select
+                                    class="sm-select"
+                                    :class="{ 'sm-inherit': mod.preset === mod.baseline, 'sm-override': mod.preset !== mod.baseline && mod.preset !== 3, 'sm-custom-sel': mod.preset === 3 }"
+                                    x-on:change="
+                                        const v = parseInt($event.target.value);
+                                        if (v === -1) { modules[mod.id].preset = modules[mod.id].baseline; markUnsaved(); }
+                                        else { modules[mod.id].preset = v; markUnsaved(); }
+                                        if (v === 3) { $dispatch('open-editor', {id: mod.id}); }
+                                    "
+                                >
+                                    <option value="-1" x-bind:selected="mod.preset === mod.baseline">Inherit from Role</option>
+                                    <option value="0" x-bind:selected="mod.preset === 0">No Access</option>
+                                    <option value="1" x-bind:selected="mod.preset === 1">View Only</option>
+                                    <option value="2" x-bind:selected="mod.preset === 2">Manage</option>
+                                    <option value="3" x-bind:selected="mod.preset === 3">Custom…</option>
+                                </select>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+
+                {{-- Unsaved warning --}}
+                <div class="unsaved-bar" :class="{ show: hasUnsavedChanges }">
+                    <span class="dot-pulse"></span>
+                    <span>You have unsaved permission changes.</span>
                 </div>
             </div>
 
-            {{-- Inline editor --}}
-            <x-permissions.inline-editor />
+            {{-- ═══ ADVANCED MODE ═══ --}}
+            <div x-show="!isSimple" x-cloak>
+                {{-- Stats bar --}}
+                <x-permissions.stats-bar />
 
-            {{-- Category accordions --}}
-            @foreach ($categories as $cat)
-                <x-permissions.category-accordion name="{{ $cat }}">
-                    @foreach (collect($moduleList)->where('category', $cat) as $mod)
-                        <x-permissions.module-row
-                            :module="$mod['module']"
-                            :baseline="$mod['baseline']"
-                            :overrides="$mod['overrides']"
-                        />
-                    @endforeach
-                </x-permissions.category-accordion>
-            @endforeach
+                {{-- Sensitive criteria --}}
+                <x-permissions.sensitive-criteria />
+
+                {{-- Search + Filters --}}
+                <div class="filters" role="tablist" aria-label="Permission filters">
+                    <x-permissions.filter-chip filter="all" label="All" />
+                    <x-permissions.filter-chip filter="modified" label="Modified" />
+                    <x-permissions.filter-chip filter="sensitive" label="Sensitive" />
+                    <x-permissions.filter-chip filter="2" label="Manage" />
+                    <x-permissions.filter-chip filter="3" label="Custom" />
+                    <x-permissions.filter-chip filter="inherited" label="From Role" />
+                    <div class="sw">
+                        <i class="ic" aria-hidden="true">🔍</i>
+                        <input
+                            class="si"
+                            type="text"
+                            placeholder="Search modules..."
+                            x-model="searchQuery"
+                            aria-label="Search modules"
+                        >
+                    </div>
+                </div>
+
+                {{-- Inline editor (shared) --}}
+                <x-permissions.inline-editor />
+
+                {{-- Category accordions --}}
+                @foreach ($categories as $cat)
+                    <x-permissions.category-accordion name="{{ $cat }}">
+                        @foreach (collect($moduleList)->where('category', $cat) as $mod)
+                            <x-permissions.module-row
+                                :module="$mod['module']"
+                                :baseline="$mod['baseline']"
+                                :overrides="$mod['overrides']"
+                            />
+                        @endforeach
+                    </x-permissions.category-accordion>
+                @endforeach
+            </div>
 
         </div>
 
@@ -336,7 +441,7 @@
         <p class="text-sm text-slate-600">The module permissions will be restored to match the role baseline. This can be undone by re-applying overrides before saving.</p>
         <x-slot name="footer">
             <button class="btn btn-s" @click="closeModal('reset-editor-modal')">Cancel</button>
-            <button class="btn btn-d" @click="closeModal('reset-editor-modal');closeEditor();markUnsaved()">Reset to Default</button>
+            <button class="btn btn-d" @click="resetModuleToBaseline(openEditor.id);closeModal('reset-editor-modal')">Reset to Default</button>
         </x-slot>
     </x-permissions.modal>
 

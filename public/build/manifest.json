@@ -11,7 +11,7 @@
     ]
   },
   "resources/css/app.css": {
-    "file": "assets/app-DNq99-F4.css",
+    "file": "assets/app-DGEFoO96.css",
     "src": "resources/css/app.css",
     "isEntry": true,
     "name": "app",
@@ -29,7 +29,7 @@
     ]
   },
   "resources/css/permissions.css": {
-    "file": "assets/permissions-DdSR484e.css",
+    "file": "assets/permissions-BViz7Yj0.css",
     "src": "resources/css/permissions.css",
     "isEntry": true,
     "name": "permissions",
@@ -38,7 +38,7 @@
     ]
   },
   "resources/js/app.js": {
-    "file": "assets/app-CnZzAsdz.js",
+    "file": "assets/app-JxvTKxWB.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true,

@@ -264,6 +264,215 @@ class BetterCreateUserTest extends TestCase
         $response->assertSee($user->email);
     }
 
+    public function test_permission_page_includes_simple_mode(): void
+    {
+        $user = User::factory()->create(['name' => 'Simple Mode', 'email' => 'simple@example.com']);
+        $response = $this->actingAs($this->superAdmin)
+            ->get(route('users.permissions.edit', $user->id))
+            ->assertOk();
+
+        $response->assertSee('Simple');
+        $response->assertSee('Advanced');
+        $response->assertSee('Inherit from Role');
+        $response->assertSee('No custom permissions');
+        $response->assertSee('Browse All Modules');
+        $response->assertSee('Show only overridden modules');
+        $response->assertSee('Module Permissions');
+        $response->assertSee('Save Overrides');
+    }
+
+    public function test_advanced_mode_content_preserved(): void
+    {
+        $user = User::factory()->create(['name' => 'Adv Mode', 'email' => 'adv@example.com']);
+        $response = $this->actingAs($this->superAdmin)
+            ->get(route('users.permissions.edit', $user->id))
+            ->assertOk();
+
+        $response->assertSee('Advanced');
+        $response->assertSee('From Role');
+        $response->assertSee('Modified');
+        $response->assertSee('Sensitive');
+        $response->assertSee('Bulk Apply');
+        $response->assertSee('Reset All Overrides');
+        $response->assertSee('Module');
+        $response->assertSee('Access Level');
+        $response->assertSee('Status');
+    }
+
+    public function test_inherit_null_payload_removes_override_row(): void
+    {
+        $user = User::factory()->create(['name' => 'Inherit Null', 'email' => 'inherit-null@example.com']);
+        $module = Module::firstOrFail();
+
+        UserModulePermission::create([
+            'user_id' => $user->id,
+            'module_id' => $module->id,
+            'can_read' => false,
+            'can_create' => true,
+        ]);
+
+        $this->assertFalse($user->canOnModule($module, 'read'));
+        $this->assertTrue($user->canOnModule($module, 'create'));
+
+        // All empty strings = Inherit from Role (server deletes row)
+        $this->actingAs($this->superAdmin)
+            ->put(route('users.permissions.update', $user->id), [
+                'permissions' => [
+                    $module->id => [
+                        'can_read' => '',
+                        'can_create' => '',
+                        'can_update' => '',
+                        'can_delete' => '',
+                        'can_approve' => '',
+                        'can_export' => '',
+                        'can_reveal' => '',
+                        'can_import' => '',
+                    ],
+                ],
+            ])
+            ->assertSessionHas('success');
+
+        $this->assertNull(
+            UserModulePermission::where('user_id', $user->id)->where('module_id', $module->id)->first(),
+            'Override row deleted when all values null (Inherit)'
+        );
+
+        $user->refresh();
+        $this->assertFalse($user->canOnModule($module, 'read'));
+        $this->assertFalse($user->canOnModule($module, 'create'));
+    }
+
+    public function test_explicit_no_access_keeps_override_row(): void
+    {
+        $user = User::factory()->create(['name' => 'No Access', 'email' => 'noaccess@example.com']);
+        $module = Module::firstOrFail();
+        $userRole = Role::where('slug', 'user')->first();
+        if ($userRole) {
+            $user->roles()->sync([$userRole->id]);
+        }
+
+        // Save with explicit "0" values = No Access override
+        $this->actingAs($this->superAdmin)
+            ->put(route('users.permissions.update', $user->id), [
+                'permissions' => [
+                    $module->id => [
+                        'can_read' => '0',
+                        'can_create' => '0',
+                        'can_update' => '0',
+                        'can_delete' => '0',
+                        'can_approve' => '0',
+                        'can_export' => '0',
+                        'can_reveal' => '0',
+                        'can_import' => '0',
+                    ],
+                ],
+            ])
+            ->assertSessionHas('success');
+
+        // Row must exist (explicit No Access keeps override row)
+        $override = UserModulePermission::where('user_id', $user->id)
+            ->where('module_id', $module->id)
+            ->first();
+        $this->assertNotNull($override, 'Explicit No Access must keep override row');
+        $this->assertFalse((bool) $override->can_read);
+    }
+
+    public function test_view_preset_saves_correctly(): void
+    {
+        $user = User::factory()->create(['name' => 'View Preset', 'email' => 'view@example.com']);
+        $module = Module::firstOrFail();
+
+        $this->actingAs($this->superAdmin)
+            ->put(route('users.permissions.update', $user->id), [
+                'permissions' => [
+                    $module->id => [
+                        'can_read' => '1',
+                        'can_create' => '0',
+                        'can_update' => '0',
+                        'can_delete' => '0',
+                        'can_approve' => '0',
+                        'can_export' => '0',
+                        'can_reveal' => '0',
+                        'can_import' => '0',
+                    ],
+                ],
+            ])
+            ->assertSessionHas('success');
+
+        $override = UserModulePermission::where('user_id', $user->id)
+            ->where('module_id', $module->id)
+            ->first();
+        $this->assertNotNull($override);
+        $this->assertTrue((bool) $override->can_read);
+        $this->assertFalse((bool) $override->can_create);
+        $this->assertFalse((bool) $override->can_update);
+    }
+
+    public function test_manage_preset_saves_correctly(): void
+    {
+        $user = User::factory()->create(['name' => 'Manage Preset', 'email' => 'manage@example.com']);
+        $module = Module::firstOrFail();
+
+        $this->actingAs($this->superAdmin)
+            ->put(route('users.permissions.update', $user->id), [
+                'permissions' => [
+                    $module->id => [
+                        'can_read' => '1',
+                        'can_create' => '1',
+                        'can_update' => '1',
+                        'can_delete' => '0',
+                        'can_approve' => '0',
+                        'can_export' => '0',
+                        'can_reveal' => '0',
+                        'can_import' => '0',
+                    ],
+                ],
+            ])
+            ->assertSessionHas('success');
+
+        $override = UserModulePermission::where('user_id', $user->id)
+            ->where('module_id', $module->id)
+            ->first();
+        $this->assertNotNull($override);
+        $this->assertTrue((bool) $override->can_read);
+        $this->assertTrue((bool) $override->can_create);
+        $this->assertTrue((bool) $override->can_update);
+        $this->assertFalse((bool) $override->can_delete);
+    }
+
+    public function test_custom_preset_stores_granular_permissions(): void
+    {
+        $user = User::factory()->create(['name' => 'Custom Granular', 'email' => 'custom@example.com']);
+        $module = Module::firstOrFail();
+
+        // Custom preset with granular permissions: view + edit + export
+        $this->actingAs($this->superAdmin)
+            ->put(route('users.permissions.update', $user->id), [
+                'permissions' => [
+                    $module->id => [
+                        'can_read' => '1',
+                        'can_create' => '0',
+                        'can_update' => '1',
+                        'can_delete' => '0',
+                        'can_approve' => '0',
+                        'can_export' => '1',
+                        'can_reveal' => '0',
+                        'can_import' => '0',
+                    ],
+                ],
+            ])
+            ->assertSessionHas('success');
+
+        $override = UserModulePermission::where('user_id', $user->id)
+            ->where('module_id', $module->id)
+            ->first();
+        $this->assertNotNull($override);
+        $this->assertTrue((bool) $override->can_read);
+        $this->assertFalse((bool) $override->can_create);
+        $this->assertTrue((bool) $override->can_update);
+        $this->assertTrue((bool) $override->can_export);
+    }
+
     // 11 — Saving basic user info does not modify overrides
     public function test_saving_user_info_preserves_overrides(): void
     {
