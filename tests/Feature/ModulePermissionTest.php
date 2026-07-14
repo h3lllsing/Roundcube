@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Module;
 use App\Models\ModuleRolePermission;
 use App\Models\User;
+use App\Models\UserModulePermission;
 use Database\Seeders\FeatureModuleSeeder;
 use HasinHayder\Tyro\Database\Seeders\TyroSeeder;
 use HasinHayder\Tyro\Models\Role;
@@ -341,5 +342,235 @@ class ModulePermissionTest extends TestCase
         $this->actingAs($this->admin);
         $this->get(route('module-permissions.index', ['role_id' => $superAdminRole->id]))
             ->assertStatus(404);
+    }
+
+    public function test_simple_mode_renders_for_focused_role(): void
+    {
+        $this->actingAs($this->admin);
+        $response = $this->get(route('module-permissions.index', ['role_id' => $this->userRole->id]));
+        $response->assertStatus(200);
+        $response->assertSee('Simple');
+        $response->assertSee('Advanced');
+        $response->assertSee('No Access');
+        $response->assertSee('View Only');
+        $response->assertSee('Manage');
+        $response->assertSee('Custom');
+    }
+
+    public function test_no_access_persists_with_all_false(): void
+    {
+        ModuleRolePermission::create([
+            'module_id' => $this->module->id,
+            'role_id' => $this->userRole->id,
+            'can_read' => true,
+        ]);
+
+        $this->actingAs($this->admin);
+        $this->post(route('module-permissions.update'), [
+            'updated_at' => $this->module->updated_at->format('Y-m-d H:i:s'),
+            'module_id' => $this->module->id,
+            'role_id' => $this->userRole->id,
+            'can_create' => false,
+            'can_read' => false,
+            'can_update' => false,
+            'can_delete' => false,
+            'can_approve' => false,
+            'can_export' => false,
+            'can_reveal' => false,
+            'can_import' => false,
+        ]);
+
+        $row = ModuleRolePermission::where('module_id', $this->module->id)
+            ->where('role_id', $this->userRole->id)
+            ->firstOrFail();
+        $this->assertFalse($row->can_read);
+        $this->assertFalse($row->can_create);
+        $this->assertFalse($row->can_update);
+        $this->assertFalse($row->can_delete);
+        $this->assertFalse($row->can_approve);
+        $this->assertFalse($row->can_export);
+        $this->assertFalse($row->can_reveal);
+        $this->assertFalse($row->can_import);
+    }
+
+    public function test_view_only_saves_exact_permissions(): void
+    {
+        $this->actingAs($this->admin);
+        $this->post(route('module-permissions.update'), [
+            'updated_at' => $this->module->updated_at->format('Y-m-d H:i:s'),
+            'module_id' => $this->module->id,
+            'role_id' => $this->userRole->id,
+            'can_create' => false,
+            'can_read' => true,
+            'can_update' => false,
+            'can_delete' => false,
+            'can_approve' => false,
+            'can_export' => false,
+            'can_reveal' => false,
+            'can_import' => false,
+        ]);
+
+        $row = ModuleRolePermission::where('module_id', $this->module->id)
+            ->where('role_id', $this->userRole->id)
+            ->firstOrFail();
+        $this->assertTrue($row->can_read);
+        $this->assertFalse($row->can_create);
+        $this->assertFalse($row->can_update);
+        $this->assertFalse($row->can_delete);
+        $this->assertFalse($row->can_approve);
+        $this->assertFalse($row->can_export);
+        $this->assertFalse($row->can_reveal);
+        $this->assertFalse($row->can_import);
+    }
+
+    public function test_manage_saves_exact_product_semantics(): void
+    {
+        $this->actingAs($this->admin);
+        $this->post(route('module-permissions.update'), [
+            'updated_at' => $this->module->updated_at->format('Y-m-d H:i:s'),
+            'module_id' => $this->module->id,
+            'role_id' => $this->userRole->id,
+            'can_create' => true,
+            'can_read' => true,
+            'can_update' => true,
+            'can_delete' => false,
+            'can_approve' => false,
+            'can_export' => false,
+            'can_reveal' => false,
+            'can_import' => false,
+        ]);
+
+        $row = ModuleRolePermission::where('module_id', $this->module->id)
+            ->where('role_id', $this->userRole->id)
+            ->firstOrFail();
+        $this->assertTrue($row->can_read);
+        $this->assertTrue($row->can_create);
+        $this->assertTrue($row->can_update);
+        $this->assertFalse($row->can_delete);
+        $this->assertFalse($row->can_approve);
+        $this->assertFalse($row->can_export);
+        $this->assertFalse($row->can_reveal);
+        $this->assertFalse($row->can_import);
+    }
+
+    public function test_custom_saves_granular_permissions(): void
+    {
+        $this->actingAs($this->admin);
+        $this->post(route('module-permissions.update'), [
+            'updated_at' => $this->module->updated_at->format('Y-m-d H:i:s'),
+            'module_id' => $this->module->id,
+            'role_id' => $this->userRole->id,
+            'can_create' => true,
+            'can_read' => true,
+            'can_update' => false,
+            'can_delete' => true,
+            'can_approve' => false,
+            'can_export' => true,
+            'can_reveal' => false,
+            'can_import' => false,
+        ]);
+
+        $row = ModuleRolePermission::where('module_id', $this->module->id)
+            ->where('role_id', $this->userRole->id)
+            ->firstOrFail();
+        $this->assertTrue($row->can_create);
+        $this->assertTrue($row->can_read);
+        $this->assertFalse($row->can_update);
+        $this->assertTrue($row->can_delete);
+        $this->assertFalse($row->can_approve);
+        $this->assertTrue($row->can_export);
+        $this->assertFalse($row->can_reveal);
+        $this->assertFalse($row->can_import);
+    }
+
+    public function test_sensitive_permissions_preserved_on_save(): void
+    {
+        $sensitiveModule = Module::whereIn('slug', config('permissions.sensitive_modules', []))->first();
+        if (!$sensitiveModule) {
+            $this->markTestSkipped('No sensitive module available');
+        }
+
+        $this->actingAs($this->admin);
+        $this->post(route('module-permissions.update'), [
+            'updated_at' => $sensitiveModule->updated_at->format('Y-m-d H:i:s'),
+            'module_id' => $sensitiveModule->id,
+            'role_id' => $this->userRole->id,
+            'can_create' => false,
+            'can_read' => true,
+            'can_update' => false,
+            'can_delete' => true,
+            'can_approve' => false,
+            'can_export' => false,
+            'can_reveal' => true,
+            'can_import' => false,
+        ]);
+
+        $row = ModuleRolePermission::where('module_id', $sensitiveModule->id)
+            ->where('role_id', $this->userRole->id)
+            ->firstOrFail();
+        $this->assertTrue($row->can_delete);
+        $this->assertTrue($row->can_reveal);
+        $this->assertTrue($row->can_read);
+    }
+
+    public function test_advanced_mode_table_renders(): void
+    {
+        $this->actingAs($this->admin);
+        $response = $this->get(route('module-permissions.index', ['role_id' => $this->userRole->id]));
+        $response->assertStatus(200);
+        $response->assertSee('Feature');
+        $response->assertSee($this->userRole->name);
+    }
+
+    public function test_global_permissions_unchanged(): void
+    {
+        $this->actingAs($this->admin);
+        $response = $this->get(route('module-permissions.index'));
+        $response->assertStatus(200);
+        $response->assertSee('Module Permissions');
+        $response->assertDontSee('Simple');
+        $response->assertDontSee('Advanced');
+        $response->assertDontSee('Back to');
+        $response->assertSee($this->userRole->name);
+    }
+
+    public function test_user_overrides_untouched_when_role_baseline_changes(): void
+    {
+        $user = User::factory()->create();
+        $user->assignRole($this->userRole);
+
+        UserModulePermission::create([
+            'user_id' => $user->id,
+            'module_id' => $this->module->id,
+            'can_read' => false,
+            'can_create' => false,
+            'can_update' => false,
+            'can_delete' => false,
+            'can_approve' => false,
+            'can_export' => false,
+            'can_reveal' => false,
+            'can_import' => false,
+        ]);
+
+        $this->actingAs($this->admin);
+        $this->post(route('module-permissions.update'), [
+            'updated_at' => $this->module->updated_at->format('Y-m-d H:i:s'),
+            'module_id' => $this->module->id,
+            'role_id' => $this->userRole->id,
+            'can_create' => false,
+            'can_read' => true,
+            'can_update' => false,
+            'can_delete' => false,
+            'can_approve' => false,
+            'can_export' => false,
+            'can_reveal' => false,
+            'can_import' => false,
+        ]);
+
+        $override = UserModulePermission::where('user_id', $user->id)
+            ->where('module_id', $this->module->id)
+            ->firstOrFail();
+        $this->assertFalse($override->can_read);
+        $this->assertFalse($override->can_create);
     }
 }
