@@ -18,6 +18,7 @@ use App\Models\VaultEntry;
 use App\Models\Voip;
 use App\Models\Vps;
 use App\Observers\DashboardCacheObserver;
+use HasinHayder\Tyro\Models\UserRole;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\ServiceProvider;
@@ -44,5 +45,8 @@ class AppServiceProvider extends ServiceProvider
         }
 
         Module::deleted(fn () => Cache::increment('perms_generation'));
+
+        UserRole::saved(fn () => Cache::increment('perms_generation'));
+        UserRole::deleted(fn () => Cache::increment('perms_generation'));
     }
 }

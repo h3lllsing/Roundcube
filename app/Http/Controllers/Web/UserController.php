@@ -304,6 +304,16 @@ class UserController extends Controller
             unset($validated['password']);
         }
 
+        if ($request->has('roles')) {
+            $currentRoleIds = $user->roles()->pluck('roles.id')->toArray();
+            if ($currentRoleIds !== $request->roles) {
+                $overrideCount = UserModulePermission::where('user_id', $user->id)->count();
+                if ($overrideCount > 0 && !$request->boolean('confirm_role_change')) {
+                    return back()->withErrors(['confirm_role_change' => 'Please confirm the role change. This user has ' . $overrideCount . ' active permission override(s).'])->withInput();
+                }
+            }
+        }
+
         $currentUser = Auth::user();
         $superAdminRoleId = $this->permissionService->getSuperAdminRoleId();
 

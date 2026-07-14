@@ -53,6 +53,22 @@
                 </div>
             </div>
 
+            @if($overrideCount > 0)
+            <div class="p-4 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 text-sm text-amber-700 dark:text-amber-300">
+                <strong>⚠ {{ $overrideCount }} custom permission override(s) exist.</strong>
+                <p class="mt-1 text-xs">Changing roles changes the baseline permissions inherited from the role. Existing overrides will remain in effect and may conflict with the new role's defaults. Overrides are not deleted automatically.</p>
+                <p class="mt-1 text-xs">Role permissions = baseline. User overrides = exceptions to the baseline.</p>
+                <label class="inline-flex items-center gap-2 mt-3 text-sm font-medium text-amber-800 dark:text-amber-200">
+                    <input type="checkbox" name="confirm_role_change" value="1" {{ old('confirm_role_change') ? 'checked' : '' }}
+                        class="rounded border-amber-300 dark:border-amber-600 text-amber-600 focus:ring-amber-500">
+                    I understand that existing user-specific permission overrides will remain active after this role change.
+                </label>
+                @error('confirm_role_change')
+                    <p class="text-xs text-red-600 dark:text-red-400 mt-1">{{ $message }}</p>
+                @enderror
+            </div>
+            @endif
+
             <div class="flex items-center gap-3 pt-4">
                 <x-button type="submit" variant="primary" size="sm">Save</x-button>
                 <x-button href="{{ route('users.index') }}" variant="outline" size="sm">Cancel</x-button>
