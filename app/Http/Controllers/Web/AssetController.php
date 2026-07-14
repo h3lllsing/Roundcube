@@ -41,10 +41,10 @@ class AssetController extends Controller
         abort_unless($user->hasRole('super-admin') || ($record->module && $user->canOnModule($record->module, 'update')), 403);
     }
 
-    private function denyIfNotSuperAdminOrCanDelete(Asset $record): void
+    private function denyIfNotSuperAdmin(Asset $record): void
     {
         $user = Auth::user();
-        abort_unless($user->hasRole('super-admin') || ($record->module && $user->canOnModule($record->module, 'delete')), 403);
+        abort_unless($user->hasRole('super-admin'), 403);
     }
 
     private function getLookupData(): array
@@ -79,7 +79,7 @@ class AssetController extends Controller
         $isSuperAdmin = $user->hasRole('super-admin');
         $canCreate = $isSuperAdmin || ($module && $user->canOnModule($module, 'create'));
         $canExport = $isSuperAdmin;
-        $canBulkDelete = $isSuperAdmin || ($module && $user->canOnModule($module, 'delete'));
+        $canBulkDelete = $isSuperAdmin;
         $canBulkRestore = $isSuperAdmin;
         $canBulkForceDelete = $isSuperAdmin;
         $bulkActions = ['update-status'];
@@ -176,7 +176,7 @@ class AssetController extends Controller
         $this->userOwnedFilter();
         $asset = Asset::findOrFail($id);
 
-        $this->denyIfNotSuperAdminOrCanDelete($asset);
+        $this->denyIfNotSuperAdmin($asset);
 
         if ($asset->status === 'assigned') {
             return redirect()->route('assets.index')
@@ -260,8 +260,7 @@ class AssetController extends Controller
         abort_unless($user->hasRole('super-admin') || ($assetModule && $user->canOnModule($assetModule, 'read')), 403);
         $this->userOwnedFilter();
         $asset = Asset::findOrFail($id);
-        $vaultModule = \App\Helpers\ModuleCache::findBySlug('vault');
-        abort_unless($user->hasRole('super-admin') || ($vaultModule && $user->canOnModule($vaultModule, 'reveal')), 403);
+        abort_unless($user->hasRole('super-admin') || ($assetModule && $user->canOnModule($assetModule, 'reveal')), 403);
         activity()->event('revealed')
             ->performedOn($asset)
             ->causedBy($user)

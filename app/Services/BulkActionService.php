@@ -103,6 +103,9 @@ class BulkActionService
             if ($type === 'users') {
                 return ['success' => false, 'message' => 'Forbidden', 'status_code' => 403];
             }
+            if (in_array($action, ['delete', 'restore', 'force-delete'], true)) {
+                return ['success' => false, 'message' => 'Forbidden', 'status_code' => 403];
+            }
             if (! $this->userHasModulePermission($user, $type, $action)) {
                 $ownedIds = $this->filterOwned($modelClass, $type, $action, $ids, $user);
                 if ($ownedIds === null) {

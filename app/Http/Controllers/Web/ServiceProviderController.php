@@ -131,7 +131,7 @@ class ServiceProviderController extends BaseResourceController
         ])->findOrFail($id);
 
         $user = Auth::user();
-        abort_unless($user->hasRole('super-admin') || ($provider->module && $user->canOnModule($provider->module, 'delete')), 403);
+        abort_unless($user->hasRole('super-admin'), 403);
 
         $dependentCount = $provider->hostings_count
             + $provider->domains_count
@@ -159,8 +159,7 @@ class ServiceProviderController extends BaseResourceController
         abort_unless($user->hasRole('super-admin') || ($providerModule && $user->canOnModule($providerModule, 'read')), 403);
         $this->userOwnedFilter();
         $provider = ServiceProvider::findOrFail($id);
-        $vaultModule = \App\Helpers\ModuleCache::findBySlug('vault');
-        abort_unless($user->hasRole('super-admin') || ($vaultModule && $user->canOnModule($vaultModule, 'reveal')), 403);
+        abort_unless($user->hasRole('super-admin') || ($providerModule && $user->canOnModule($providerModule, 'reveal')), 403);
         activity()->event('revealed')
             ->performedOn($provider)
             ->causedBy($user)

@@ -95,11 +95,7 @@ class BulkActionTest extends TestCase
                 'action' => 'delete',
             ]);
 
-        $response->assertOk();
-        $response->assertJsonPath('data.affected', 1);
-
-        $this->assertNotSoftDeleted($othersDomain);
-        $this->assertSoftDeleted($ownDomain);
+        $response->assertStatus(403);
     }
 
     public function test_non_admin_cannot_bulk_update_others_records(): void
@@ -184,8 +180,7 @@ class BulkActionTest extends TestCase
                 'action' => 'restore',
             ]);
 
-        $response->assertOk();
-        $this->assertNotSoftDeleted($domain);
+        $response->assertStatus(403);
     }
 
     public function test_bulk_update_status_logs_activity(): void

@@ -67,7 +67,7 @@ class VaultController extends Controller
         $isSuperAdmin = $user->hasRole('super-admin');
         $canCreate = $isSuperAdmin || ($module && $user->canOnModule($module, 'create'));
         $canExport = $isSuperAdmin;
-        $canBulkDelete = $isSuperAdmin || ($module && $user->canOnModule($module, 'delete'));
+        $canBulkDelete = $isSuperAdmin;
         $canBulkRestore = $isSuperAdmin;
         $canBulkForceDelete = $isSuperAdmin;
         $bulkActions = [];
@@ -177,7 +177,7 @@ class VaultController extends Controller
         $entry = VaultEntry::findOrFail($id);
 
         $user = Auth::user();
-        abort_unless($user->hasRole('super-admin') || ($entry->module && $user->canOnModule($entry->module, 'delete')), 403);
+        abort_unless($user->hasRole('super-admin'), 403);
 
         $entry->delete();
 

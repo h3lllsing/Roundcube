@@ -153,7 +153,7 @@ class DomainEmailController extends Controller
         $email = DomainEmail::with('module')->findOrFail($id);
 
         $user = Auth::user();
-        abort_unless($user->hasRole('super-admin') || ($email->module && $user->canOnModule($email->module, 'delete')), 403);
+        abort_unless($user->hasRole('super-admin'), 403);
 
         $email->delete();
 
@@ -170,8 +170,7 @@ class DomainEmailController extends Controller
         $this->userOwnedFilter();
         $email = DomainEmail::findOrFail($id);
 
-        $vaultModule = \App\Helpers\ModuleCache::findBySlug('vault');
-        abort_unless($user->hasRole('super-admin') || ($vaultModule && $user->canOnModule($vaultModule, 'reveal')), 403);
+        abort_unless($user->hasRole('super-admin') || ($emailModule && $user->canOnModule($emailModule, 'reveal')), 403);
 
         activity()->event('revealed')
             ->performedOn($email)

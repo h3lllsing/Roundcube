@@ -199,12 +199,7 @@ class VpsController extends Controller
     public function destroy(Request $request, Vps $vps): JsonResponse
     {
         $user = $request->user();
-        if (! $user->hasRole('super-admin') && $vps->user_id !== $user->id) {
-            abort(403, 'Forbidden');
-        }
-        if (!$user->hasRole('super-admin') && $vps->module && !$user->canOnModule($vps->module, 'delete')) {
-            abort(403, 'Forbidden');
-        }
+        abort_unless($user->hasRole('super-admin'), 403);
         $this->vpsService->delete($vps);
 
         return $this->message('VPS deleted');

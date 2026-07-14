@@ -52,10 +52,29 @@ trait HasModulePermissions
             return $userOverride->$column;
         }
 
-        return ModuleRolePermission::whereIn('role_id', $this->getRoleIds())
+        $hasRolePermission = ModuleRolePermission::whereIn('role_id', $this->getRoleIds())
             ->where('module_id', $module->id)
             ->where($column, true)
             ->exists();
+
+        if ($hasRolePermission) {
+            return true;
+        }
+
+        if ($action === 'reveal') {
+            $hasReadOverride = $userOverride && $userOverride->can_read !== null;
+            $hasReadPermission = $hasReadOverride ? $userOverride->can_read : ModuleRolePermission::whereIn('role_id', $this->getRoleIds())
+                ->where('module_id', $module->id)
+                ->where('can_read', true)
+                ->exists();
+            $explicitRevealDeny = $userOverride && $userOverride->can_reveal !== null && ! $userOverride->can_reveal;
+
+            if ($hasReadPermission && ! $explicitRevealDeny) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /** @return array<string, array<string, bool>> */

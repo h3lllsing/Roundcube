@@ -262,9 +262,7 @@ class TaskController extends Controller
         $this->userOwnedFilter();
         $task = Task::findOrFail($id);
         $user = Auth::user();
-        if (!$user->hasRole('super-admin') && $task->module && !$user->canOnModule($task->module, 'delete')) {
-            abort(403, 'Forbidden');
-        }
+        abort_unless($user->hasRole('super-admin'), 403);
         $task->delete();
 
         return redirect()->route('tasks.index')->with('success', 'Task deleted successfully.');

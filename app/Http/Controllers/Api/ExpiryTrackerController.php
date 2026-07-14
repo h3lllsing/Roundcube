@@ -191,12 +191,7 @@ class ExpiryTrackerController extends Controller
     public function destroy(Request $request, ExpiryTracker $expiryTracker): JsonResponse
     {
         $user = $request->user();
-        if (! $user->hasRole('super-admin') && $expiryTracker->user_id !== $user->id) {
-            abort(403, 'Forbidden');
-        }
-        if (!$user->hasRole('super-admin') && $expiryTracker->module && !$user->canOnModule($expiryTracker->module, 'delete')) {
-            abort(403, 'Forbidden');
-        }
+        abort_unless($user->hasRole('super-admin'), 403);
         $this->expiryTrackerService->delete($expiryTracker);
 
         return $this->message('Renewal deleted');

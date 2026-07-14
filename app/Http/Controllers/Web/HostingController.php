@@ -124,8 +124,7 @@ class HostingController extends BaseResourceController
         abort_unless($user->hasRole('super-admin') || ($hostingModule && $user->canOnModule($hostingModule, 'read')), 403);
         $this->userOwnedFilter();
         $hosting = Hosting::findOrFail($id);
-        $vaultModule = \App\Helpers\ModuleCache::findBySlug('vault');
-        abort_unless($user->hasRole('super-admin') || ($vaultModule && $user->canOnModule($vaultModule, 'reveal')), 403);
+        abort_unless($user->hasRole('super-admin') || ($hostingModule && $user->canOnModule($hostingModule, 'reveal')), 403);
         activity()->event('revealed')
             ->performedOn($hosting)
             ->causedBy($user)

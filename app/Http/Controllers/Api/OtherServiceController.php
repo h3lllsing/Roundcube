@@ -188,12 +188,7 @@ class OtherServiceController extends Controller
     public function destroy(Request $request, OtherService $otherService): JsonResponse
     {
         $user = $request->user();
-        if (! $user->hasRole('super-admin') && $otherService->user_id !== $user->id) {
-            abort(403, 'Forbidden');
-        }
-        if (!$user->hasRole('super-admin') && $otherService->module && !$user->canOnModule($otherService->module, 'delete')) {
-            abort(403, 'Forbidden');
-        }
+        abort_unless($user->hasRole('super-admin'), 403);
         $this->otherServiceService->delete($otherService);
 
         return $this->message('Other service deleted');

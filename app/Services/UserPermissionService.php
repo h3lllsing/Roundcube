@@ -45,8 +45,9 @@ class UserPermissionService
         }
 
         $permissionColumns = config('permissions.keys');
+        $isSuperAdmin = $user->hasRole('super-admin');
 
-        DB::transaction(function () use ($user, $permissions, $permissionColumns) {
+        DB::transaction(function () use ($user, $permissions, $permissionColumns, $isSuperAdmin) {
             UserModulePermission::where('user_id', $user->id)
                 ->lockForUpdate()
                 ->get();
@@ -69,6 +70,10 @@ class UserPermissionService
                     } else {
                         $data[$col] = null;
                     }
+                }
+
+                if (! $isSuperAdmin) {
+                    $data['can_delete'] = false;
                 }
 
                 if ($hasNonNull) {

@@ -109,12 +109,7 @@ class GMailController extends Controller
     public function destroy(Request $request, GMail $gMail): JsonResponse
     {
         $user = $request->user();
-        if (!$user->hasRole('super-admin') && $gMail->user_id !== $user->id) {
-            abort(403, 'Forbidden');
-        }
-        if (!$user->hasRole('super-admin') && $gMail->module && !$user->canOnModule($gMail->module, 'delete')) {
-            abort(403, 'Forbidden');
-        }
+        abort_unless($user->hasRole('super-admin'), 403);
         $gMail->delete();
 
         return response()->json(['message' => 'G-Mail deleted']);

@@ -135,6 +135,9 @@ class NoteController extends Controller
         $user = Auth::user();
         if ($user->hasRole('super-admin')) { return; }
         if ($note->notable instanceof \App\Models\Module) {
+            if ($action === 'delete') {
+                abort(403, 'Forbidden');
+            }
             abort_unless($note->notable && $user->canOnModule($note->notable, $action), 403);
         }
         abort_unless($note->user_id === $user->id, 403);

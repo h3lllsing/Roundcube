@@ -49,10 +49,7 @@ class TaskController extends Controller
     private function authorizeTaskDelete(Task $task): void
     {
         $user = request()->user();
-        if (! $user || $user->hasRole('super-admin')) { return; }
-        $task->loadMissing('module');
-        $module = $task->module;
-        abort_unless($module && $user->canOnModule($module, 'delete'), 403);
+        abort_unless($user && $user->hasRole('super-admin'), 403);
     }
 
     #[OA\Get(

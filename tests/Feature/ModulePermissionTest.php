@@ -268,7 +268,7 @@ class ModulePermissionTest extends TestCase
         $this->assertTrue($perm->can_create);
         $this->assertTrue($perm->can_read);
         $this->assertTrue($perm->can_update);
-        $this->assertTrue($perm->can_delete);
+        $this->assertFalse($perm->can_delete);
         $this->assertTrue($perm->can_approve);
         $this->assertTrue($perm->can_export);
         $this->assertTrue($perm->can_reveal);
@@ -476,7 +476,7 @@ class ModulePermissionTest extends TestCase
         $this->assertTrue($row->can_create);
         $this->assertTrue($row->can_read);
         $this->assertFalse($row->can_update);
-        $this->assertTrue($row->can_delete);
+        $this->assertFalse($row->can_delete);
         $this->assertFalse($row->can_approve);
         $this->assertTrue($row->can_export);
         $this->assertFalse($row->can_reveal);
@@ -508,7 +508,7 @@ class ModulePermissionTest extends TestCase
         $row = ModuleRolePermission::where('module_id', $sensitiveModule->id)
             ->where('role_id', $this->userRole->id)
             ->firstOrFail();
-        $this->assertTrue($row->can_delete);
+        $this->assertFalse($row->can_delete);
         $this->assertTrue($row->can_reveal);
         $this->assertTrue($row->can_read);
     }

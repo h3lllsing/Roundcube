@@ -139,8 +139,7 @@ class VoipController extends BaseResourceController
         abort_unless($user->hasRole('super-admin') || ($voipModule && $user->canOnModule($voipModule, 'read')), 403);
         $this->userOwnedFilter();
         $voip = Voip::findOrFail($id);
-        $vaultModule = \App\Helpers\ModuleCache::findBySlug('vault');
-        abort_unless($user->hasRole('super-admin') || ($vaultModule && $user->canOnModule($vaultModule, 'reveal')), 403);
+        abort_unless($user->hasRole('super-admin') || ($voipModule && $user->canOnModule($voipModule, 'reveal')), 403);
         activity()->event('revealed')
             ->performedOn($voip)
             ->causedBy($user)
@@ -157,8 +156,7 @@ class VoipController extends BaseResourceController
         abort_unless($user->hasRole('super-admin') || ($voipModule && $user->canOnModule($voipModule, 'read')), 403);
         $this->userOwnedFilter();
         $voip = Voip::findOrFail($id);
-        $vaultModule = \App\Helpers\ModuleCache::findBySlug('vault');
-        abort_unless($user->hasRole('super-admin') || ($vaultModule && $user->canOnModule($vaultModule, 'reveal')), 403);
+        abort_unless($user->hasRole('super-admin') || ($voipModule && $user->canOnModule($voipModule, 'reveal')), 403);
         activity()->event('revealed')
             ->performedOn($voip)
             ->causedBy($user)

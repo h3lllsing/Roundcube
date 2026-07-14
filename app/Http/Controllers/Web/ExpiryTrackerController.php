@@ -63,7 +63,7 @@ class ExpiryTrackerController extends Controller
         $isSuperAdmin = $user->hasRole('super-admin');
         $canCreate = $isSuperAdmin || ($module && $user->canOnModule($module, 'create'));
         $canExport = $isSuperAdmin;
-        $canBulkDelete = $isSuperAdmin || ($module && $user->canOnModule($module, 'delete'));
+        $canBulkDelete = $isSuperAdmin;
         $canBulkRestore = $user->hasRole('super-admin');
         $canBulkForceDelete = $user->hasRole('super-admin');
         $bulkActions = ['update-status'];
@@ -176,7 +176,7 @@ class ExpiryTrackerController extends Controller
         $tracker = ExpiryTracker::findOrFail($id);
 
         $user = Auth::user();
-        abort_unless($user->hasRole('super-admin') || ($tracker->module && $user->canOnModule($tracker->module, 'delete')), 403);
+        abort_unless($user->hasRole('super-admin'), 403);
 
         $this->expiryTrackerService->delete($tracker);
 

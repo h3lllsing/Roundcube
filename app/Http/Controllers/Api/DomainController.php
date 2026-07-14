@@ -174,12 +174,7 @@ class DomainController extends Controller
     public function destroy(Request $request, Domain $domain): JsonResponse
     {
         $user = $request->user();
-        if (! $user->hasRole('super-admin') && $domain->user_id !== $user->id) {
-            abort(403, 'Forbidden');
-        }
-        if (!$user->hasRole('super-admin') && $domain->module && !$user->canOnModule($domain->module, 'delete')) {
-            abort(403, 'Forbidden');
-        }
+        abort_unless($user->hasRole('super-admin'), 403);
         $this->domainService->delete($domain);
 
         return $this->message('Domain deleted');

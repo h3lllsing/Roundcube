@@ -188,12 +188,7 @@ class HostingController extends Controller
     public function destroy(Request $request, Hosting $hosting): JsonResponse
     {
         $user = $request->user();
-        if (! $user->hasRole('super-admin') && $hosting->user_id !== $user->id) {
-            abort(403, 'Forbidden');
-        }
-        if (!$user->hasRole('super-admin') && $hosting->module && !$user->canOnModule($hosting->module, 'delete')) {
-            abort(403, 'Forbidden');
-        }
+        abort_unless($user->hasRole('super-admin'), 403);
         $this->hostingService->delete($hosting);
 
         return $this->message('Hosting deleted');

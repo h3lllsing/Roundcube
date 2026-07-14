@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Module;
 use App\Models\ModuleRolePermission;
+use App\Models\Role;
 use Illuminate\Support\Facades\Cache;
 
 class ModulePermissionService
@@ -33,9 +34,15 @@ class ModulePermissionService
     /** @param array<string, bool> $permissions */
     public function setForRole(Module $module, int $roleId, array $permissions): ModuleRolePermission
     {
+        $role = Role::find($roleId);
+        $isSuperAdmin = $role && $role->slug === 'super-admin';
+
         $data = [];
         foreach (config('permissions.keys') as $key) {
             $data[$key] = $permissions[$key] ?? false;
+        }
+        if (! $isSuperAdmin) {
+            $data['can_delete'] = false;
         }
 
         $result = ModuleRolePermission::updateOrCreate(

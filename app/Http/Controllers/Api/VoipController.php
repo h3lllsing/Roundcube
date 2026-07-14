@@ -211,12 +211,7 @@ class VoipController extends Controller
     public function destroy(Request $request, Voip $voip): JsonResponse
     {
         $user = $request->user();
-        if (! $user->hasRole('super-admin') && $voip->user_id !== $user->id) {
-            abort(403, 'Forbidden');
-        }
-        if (!$user->hasRole('super-admin') && $voip->module && !$user->canOnModule($voip->module, 'delete')) {
-            abort(403, 'Forbidden');
-        }
+        abort_unless($user->hasRole('super-admin'), 403);
         $this->voipService->delete($voip);
 
         return $this->message('VoIP deleted');

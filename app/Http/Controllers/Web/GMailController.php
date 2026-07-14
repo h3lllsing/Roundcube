@@ -113,8 +113,7 @@ class GMailController extends BaseResourceController
         $this->userOwnedFilter();
         $gMail = GMail::findOrFail($id);
 
-        $vaultModule = ModuleCache::findBySlug('vault');
-        abort_unless($user->hasRole('super-admin') || ($vaultModule && $user->canOnModule($vaultModule, 'reveal')), 403);
+        abort_unless($user->hasRole('super-admin') || ($gMailModule && $user->canOnModule($gMailModule, 'reveal')), 403);
 
         activity()->event('revealed')
             ->performedOn($gMail)

@@ -238,13 +238,8 @@ class VaultController extends Controller
     )]
     public function destroy(Request $request, VaultEntry $vault): JsonResponse
     {
-        if (! $request->user()->isVaultOwner($vault)) {
-            return $this->message('Forbidden', 403);
-        }
         $user = $request->user();
-        if (!$user->hasRole('super-admin') && $vault->module && !$user->canOnModule($vault->module, 'delete')) {
-            abort(403, 'Forbidden');
-        }
+        abort_unless($user->hasRole('super-admin'), 403);
         $this->vaultService->delete($vault);
 
         return $this->message('Vault entry deleted');

@@ -667,7 +667,7 @@ class TaskTest extends TestCase
         $response = $this->withHeader('Authorization', "Bearer $token")
             ->deleteJson("/api/tasks/{$task->id}");
 
-        $response->assertStatus(200);
+        $response->assertStatus(403);
     }
 
     public function test_non_super_admin_kanban_respects_permissions()

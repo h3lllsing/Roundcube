@@ -287,13 +287,11 @@ class NoteController extends Controller
     public function destroy(Request $request, Note $note): JsonResponse
     {
         $user = $request->user();
-        if (! $user->hasRole('super-admin') && $note->user_id !== $user->id) {
+        if (! $user->hasRole('super-admin')) {
             if ($note->notable_type === 'App\Models\Module') {
-                $module = Module::find($note->notable_id);
-                if (! $module || ! $user->canOnModule($module, 'delete')) {
-                    return $this->message('Forbidden', 403);
-                }
-            } else {
+                return $this->message('Forbidden', 403);
+            }
+            if ($note->user_id !== $user->id) {
                 return $this->message('Forbidden', 403);
             }
         }

@@ -495,7 +495,7 @@ class VaultTest extends TestCase
 
         $this->withHeader('Authorization', "Bearer $token")
             ->postJson("/api/vault/{$entry->id}/reveal")
-            ->assertStatus(403);
+            ->assertStatus(200);
     }
 
     public function test_api_reveal_allowed_with_can_reveal(): void

@@ -182,12 +182,7 @@ class ServiceProviderController extends Controller
     public function destroy(Request $request, ServiceProvider $serviceProvider): JsonResponse
     {
         $user = $request->user();
-        if (! $user->hasRole('super-admin') && $serviceProvider->user_id !== $user->id) {
-            abort(403, 'Forbidden');
-        }
-        if (!$user->hasRole('super-admin') && $serviceProvider->module && !$user->canOnModule($serviceProvider->module, 'delete')) {
-            abort(403, 'Forbidden');
-        }
+        abort_unless($user->hasRole('super-admin'), 403);
         $this->serviceProviderService->delete($serviceProvider);
 
         return $this->message('Service provider deleted');
