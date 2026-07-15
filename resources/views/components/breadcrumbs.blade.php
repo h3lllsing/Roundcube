@@ -20,7 +20,7 @@ $labels = [
     'activity-logs' => 'Activity Logs', 'login-audits' => 'Login Audits',
     'attachments' => 'Attachments', 'reports' => 'Reports',
     'import' => 'Import', 'tokens' => 'API Access',
-    'users' => 'Users', 'my-permissions' => 'My Access',
+    'users' => 'Users', 'my-permissions' => 'My Permissions',
     'guide' => 'Help Center', 'profile' => 'My Profile',
 ];
 

@@ -33,78 +33,77 @@ class HelpController extends Controller
         $roleLabel = $this->helpService->getRoleLabel($roleSlug);
         $todayWorkflow = $this->helpService->getTodayWorkflow($user);
         $quickLinks = $this->helpService->getQuickLinks($user);
-        $sidebarLinks = $this->helpService->getHelpSidebarLinks();
+        $navigation = $this->helpService->getNavigation($user);
         $showDeveloperDocs = $user && $user->hasRole('super-admin');
 
         return view('help.index', compact(
             'roleSlug', 'roleLabel', 'guideHtml', 'guideToc', 'todayWorkflow',
-            'quickLinks', 'sidebarLinks', 'showDeveloperDocs'
+            'quickLinks', 'navigation', 'showDeveloperDocs'
         ));
     }
 
     public function show(string $slug): JsonResponse
     {
         $user = auth()->user();
-        $file = null;
 
-        if ($slug === 'my-role-guide') {
-            $file = $this->helpService->getRoleGuideFileForUser($user);
-        } elseif (in_array($slug, ['super-admin-guide', 'admin-guide', 'it-support-guide', 'read-only-guide', 'monitoring-guide'])) {
-            $map = [
-                'super-admin-guide' => '02_SUPER_ADMIN_GUIDE.md',
-                'admin-guide' => '03_ADMIN_GUIDE.md',
-                'it-support-guide' => '04_IT_STAFF_GUIDE.md',
-                'read-only-guide' => '05_READ_ONLY_GUIDE.md',
-                'monitoring-guide' => '19_MONITORING_GUIDE.md',
-            ];
-            $file = $map[$slug];
-        } elseif ($slug === 'about') {
-            $file = '15_VERSION_HISTORY.md';
-        } elseif ($this->helpService->isDeveloperDoc($slug)) {
+        $legacySlugs = $this->helpService->getLegacySlugRedirects();
+        if (isset($legacySlugs[$slug])) {
+            return response()->json(['redirect' => $legacySlugs[$slug]]);
+        }
+
+        if ($this->helpService->isRetiredSlug($slug)) {
+            return response()->json(['error' => 'This document has been retired and is no longer available.'], 410);
+        }
+
+        if ($this->helpService->isDeveloperDoc($slug)) {
             if (!$user || !$user->hasRole('super-admin')) {
                 return response()->json(['error' => 'Not authorized'], 403);
             }
             $file = $this->helpService->getDeveloperDocFile($slug);
-        } else {
-            $sidebarLinks = $this->helpService->getHelpSidebarLinks();
-            if (isset($sidebarLinks[$slug])) {
-                $file = $sidebarLinks[$slug]['file'] ?? null;
+            $md = $file ? $this->helpService->loadMarkdownFile($file) : null;
+            if (!$md) {
+                return response()->json(['error' => 'Document not found'], 404);
             }
-            if (!$file) {
-                $allDocs = $this->helpService->getAllDocLabels();
-                foreach ([$slug . '.md', strtoupper(str_replace('-', '_', $slug)) . '.md'] as $c) {
-                    if (isset($allDocs[$c])) { $file = $c; break; }
-                }
-            }
+            $html = self::wrapSections(MarkdownHelper::toHtml($md));
+            $toc = MarkdownHelper::extractHeadings($md);
+            return response()->json([
+                'html' => $html,
+                'title' => ucwords(str_replace('-', ' ', $slug)),
+                'slug' => $slug,
+                'toc' => $toc,
+            ]);
         }
 
-        if (!$file || !file_exists(base_path($file))) {
+        if (!$this->helpService->documentExists($slug)) {
             return response()->json(['error' => 'Document not found'], 404);
         }
 
-        $md = $this->helpService->loadMarkdownFile($file);
-        $html = $md ? self::wrapSections(MarkdownHelper::toHtml($md)) : null;
-        $toc = $md ? MarkdownHelper::extractHeadings($md) : [];
-        $label = $this->getLabelForFile($file);
+        if (!$this->helpService->canAccess($slug, $user)) {
+            return response()->json(['error' => 'Not authorized'], 403);
+        }
+
+        $md = $this->helpService->loadRegisteredDocument($slug);
+        if (!$md) {
+            return response()->json(['error' => 'Document file not found'], 404);
+        }
+
+        $html = self::wrapSections(MarkdownHelper::toHtml($md));
+        $toc = MarkdownHelper::extractHeadings($md);
+        $doc = $this->helpService->getDocument($slug);
 
         return response()->json([
             'html' => $html,
-            'title' => $label,
-            'file' => $file,
+            'title' => $doc['title'] ?? ucwords(str_replace('-', ' ', $slug)),
+            'slug' => $slug,
             'toc' => $toc,
         ]);
     }
 
     public function moduleHelp(string $module): JsonResponse
     {
-        $user = auth()->user();
         $moduleSlug = str_replace('_', '-', $module);
         $html = $this->helpService->getModuleHelp($moduleSlug);
-        if (!$html) {
-            $guideFile = $this->helpService->getRoleGuideFileForUser($user);
-            $md = $guideFile ? $this->helpService->loadMarkdownFile($guideFile) : null;
-            $html = $md ? MarkdownHelper::toHtml($md) : null;
-        }
+
         return response()->json([
             'html' => $html ?: '<p class="text-gray-500">Help content not available for this module.</p>',
             'title' => ucwords(str_replace('-', ' ', $moduleSlug)) . ' Help',
@@ -115,39 +114,10 @@ class HelpController extends Controller
     {
         $request->validate(['q' => 'nullable|string|max:500']);
         $query = $request->input('q', '');
-        $results = $this->helpService->search($query);
-
-        $sidebarLinks = $this->helpService->getHelpSidebarLinks();
-        $fileToSlug = [];
-        foreach ($sidebarLinks as $slug => $link) {
-            if (isset($link['file'])) {
-                $fileToSlug[$link['file']] = $slug;
-            }
-        }
-        $fallback = [
-            '02_SUPER_ADMIN_GUIDE.md' => 'super-admin-guide',
-            '03_ADMIN_GUIDE.md' => 'admin-guide',
-            '04_IT_STAFF_GUIDE.md' => 'it-support-guide',
-            '05_READ_ONLY_GUIDE.md' => 'read-only-guide',
-            '19_MONITORING_GUIDE.md' => 'monitoring-guide',
-        ];
-        foreach ($fallback as $f => $s) {
-            if (!isset($fileToSlug[$f])) $fileToSlug[$f] = $s;
-        }
-
-        foreach ($results as &$r) {
-            $r['slug'] = $fileToSlug[$r['file']] ?? strtolower(
-                preg_replace('/^\d+_/', '', pathinfo($r['file'], PATHINFO_FILENAME))
-            );
-        }
+        $user = auth()->user();
+        $results = $this->helpService->search($query, $user);
 
         return response()->json(['results' => $results]);
-    }
-
-    private function getLabelForFile(string $file): string
-    {
-        $labels = $this->helpService->getAllDocLabels();
-        return $labels[$file] ?? ucwords(str_replace(['_', '.md', '-'], [' ', '', ' '], $file));
     }
 
     public static function wrapSections(string $html): string
