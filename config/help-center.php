@@ -79,10 +79,6 @@ return [
     |
     | The 'file' path is relative to the project root (base_path()).
     |
-    | Only existing documents are registered. Batch 1 contains minimal
-    | foundation documents; additional documents will be added in later
-    | implementation batches.
-    |
     */
     'documents' => [
 
@@ -124,11 +120,12 @@ return [
             'searchable' => true,
         ],
 
+        // ── Infrastructure ────────────────────────────────────────────
         'domains' => [
             'title' => 'Domains',
             'file' => 'help/portal-reference/features/domains.md',
-            'category' => 'portal-reference-features',
-            'weight' => 10,
+            'category' => 'portal-reference-infrastructure',
+            'weight' => 0,
             'audience' => 'all',
             'searchable' => true,
         ],
@@ -136,8 +133,99 @@ return [
         'hostings' => [
             'title' => 'Hostings',
             'file' => 'help/portal-reference/features/hostings.md',
-            'category' => 'portal-reference-features',
+            'category' => 'portal-reference-infrastructure',
+            'weight' => 10,
+            'audience' => 'all',
+            'searchable' => true,
+        ],
+
+        'vps' => [
+            'title' => 'VPS',
+            'file' => 'help/portal-reference/infrastructure/vps.md',
+            'category' => 'portal-reference-infrastructure',
             'weight' => 20,
+            'audience' => 'all',
+            'searchable' => true,
+        ],
+
+        'voip' => [
+            'title' => 'VoIP',
+            'file' => 'help/portal-reference/infrastructure/voip.md',
+            'category' => 'portal-reference-infrastructure',
+            'weight' => 30,
+            'audience' => 'all',
+            'searchable' => true,
+        ],
+
+        'service-providers' => [
+            'title' => 'Service Providers',
+            'file' => 'help/portal-reference/infrastructure/service-providers.md',
+            'category' => 'portal-reference-infrastructure',
+            'weight' => 40,
+            'audience' => 'all',
+            'searchable' => true,
+        ],
+
+        'domain-emails' => [
+            'title' => 'Domain Emails',
+            'file' => 'help/portal-reference/infrastructure/domain-emails.md',
+            'category' => 'portal-reference-infrastructure',
+            'weight' => 50,
+            'audience' => 'all',
+            'searchable' => true,
+        ],
+
+        'other-services' => [
+            'title' => 'Other Services',
+            'file' => 'help/portal-reference/infrastructure/other-services.md',
+            'category' => 'portal-reference-infrastructure',
+            'weight' => 60,
+            'audience' => 'all',
+            'searchable' => true,
+        ],
+
+        'expiry-trackers' => [
+            'title' => 'Expiry Trackers',
+            'file' => 'help/portal-reference/infrastructure/expiry-trackers.md',
+            'category' => 'portal-reference-infrastructure',
+            'weight' => 70,
+            'audience' => 'all',
+            'searchable' => true,
+        ],
+
+        'assets' => [
+            'title' => 'Assets',
+            'file' => 'help/portal-reference/infrastructure/assets.md',
+            'category' => 'portal-reference-infrastructure',
+            'weight' => 80,
+            'audience' => 'all',
+            'searchable' => true,
+        ],
+
+        'g-mails' => [
+            'title' => 'G·Mails',
+            'file' => 'help/portal-reference/infrastructure/g-mails.md',
+            'category' => 'portal-reference-infrastructure',
+            'weight' => 90,
+            'audience' => 'all',
+            'searchable' => true,
+        ],
+
+        // ── Credentials & Vault ──────────────────────────────────────
+        'vault' => [
+            'title' => 'Vault',
+            'file' => 'help/portal-reference/credentials/vault.md',
+            'category' => 'portal-reference-credentials',
+            'weight' => 0,
+            'audience' => 'all',
+            'searchable' => true,
+        ],
+
+        'credential-reveal' => [
+            'title' => 'Credential Reveal',
+            'file' => 'help/reference/credential-reveal.md',
+            'category' => 'portal-reference-credentials',
+            'weight' => 10,
             'audience' => 'all',
             'searchable' => true,
         ],
@@ -152,6 +240,42 @@ return [
             'searchable' => true,
         ],
 
+        'tasks' => [
+            'title' => 'Tasks',
+            'file' => 'help/portal-reference/operations/tasks.md',
+            'category' => 'portal-reference-operations',
+            'weight' => 10,
+            'audience' => 'all',
+            'searchable' => true,
+        ],
+
+        'notes' => [
+            'title' => 'Notes',
+            'file' => 'help/portal-reference/operations/notes.md',
+            'category' => 'portal-reference-operations',
+            'weight' => 20,
+            'audience' => 'all',
+            'searchable' => true,
+        ],
+
+        'calendar' => [
+            'title' => 'Calendar',
+            'file' => 'help/portal-reference/operations/calendar.md',
+            'category' => 'portal-reference-operations',
+            'weight' => 30,
+            'audience' => 'all',
+            'searchable' => true,
+        ],
+
+        'global-search' => [
+            'title' => 'Global Search',
+            'file' => 'help/portal-reference/operations/global-search.md',
+            'category' => 'portal-reference-operations',
+            'weight' => 40,
+            'audience' => 'all',
+            'searchable' => true,
+        ],
+
         // ── Administration (Super Admin only) ─────────────────────────
         'super-admin-guide' => [
             'title' => 'Super Admin Guide',
@@ -162,21 +286,166 @@ return [
             'searchable' => true,
         ],
 
+        'users' => [
+            'title' => 'Users',
+            'file' => 'help/portal-reference/administrator/users.md',
+            'category' => 'administration',
+            'weight' => 10,
+            'audience' => 'super-admin',
+            'searchable' => true,
+        ],
+
+        'roles' => [
+            'title' => 'Roles',
+            'file' => 'help/portal-reference/administrator/roles.md',
+            'category' => 'administration',
+            'weight' => 20,
+            'audience' => 'super-admin',
+            'searchable' => true,
+        ],
+
+        'module-permissions' => [
+            'title' => 'Module Permissions',
+            'file' => 'help/portal-reference/administrator/module-permissions.md',
+            'category' => 'administration',
+            'weight' => 30,
+            'audience' => 'super-admin',
+            'searchable' => true,
+        ],
+
+        'privileges' => [
+            'title' => 'Privileges',
+            'file' => 'help/portal-reference/administrator/privileges.md',
+            'category' => 'administration',
+            'weight' => 40,
+            'audience' => 'super-admin',
+            'searchable' => true,
+        ],
+
+        'role-templates' => [
+            'title' => 'Role Templates',
+            'file' => 'help/portal-reference/administrator/role-templates.md',
+            'category' => 'administration',
+            'weight' => 50,
+            'audience' => 'super-admin',
+            'searchable' => true,
+        ],
+
+        'activity-logs' => [
+            'title' => 'Activity Logs',
+            'file' => 'help/portal-reference/administrator/activity-logs.md',
+            'category' => 'administration',
+            'weight' => 60,
+            'audience' => 'super-admin',
+            'searchable' => true,
+        ],
+
+        'login-audits' => [
+            'title' => 'Login Audits',
+            'file' => 'help/portal-reference/administrator/login-audits.md',
+            'category' => 'administration',
+            'weight' => 70,
+            'audience' => 'super-admin',
+            'searchable' => true,
+        ],
+
+        'features' => [
+            'title' => 'Features',
+            'file' => 'help/portal-reference/administrator/features.md',
+            'category' => 'administration',
+            'weight' => 80,
+            'audience' => 'super-admin',
+            'searchable' => true,
+        ],
+
+        'modules' => [
+            'title' => 'Modules',
+            'file' => 'help/portal-reference/administrator/modules.md',
+            'category' => 'administration',
+            'weight' => 90,
+            'audience' => 'super-admin',
+            'searchable' => true,
+        ],
+
+        'import-export' => [
+            'title' => 'Import / Export',
+            'file' => 'help/portal-reference/administrator/import-export.md',
+            'category' => 'administration',
+            'weight' => 100,
+            'audience' => 'super-admin',
+            'searchable' => true,
+        ],
+
+        'bulk-actions' => [
+            'title' => 'Bulk Actions',
+            'file' => 'help/portal-reference/administrator/bulk-actions.md',
+            'category' => 'administration',
+            'weight' => 110,
+            'audience' => 'super-admin',
+            'searchable' => true,
+        ],
+
+        'reports' => [
+            'title' => 'Reports',
+            'file' => 'help/portal-reference/administrator/reports.md',
+            'category' => 'administration',
+            'weight' => 120,
+            'audience' => 'super-admin',
+            'searchable' => true,
+        ],
+
+        'webhooks' => [
+            'title' => 'Webhooks',
+            'file' => 'help/portal-reference/administrator/webhooks.md',
+            'category' => 'administration',
+            'weight' => 130,
+            'audience' => 'super-admin',
+            'searchable' => true,
+        ],
+
+        'smtp-profiles' => [
+            'title' => 'SMTP Profiles',
+            'file' => 'help/portal-reference/administrator/smtp-profiles.md',
+            'category' => 'administration',
+            'weight' => 140,
+            'audience' => 'super-admin',
+            'searchable' => true,
+        ],
+
+        'api-tokens' => [
+            'title' => 'API Tokens',
+            'file' => 'help/portal-reference/administrator/api-tokens.md',
+            'category' => 'administration',
+            'weight' => 150,
+            'audience' => 'super-admin',
+            'searchable' => true,
+        ],
+
+        'attachments' => [
+            'title' => 'Attachments',
+            'file' => 'help/portal-reference/administrator/attachments.md',
+            'category' => 'administration',
+            'weight' => 160,
+            'audience' => 'super-admin',
+            'searchable' => true,
+        ],
+
+        // ── Troubleshooting & FAQ ─────────────────────────────────────
+        'faq' => [
+            'title' => 'Frequently Asked Questions',
+            'file' => 'help/faq.md',
+            'category' => 'troubleshooting',
+            'weight' => 0,
+            'audience' => 'all',
+            'searchable' => true,
+        ],
+
         // ── Reference ─────────────────────────────────────────────────
         'permission-reference' => [
             'title' => 'Permission Reference',
             'file' => 'help/reference/permission-reference.md',
             'category' => 'reference',
             'weight' => 0,
-            'audience' => 'all',
-            'searchable' => true,
-        ],
-
-        'credential-reveal' => [
-            'title' => 'Credential Reveal Reference',
-            'file' => 'help/reference/credential-reveal.md',
-            'category' => 'reference',
-            'weight' => 10,
             'audience' => 'all',
             'searchable' => true,
         ],
@@ -209,37 +478,37 @@ return [
         'dashboard'          => 'dashboard',
         'domains'            => 'domains',
         'hostings'           => 'hostings',
-        'vps'                => 'domains',
-        'voip'               => 'domains',
-        'service-providers'  => 'domains',
-        'domain-emails'      => 'domains',
-        'other-services'     => 'domains',
-        'expiry-trackers'    => 'domains',
-        'assets'             => 'domains',
-        'g-mails'            => 'domains',
-        'vault'              => 'domains',
-        'tasks'              => 'domains',
-        'notes'              => 'domains',
-        'calendar'           => 'quick-start',
+        'vps'                => 'vps',
+        'voip'               => 'voip',
+        'service-providers'  => 'service-providers',
+        'domain-emails'      => 'domain-emails',
+        'other-services'     => 'other-services',
+        'expiry-trackers'    => 'expiry-trackers',
+        'assets'             => 'assets',
+        'g-mails'            => 'g-mails',
+        'vault'              => 'vault',
+        'tasks'              => 'tasks',
+        'notes'              => 'notes',
+        'calendar'           => 'calendar',
         'monitoring'         => 'monitoring',
-        'users'              => 'super-admin-guide',
-        'roles'              => 'super-admin-guide',
-        'module-permissions' => 'super-admin-guide',
-        'activity-logs'      => 'super-admin-guide',
-        'smtp-profiles'      => 'super-admin-guide',
-        'reports'            => 'super-admin-guide',
+        'users'              => 'users',
+        'roles'              => 'roles',
+        'module-permissions' => 'module-permissions',
+        'activity-logs'      => 'activity-logs',
+        'login-audits'       => 'login-audits',
+        'smtp-profiles'      => 'smtp-profiles',
+        'reports'            => 'reports',
         'notifications'      => 'quick-start',
-        'role-templates'     => 'super-admin-guide',
-        'privileges'         => 'super-admin-guide',
-        'modules'            => 'super-admin-guide',
-        'features'           => 'super-admin-guide',
-        'import'             => 'super-admin-guide',
-        'attachments'        => 'super-admin-guide',
-        'webhooks'           => 'super-admin-guide',
-        'tokens'             => 'super-admin-guide',
-        'login-audits'       => 'super-admin-guide',
-        'search'             => 'quick-start',
-        'export'             => 'domains',
+        'role-templates'     => 'role-templates',
+        'privileges'         => 'privileges',
+        'modules'            => 'modules',
+        'features'           => 'features',
+        'import'             => 'import-export',
+        'export'             => 'import-export',
+        'attachments'        => 'attachments',
+        'webhooks'           => 'webhooks',
+        'tokens'             => 'api-tokens',
+        'search'             => 'global-search',
         'profile'            => 'quick-start',
         'my-permissions'     => 'my-permissions',
     ],
@@ -281,7 +550,6 @@ return [
         'my-role-guide',
         'daily-ops',
         'workflows',
-        'faq',
         'troubleshooting',
         'release-notes',
         'admin-guide',

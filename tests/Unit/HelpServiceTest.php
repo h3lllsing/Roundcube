@@ -226,7 +226,6 @@ class HelpServiceTest extends TestCase
     {
         $this->assertTrue($this->service->isRetiredSlug('my-role-guide'));
         $this->assertTrue($this->service->isRetiredSlug('daily-ops'));
-        $this->assertTrue($this->service->isRetiredSlug('faq'));
         $this->assertTrue($this->service->isRetiredSlug('admin-guide'));
         $this->assertTrue($this->service->isRetiredSlug('it-support-guide'));
         $this->assertTrue($this->service->isRetiredSlug('read-only-guide'));
@@ -237,6 +236,7 @@ class HelpServiceTest extends TestCase
         $this->assertFalse($this->service->isRetiredSlug('quick-start'));
         $this->assertFalse($this->service->isRetiredSlug('dashboard'));
         $this->assertFalse($this->service->isRetiredSlug('monitoring'));
+        $this->assertFalse($this->service->isRetiredSlug('faq'));
     }
 
     public function test_developer_slugs_are_not_exposed_as_retired(): void
@@ -341,8 +341,8 @@ class HelpServiceTest extends TestCase
 
     public function test_get_developer_doc_file_returns_correct_file(): void
     {
-        $this->assertEquals('17_ARCHITECTURE_OVERVIEW.md', $this->service->getDeveloperDocFile('architecture'));
-        $this->assertEquals('18_DEVELOPER_RBAC_REFERENCE.md', $this->service->getDeveloperDocFile('developer-rbac'));
+        $this->assertEquals('docs/reference/architecture/01_SYSTEM_OVERVIEW.md', $this->service->getDeveloperDocFile('architecture'));
+        $this->assertEquals('docs/reference/architecture/05_PERMISSION_SYSTEM.md', $this->service->getDeveloperDocFile('developer-rbac'));
         $this->assertNull($this->service->getDeveloperDocFile('nonexistent'));
     }
 
@@ -519,6 +519,135 @@ class HelpServiceTest extends TestCase
                 '<h1',
                 $html,
                 "Batch 2 doc '{$slug}' has no <h1> tag"
+            );
+        }
+    }
+
+    // ── BATCH 3 — All remaining portal docs ─────────────────────────
+
+    public function test_batch3_docs_are_registered(): void
+    {
+        $slugs = [
+            'vps', 'voip', 'service-providers', 'domain-emails', 'other-services',
+            'expiry-trackers', 'assets', 'g-mails', 'vault', 'tasks', 'notes',
+            'calendar', 'global-search', 'users', 'roles', 'module-permissions',
+            'privileges', 'role-templates', 'activity-logs', 'login-audits',
+            'features', 'modules', 'import-export', 'bulk-actions', 'reports',
+            'webhooks', 'smtp-profiles', 'api-tokens', 'attachments', 'faq',
+        ];
+        foreach ($slugs as $slug) {
+            $this->assertNotNull(
+                $this->service->getDocument($slug),
+                "Batch 3 doc '{$slug}' is not registered"
+            );
+        }
+    }
+
+    public function test_batch3_doc_files_exist(): void
+    {
+        $batch3 = [
+            'vps'               => 'help/portal-reference/infrastructure/vps.md',
+            'voip'              => 'help/portal-reference/infrastructure/voip.md',
+            'service-providers' => 'help/portal-reference/infrastructure/service-providers.md',
+            'domain-emails'     => 'help/portal-reference/infrastructure/domain-emails.md',
+            'other-services'    => 'help/portal-reference/infrastructure/other-services.md',
+            'expiry-trackers'   => 'help/portal-reference/infrastructure/expiry-trackers.md',
+            'assets'            => 'help/portal-reference/infrastructure/assets.md',
+            'g-mails'           => 'help/portal-reference/infrastructure/g-mails.md',
+            'vault'             => 'help/portal-reference/credentials/vault.md',
+            'tasks'             => 'help/portal-reference/operations/tasks.md',
+            'notes'             => 'help/portal-reference/operations/notes.md',
+            'calendar'          => 'help/portal-reference/operations/calendar.md',
+            'global-search'     => 'help/portal-reference/operations/global-search.md',
+            'users'             => 'help/portal-reference/administrator/users.md',
+            'roles'             => 'help/portal-reference/administrator/roles.md',
+            'module-permissions'=> 'help/portal-reference/administrator/module-permissions.md',
+            'privileges'        => 'help/portal-reference/administrator/privileges.md',
+            'role-templates'    => 'help/portal-reference/administrator/role-templates.md',
+            'activity-logs'     => 'help/portal-reference/administrator/activity-logs.md',
+            'login-audits'      => 'help/portal-reference/administrator/login-audits.md',
+            'features'          => 'help/portal-reference/administrator/features.md',
+            'modules'           => 'help/portal-reference/administrator/modules.md',
+            'import-export'     => 'help/portal-reference/administrator/import-export.md',
+            'bulk-actions'      => 'help/portal-reference/administrator/bulk-actions.md',
+            'reports'           => 'help/portal-reference/administrator/reports.md',
+            'webhooks'          => 'help/portal-reference/administrator/webhooks.md',
+            'smtp-profiles'     => 'help/portal-reference/administrator/smtp-profiles.md',
+            'api-tokens'        => 'help/portal-reference/administrator/api-tokens.md',
+            'attachments'       => 'help/portal-reference/administrator/attachments.md',
+            'faq'               => 'help/faq.md',
+        ];
+        foreach ($batch3 as $slug => $file) {
+            $this->assertFileExists(
+                base_path($file),
+                "Batch 3 file for '{$slug}' does not exist: {$file}"
+            );
+        }
+    }
+
+    public function test_batch3_all_audience_docs_are_searchable(): void
+    {
+        $allAudienceSlugs = [
+            'vps', 'voip', 'service-providers', 'domain-emails', 'other-services',
+            'expiry-trackers', 'assets', 'g-mails', 'vault', 'tasks', 'notes',
+            'calendar', 'global-search', 'faq',
+        ];
+        foreach ($allAudienceSlugs as $slug) {
+            $doc = $this->service->getDocument($slug);
+            $this->assertNotNull($doc, "Slug '{$slug}' not found");
+            $this->assertTrue(
+                $doc['searchable'] ?? false,
+                "Batch 3 '{$slug}' should be searchable"
+            );
+        }
+    }
+
+    public function test_batch3_all_audience_docs_accessible_by_normal_user(): void
+    {
+        $user = $this->createUserWithRole('admin');
+        $slugs = [
+            'vps', 'voip', 'service-providers', 'domain-emails', 'other-services',
+            'expiry-trackers', 'assets', 'g-mails', 'vault', 'tasks', 'notes',
+            'calendar', 'global-search', 'faq',
+        ];
+        foreach ($slugs as $slug) {
+            $this->assertTrue(
+                $this->service->canAccess($slug, $user),
+                "Batch 3 all-audience doc '{$slug}' denied to normal user"
+            );
+        }
+    }
+
+    public function test_batch3_admin_docs_denied_to_normal_user(): void
+    {
+        $user = $this->createUserWithRole('admin');
+        $slugs = [
+            'users', 'roles', 'module-permissions', 'privileges', 'role-templates',
+            'activity-logs', 'login-audits', 'features', 'modules', 'import-export',
+            'bulk-actions', 'reports', 'webhooks', 'smtp-profiles', 'api-tokens',
+            'attachments',
+        ];
+        foreach ($slugs as $slug) {
+            $this->assertFalse(
+                $this->service->canAccess($slug, $user),
+                "Batch 3 SA doc '{$slug}' should be denied to normal user"
+            );
+        }
+    }
+
+    public function test_batch3_admin_docs_accessible_by_super_admin(): void
+    {
+        $user = $this->createUserWithRole('super-admin');
+        $slugs = [
+            'users', 'roles', 'module-permissions', 'privileges', 'role-templates',
+            'activity-logs', 'login-audits', 'features', 'modules', 'import-export',
+            'bulk-actions', 'reports', 'webhooks', 'smtp-profiles', 'api-tokens',
+            'attachments',
+        ];
+        foreach ($slugs as $slug) {
+            $this->assertTrue(
+                $this->service->canAccess($slug, $user),
+                "Batch 3 SA doc '{$slug}' denied to super admin"
             );
         }
     }

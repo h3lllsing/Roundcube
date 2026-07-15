@@ -26,9 +26,9 @@ class HelpService
         ];
 
         $this->developerDocMap = [
-            'architecture'      => '17_ARCHITECTURE_OVERVIEW.md',
-            'developer-rbac'    => '18_DEVELOPER_RBAC_REFERENCE.md',
-            'disaster-recovery' => '16_DISASTER_RECOVERY_GUIDE.md',
+            'architecture'      => 'docs/reference/architecture/01_SYSTEM_OVERVIEW.md',
+            'developer-rbac'    => 'docs/reference/architecture/05_PERMISSION_SYSTEM.md',
+            'disaster-recovery' => 'docs/reference/guides/DEPLOYMENT_GUIDE.md',
         ];
     }
 
