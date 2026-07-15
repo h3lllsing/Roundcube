@@ -34,6 +34,16 @@ class Module extends Model
         ];
     }
 
+    public function isImportSupported(): bool
+    {
+        return in_array($this->slug, config('permissions.importable_modules', []));
+    }
+
+    public function isExportSupported(): bool
+    {
+        return in_array($this->slug, config('permissions.exportable_modules', []));
+    }
+
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()

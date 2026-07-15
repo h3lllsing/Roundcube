@@ -45,29 +45,26 @@ class ModulePermissionController extends Controller
             'updated_at' => 'required|date',
             'module_id' => 'required|exists:modules,id',
             'role_id' => 'required|exists:roles,id',
-            'can_create' => 'nullable|boolean',
-            'can_read' => 'nullable|boolean',
-            'can_update' => 'nullable|boolean',
-            'can_delete' => 'nullable|boolean',
-            'can_approve' => 'nullable|boolean',
-            'can_export' => 'nullable|boolean',
-            'can_reveal' => 'nullable|boolean',
-            'can_import' => 'nullable|boolean',
+            'access' => 'nullable|boolean',
+            'manage' => 'nullable|boolean',
+            'import' => 'nullable|boolean',
+            'export' => 'nullable|boolean',
+            'full_access' => 'nullable|boolean',
         ]);
 
         $module = Module::findOrFail($validated['module_id']);
         /** @var Module $module */
         $this->checkOptimisticLock($module, $request);
-        $this->permissionService->setForRole($module, $validated['role_id'], [
-            'can_create' => $request->boolean('can_create'),
-            'can_read' => $request->boolean('can_read'),
-            'can_update' => $request->boolean('can_update'),
-            'can_delete' => $request->boolean('can_delete'),
-            'can_approve' => $request->boolean('can_approve'),
-            'can_export' => $request->boolean('can_export'),
-            'can_reveal' => $request->boolean('can_reveal'),
-            'can_import' => $request->boolean('can_import'),
-        ]);
+
+        $controls = [
+            'access' => $request->boolean('access'),
+            'manage' => $request->boolean('manage'),
+            'import' => $request->boolean('import'),
+            'export' => $request->boolean('export'),
+            'full_access' => $request->boolean('full_access'),
+        ];
+        $normalized = $this->permissionService->normalizeControls($controls, $module);
+        $this->permissionService->setForRole($module, $validated['role_id'], $normalized);
 
         $role = \App\Models\Role::find($validated['role_id']);
 
@@ -76,7 +73,7 @@ class ModulePermissionController extends Controller
             ->withProperties([
                 'module' => $module->name,
                 'role' => $role?->getAttribute('name'),
-                'permissions' => array_keys(array_filter($request->only(config('permissions.keys')), fn ($v) => $v)),
+                'permissions' => array_keys(array_filter($controls, fn ($v) => $v)),
             ])
             ->log('Module permissions updated for role: '.($role?->getAttribute('name') ?? $validated['role_id']).' on module: '.$module->name);
 

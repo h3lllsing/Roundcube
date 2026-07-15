@@ -31,6 +31,58 @@ class ModulePermissionService
             ->all();
     }
 
+    /** @param array<string, bool> $controls */
+    public function normalizeControls(array $controls, Module $module): array
+    {
+        $result = [
+            'can_create' => false,
+            'can_read' => false,
+            'can_update' => false,
+            'can_delete' => false,
+            'can_approve' => false,
+            'can_export' => false,
+            'can_reveal' => false,
+            'can_import' => false,
+        ];
+
+        $access = $controls['access'] ?? false;
+        $manage = $controls['manage'] ?? false;
+        $import = $controls['import'] ?? false;
+        $export = $controls['export'] ?? false;
+        $fullAccess = $controls['full_access'] ?? false;
+
+        if ($fullAccess) {
+            $result['can_read'] = true;
+            $result['can_reveal'] = true;
+            $result['can_create'] = true;
+            $result['can_update'] = true;
+            if ($module->isImportSupported()) {
+                $result['can_import'] = true;
+            }
+            if ($module->isExportSupported()) {
+                $result['can_export'] = true;
+            }
+        } else {
+            $hasAny = $access || $manage || $import || $export;
+            if ($hasAny) {
+                $result['can_read'] = true;
+                $result['can_reveal'] = true;
+            }
+            if ($manage) {
+                $result['can_create'] = true;
+                $result['can_update'] = true;
+            }
+            if ($import && $module->isImportSupported()) {
+                $result['can_import'] = true;
+            }
+            if ($export && $module->isExportSupported()) {
+                $result['can_export'] = true;
+            }
+        }
+
+        return $result;
+    }
+
     /** @param array<string, bool> $permissions */
     public function setForRole(Module $module, int $roleId, array $permissions): ModuleRolePermission
     {

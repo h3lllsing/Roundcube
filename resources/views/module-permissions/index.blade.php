@@ -4,7 +4,11 @@
 
 @section('content')
 <div class="max-w-7xl mx-auto">
-    @php $modulePresets = []; @endphp
+    @php
+        $moduleControls = [];
+        $importableSlugs = config('permissions.importable_modules', []);
+        $exportableSlugs = config('permissions.exportable_modules', []);
+    @endphp
     @if ($focusedRole)
     <div class="mb-6">
         <a href="{{ route('roles.show', $focusedRole->id) }}" class="text-sm text-indigo-600 dark:text-indigo-400 hover:underline">&larr; Back to {{ $focusedRole->name }}</a>
@@ -13,44 +17,41 @@
     @php
         $sensitiveSlugs = config('permissions.sensitive_modules', []);
         $sensitivePermKeys = config('permissions.sensitive_permissions', []);
-        $permKeys = config('permissions.keys', []);
 
         $accessibleCount = 0;
         $noAccessCount = 0;
-        $customCount = 0;
         $sensitiveWithAccess = 0;
 
         foreach ($modules as $module) {
             $perm = $module->rolePermissions->firstWhere('role_id', $focusedRole->id);
-            $preset = 0;
             $isSensitive = in_array($module->slug, $sensitiveSlugs);
+            $isImportable = in_array($module->slug, $importableSlugs);
+            $isExportable = in_array($module->slug, $exportableSlugs);
             $activeSensitive = [];
+            $hasAccess = false;
+            $ctlAccess = false;
+            $ctlManage = false;
+            $ctlImport = false;
+            $ctlExport = false;
+            $ctlFullAccess = false;
 
             if ($perm) {
-                $allFalse = true;
-                foreach ($permKeys as $pk) { if ($perm->$pk) { $allFalse = false; break; } }
+                $cr = (bool) $perm->can_read;
+                $cc = (bool) $perm->can_create;
+                $cu = (bool) $perm->can_update;
+                $ci = (bool) $perm->can_import;
+                $ce = (bool) $perm->can_export;
 
-                if ($allFalse) {
-                    $preset = 0;
-                } elseif (
-                    $perm->can_read && !$perm->can_create && !$perm->can_update
-                    && !$perm->can_delete && !$perm->can_approve
-                    && !$perm->can_export && !$perm->can_reveal && !$perm->can_import
-                ) {
-                    $preset = 1;
-                } elseif (
-                    $perm->can_read && $perm->can_create && $perm->can_update
-                    && !$perm->can_delete && !$perm->can_approve
-                    && !$perm->can_export && !$perm->can_reveal && !$perm->can_import
-                ) {
-                    $preset = 2;
-                } else {
-                    $preset = 3;
-                }
+                $ctlAccess = $cr;
+                $ctlManage = $cr && $cc && $cu;
+                $ctlImport = $cr && $ci;
+                $ctlExport = $cr && $ce;
+                $ctlFullAccess = $ctlAccess && $ctlManage;
+                if ($isImportable && !$ctlImport) { $ctlFullAccess = false; }
+                if ($isExportable && !$ctlExport) { $ctlFullAccess = false; }
 
-                if ($perm->can_read) { $accessibleCount++; } else { $noAccessCount++; }
-
-                if ($preset === 3) { $customCount++; }
+                $hasAccess = $ctlAccess;
+                if ($hasAccess) { $accessibleCount++; } else { $noAccessCount++; }
 
                 if ($isSensitive) {
                     foreach ($sensitivePermKeys as $spk) {
@@ -62,18 +63,17 @@
                 $noAccessCount++;
             }
 
-            $modulePresets[$module->id] = [
-                'preset' => $preset,
+            $moduleControls[$module->id] = [
+                'hasAccess' => $hasAccess,
+                'ctlAccess' => $ctlAccess,
+                'ctlManage' => $ctlManage,
+                'ctlImport' => $ctlImport,
+                'ctlExport' => $ctlExport,
+                'ctlFullAccess' => $ctlFullAccess,
                 'isSensitive' => $isSensitive,
                 'activeSensitive' => $activeSensitive,
-                'can_create' => $perm && $perm->can_create,
-                'can_read' => $perm && $perm->can_read,
-                'can_update' => $perm && $perm->can_update,
-                'can_delete' => $perm && $perm->can_delete,
-                'can_approve' => $perm && $perm->can_approve,
-                'can_export' => $perm && $perm->can_export,
-                'can_reveal' => $perm && $perm->can_reveal,
-                'can_import' => $perm && $perm->can_import,
+                'isImportable' => $isImportable,
+                'isExportable' => $isExportable,
             ];
         }
     @endphp
@@ -88,7 +88,7 @@
                 <a href="{{ route('module-permissions.index') }}" class="text-indigo-600 dark:text-indigo-400 hover:underline">View all roles</a>
             </div>
         </div>
-        <div class="grid grid-cols-4 gap-4 mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+        <div class="grid grid-cols-3 gap-4 mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
             <div>
                 <span class="text-xs font-medium text-gray-500 dark:text-gray-400">With Access</span>
                 <p class="text-lg font-semibold text-green-600 dark:text-green-400">{{ $accessibleCount }}</p>
@@ -96,10 +96,6 @@
             <div>
                 <span class="text-xs font-medium text-gray-500 dark:text-gray-400">No Access</span>
                 <p class="text-lg font-semibold text-gray-400 dark:text-gray-500">{{ $noAccessCount }}</p>
-            </div>
-            <div>
-                <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Custom</span>
-                <p class="text-lg font-semibold text-purple-600 dark:text-purple-400">{{ $customCount }}</p>
             </div>
             <div>
                 <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Sensitive Granted</span>
@@ -127,20 +123,17 @@
 
         <div class="bg-white dark:bg-black rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
             @forelse ($modules as $module)
-                @php $info = $modulePresets[$module->id]; @endphp
+                @php $info = $moduleControls[$module->id]; @endphp
                 <form method="POST" action="{{ route('module-permissions.update') }}" class="sm-row-form">
                     @csrf
                     <input type="hidden" name="updated_at" value="{{ $module->updated_at->format('Y-m-d H:i:s') }}">
                     <input type="hidden" name="module_id" value="{{ $module->id }}">
                     <input type="hidden" name="role_id" value="{{ $focusedRole->id }}">
-                    <input type="hidden" name="can_create" value="0">
-                    <input type="hidden" name="can_read" value="0">
-                    <input type="hidden" name="can_update" value="0">
-                    <input type="hidden" name="can_delete" value="0">
-                    <input type="hidden" name="can_approve" value="0">
-                    <input type="hidden" name="can_export" value="0">
-                    <input type="hidden" name="can_reveal" value="0">
-                    <input type="hidden" name="can_import" value="0">
+                    <input type="hidden" name="access" value="{{ $info['ctlAccess'] ? '1' : '0' }}">
+                    <input type="hidden" name="manage" value="{{ $info['ctlManage'] ? '1' : '0' }}">
+                    <input type="hidden" name="import" value="{{ $info['ctlImport'] ? '1' : '0' }}">
+                    <input type="hidden" name="export" value="{{ $info['ctlExport'] ? '1' : '0' }}">
+                    <input type="hidden" name="full_access" value="{{ $info['ctlFullAccess'] ? '1' : '0' }}">
 
                     <div class="sm-row flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-900/50">
                         <div class="sm-info flex items-center gap-2 min-w-0">
@@ -149,21 +142,13 @@
                             @if ($info['isSensitive'])
                             <span class="text-[10px] px-1.5 py-0.5 rounded bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 font-medium">sensitive</span>
                             @endif
-                            @if ($info['preset'] === 1)
-                            <span class="text-[10px] px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 font-medium">View</span>
-                            @elseif ($info['preset'] === 2)
-                            <span class="text-[10px] px-1.5 py-0.5 rounded bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 font-medium">Manage</span>
-                            @elseif ($info['preset'] === 3)
-                            <span class="text-[10px] px-1.5 py-0.5 rounded bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 font-medium">Custom</span>
-                            @endif
                         </div>
-                        <div class="sm-setting flex-shrink-0 ml-4">
-                            <select class="sm-select text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-1.5 bg-white dark:bg-black cursor-pointer" onchange="onRolePresetChange(this)" data-module-id="{{ $module->id }}" data-role-id="{{ $focusedRole->id }}">
-                                <option value="0" {{ $info['preset'] == 0 ? 'selected' : '' }}>No Access</option>
-                                <option value="1" {{ $info['preset'] == 1 ? 'selected' : '' }}>View Only</option>
-                                <option value="2" {{ $info['preset'] == 2 ? 'selected' : '' }}>Manage</option>
-                                <option value="3" {{ $info['preset'] == 3 ? 'selected' : '' }}>Custom…</option>
-                            </select>
+                        <div class="sm-setting flex-shrink-0 ml-4 flex items-center gap-1.5">
+                            <button type="button" class="perm-chip {{ $info['ctlAccess'] ? 'perm-chip-active perm-chip-blue' : '' }}" data-control="access" onclick="toggleModuleControl(this.closest('form'), 'access')">Access</button>
+                            <button type="button" class="perm-chip {{ $info['ctlManage'] ? 'perm-chip-active perm-chip-green' : '' }}" data-control="manage" onclick="toggleModuleControl(this.closest('form'), 'manage')">Manage</button>
+                            <button type="button" class="perm-chip {{ $info['ctlImport'] ? 'perm-chip-active perm-chip-purple' : '' }} {{ !$info['isImportable'] ? 'perm-chip-disabled' : '' }}" data-control="import" onclick="if(this.classList.contains('perm-chip-disabled')) return; toggleModuleControl(this.closest('form'), 'import')">Import</button>
+                            <button type="button" class="perm-chip {{ $info['ctlExport'] ? 'perm-chip-active perm-chip-orange' : '' }} {{ !$info['isExportable'] ? 'perm-chip-disabled' : '' }}" data-control="export" onclick="if(this.classList.contains('perm-chip-disabled')) return; toggleModuleControl(this.closest('form'), 'export')">Export</button>
+                            <button type="button" class="perm-chip {{ $info['ctlFullAccess'] ? 'perm-chip-active perm-chip-rose' : '' }}" data-control="full_access" onclick="toggleModuleControl(this.closest('form'), 'full_access')">Full Access</button>
                         </div>
                     </div>
                 </form>
@@ -196,14 +181,31 @@
                                 @if (! in_array($role->slug, ['super-admin', '*']))
                                     @php
                                         $perm = $module->rolePermissions->firstWhere('role_id', $role->id);
+                                        $isImportable = in_array($module->slug, $importableSlugs);
+                                        $isExportable = in_array($module->slug, $exportableSlugs);
+                                        $ctlAccess = $perm && $perm->can_read;
+                                        $ctlManage = $perm && $perm->can_read && $perm->can_create && $perm->can_update;
+                                        $ctlImport = $perm && $perm->can_read && $perm->can_import;
+                                        $ctlExport = $perm && $perm->can_read && $perm->can_export;
+                                        $ctlFullAccess = $ctlAccess && $ctlManage;
+                                        if ($isImportable && !$ctlImport) { $ctlFullAccess = false; }
+                                        if ($isExportable && !$ctlExport) { $ctlFullAccess = false; }
                                     @endphp
                                     <td class="px-2 py-3 text-center">
                                         <a href="#"
                                            data-edit-perm="{{ $module->id }},{{ $role->id }}"
                                            data-updated-at="{{ $module->updated_at->format('Y-m-d H:i:s') }}"
-                                           class="inline-flex items-center gap-1 text-xs {{ $perm ? 'text-green-600 dark:text-green-400' : 'text-gray-400 dark:text-gray-500' }}">
+                                           class="inline-flex items-center justify-center gap-0.5 text-xs {{ $perm ? 'text-green-600 dark:text-green-400' : 'text-gray-400 dark:text-gray-500' }}">
                                             @if ($perm)
-                                                {{ ($perm->can_create ? 'C' : '') . ($perm->can_read ? 'R' : '') . ($perm->can_update ? 'U' : '') . ($perm->can_delete ? 'D' : '') . ($perm->can_approve ? 'A' : '') . ($perm->can_export ? 'E' : '') . ($perm->can_reveal ? 'Rev' : '') . ($perm->can_import ? 'I' : '') }}
+                                                @php
+                                                    $labels = [];
+                                                    if ($ctlAccess) $labels[] = '<span class="px-1 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">A</span>';
+                                                    if ($ctlManage) $labels[] = '<span class="px-1 rounded bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300">M</span>';
+                                                    if ($ctlImport) $labels[] = '<span class="px-1 rounded bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300">I</span>';
+                                                    if ($ctlExport) $labels[] = '<span class="px-1 rounded bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300">E</span>';
+                                                    if ($ctlFullAccess) $labels[] = '<span class="px-1 rounded bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-300">F</span>';
+                                                @endphp
+                                                {!! implode('', $labels) ?: '<span class="text-gray-400 dark:text-gray-500">—</span>' !!}
                                             @else
                                                 —
                                             @endif
@@ -220,7 +222,7 @@
         </div>
     </div>
 
-    {{-- Edit Modal (shared between Simple Custom and Advanced) --}}
+    {{-- Edit Modal --}}
     <div id="permModal" class="fixed inset-0 z-50 hidden bg-black/50 flex items-center justify-center">
         <div class="bg-white dark:bg-black rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 p-6 w-full max-w-md mx-4">
             <h3 class="text-lg font-semibold mb-4">Edit Permissions</h3>
@@ -230,13 +232,31 @@
                 <input type="hidden" name="module_id" id="edit_module_id">
                 <input type="hidden" name="role_id" id="edit_role_id">
 
-                @foreach (['create', 'read', 'update', 'delete', 'approve', 'export', 'reveal', 'import'] as $perm)
-                    <label class="flex items-center gap-3 text-sm text-gray-700 dark:text-gray-300">
-                        <input type="checkbox" name="can_{{ $perm }}" value="1"
-                            class="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500">
-                        Can {{ ucfirst($perm) }}
-                    </label>
-                @endforeach
+                <label class="flex items-center gap-3 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
+                    <input type="checkbox" name="access" value="1" class="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 perm-modal-check" data-control="access">
+                    <span class="font-medium text-blue-600 dark:text-blue-400">Access</span>
+                    <span class="text-xs text-gray-400">View and see details</span>
+                </label>
+                <label class="flex items-center gap-3 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
+                    <input type="checkbox" name="manage" value="1" class="rounded border-gray-300 dark:border-gray-600 text-green-600 focus:ring-green-500 perm-modal-check" data-control="manage">
+                    <span class="font-medium text-green-600 dark:text-green-400">Manage</span>
+                    <span class="text-xs text-gray-400">Create and update</span>
+                </label>
+                <label class="flex items-center gap-3 text-sm text-gray-700 dark:text-gray-300 cursor-pointer" id="modalImportLabel">
+                    <input type="checkbox" name="import" value="1" class="rounded border-gray-300 dark:border-gray-600 text-purple-600 focus:ring-purple-500 perm-modal-check" data-control="import">
+                    <span class="font-medium text-purple-600 dark:text-purple-400">Import</span>
+                    <span class="text-xs text-gray-400">Import data</span>
+                </label>
+                <label class="flex items-center gap-3 text-sm text-gray-700 dark:text-gray-300 cursor-pointer" id="modalExportLabel">
+                    <input type="checkbox" name="export" value="1" class="rounded border-gray-300 dark:border-gray-600 text-orange-600 focus:ring-orange-500 perm-modal-check" data-control="export">
+                    <span class="font-medium text-orange-600 dark:text-orange-400">Export</span>
+                    <span class="text-xs text-gray-400">Export data</span>
+                </label>
+                <label class="flex items-center gap-3 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
+                    <input type="checkbox" name="full_access" value="1" class="rounded border-gray-300 dark:border-gray-600 text-rose-600 focus:ring-rose-500 perm-modal-check" data-control="full_access">
+                    <span class="font-medium text-rose-600 dark:text-rose-400">Full Access</span>
+                    <span class="text-xs text-gray-400">All available controls</span>
+                </label>
 
                 <div class="flex items-center gap-3 pt-4">
                     <x-button type="submit" variant="primary" size="sm">Save</x-button>
@@ -285,14 +305,31 @@
                             @if (! in_array($role->slug, ['super-admin', '*']))
                                 @php
                                     $perm = $module->rolePermissions->firstWhere('role_id', $role->id);
+                                    $isImportable = in_array($module->slug, $importableSlugs);
+                                    $isExportable = in_array($module->slug, $exportableSlugs);
+                                    $ctlAccess = $perm && $perm->can_read;
+                                    $ctlManage = $perm && $perm->can_read && $perm->can_create && $perm->can_update;
+                                    $ctlImport = $perm && $perm->can_read && $perm->can_import;
+                                    $ctlExport = $perm && $perm->can_read && $perm->can_export;
+                                    $ctlFullAccess = $ctlAccess && $ctlManage;
+                                    if ($isImportable && !$ctlImport) { $ctlFullAccess = false; }
+                                    if ($isExportable && !$ctlExport) { $ctlFullAccess = false; }
                                 @endphp
                                 <td class="px-2 py-3 text-center">
                                     <a href="#"
                                        data-edit-perm="{{ $module->id }},{{ $role->id }}"
                                        data-updated-at="{{ $module->updated_at->format('Y-m-d H:i:s') }}"
-                                       class="inline-flex items-center gap-1 text-xs {{ $perm ? 'text-green-600 dark:text-green-400' : 'text-gray-400 dark:text-gray-500' }}">
+                                       class="inline-flex items-center justify-center gap-0.5 text-xs {{ $perm ? 'text-green-600 dark:text-green-400' : 'text-gray-400 dark:text-gray-500' }}">
                                         @if ($perm)
-                                            {{ ($perm->can_create ? 'C' : '') . ($perm->can_read ? 'R' : '') . ($perm->can_update ? 'U' : '') . ($perm->can_delete ? 'D' : '') . ($perm->can_approve ? 'A' : '') . ($perm->can_export ? 'E' : '') . ($perm->can_reveal ? 'Rev' : '') . ($perm->can_import ? 'I' : '') }}
+                                            @php
+                                                $labels = [];
+                                                if ($ctlAccess) $labels[] = '<span class="px-1 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">A</span>';
+                                                if ($ctlManage) $labels[] = '<span class="px-1 rounded bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300">M</span>';
+                                                if ($ctlImport) $labels[] = '<span class="px-1 rounded bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300">I</span>';
+                                                if ($ctlExport) $labels[] = '<span class="px-1 rounded bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300">E</span>';
+                                                if ($ctlFullAccess) $labels[] = '<span class="px-1 rounded bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-300">F</span>';
+                                            @endphp
+                                            {!! implode('', $labels) ?: '<span class="text-gray-400 dark:text-gray-500">—</span>' !!}
                                         @else
                                             —
                                         @endif
@@ -311,8 +348,60 @@
 
 </div>
 
+<style>
+.perm-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.625rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    border: 1px solid #d1d5db;
+    background: transparent;
+    color: #6b7280;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    line-height: 1.25rem;
+}
+.perm-chip:hover {
+    border-color: #9ca3af;
+    background: #f9fafb;
+}
+.perm-chip-active {
+    border-color: transparent;
+    color: #fff;
+}
+.perm-chip-active:hover {
+    opacity: 0.85;
+}
+.perm-chip-blue { background: #3b82f6; border-color: #3b82f6; }
+.perm-chip-green { background: #22c55e; border-color: #22c55e; }
+.perm-chip-purple { background: #a855f7; border-color: #a855f7; }
+.perm-chip-orange { background: #f97316; border-color: #f97316; }
+.perm-chip-rose { background: #f43f5e; border-color: #f43f5e; }
+.perm-chip-disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+.dark .perm-chip {
+    border-color: #4b5563;
+    color: #9ca3af;
+    background: transparent;
+}
+.dark .perm-chip:hover {
+    background: #1f2937;
+}
+.dark .perm-chip-active {
+    color: #fff;
+}
+.dark .perm-chip-active:hover {
+    opacity: 0.8;
+}
+</style>
+
 <script>
-var roleModulePermData = @json($focusedRole ? $modulePresets : (object)[]);
+var roleModulePermData = @json($focusedRole ? $moduleControls : (object)[]);
 
 function initRolePermMode() {
     var isSimple = localStorage.getItem('role_perm_mode') !== 'advanced';
@@ -346,55 +435,91 @@ function filterSimpleModules(query) {
     var rows = document.querySelectorAll('#simpleMode .sm-row');
     rows.forEach(function(row) {
         var name = row.querySelector('.sm-name')?.textContent?.toLowerCase() || '';
-        var hasAccess = row.querySelector('.sm-select')?.value !== '0';
+        var chips = row.querySelectorAll('.perm-chip-active');
+        var hasAccess = chips.length > 0;
         var matchSearch = !q || name.includes(q);
         var matchFilter = !filterAccess || hasAccess;
         row.style.display = (matchSearch && matchFilter) ? '' : 'none';
     });
 }
 
-function onRolePresetChange(select) {
-    var form = select.closest('form');
-    var preset = parseInt(select.value);
-    var moduleId = parseInt(select.dataset.moduleId);
-    var roleId = parseInt(select.dataset.roleId);
+function toggleModuleControl(formEl, controlName) {
+    var hidden = formEl.querySelector('input[name="' + controlName + '"]');
+    if (!hidden) return;
+    hidden.value = hidden.value === '1' ? '0' : '1';
+    enforceModuleDeps(formEl);
+    formEl.submit();
+}
 
-    form.querySelectorAll('input[type="hidden"][name^="can_"]').forEach(function(input) {
-        input.value = '0';
-    });
+function enforceModuleDeps(formEl) {
+    var get = function(name) { var el = formEl.querySelector('input[name="' + name + '"]'); return el && el.value === '1'; };
+    var set = function(name, val) { var el = formEl.querySelector('input[name="' + name + '"]'); if (el) el.value = val ? '1' : '0'; };
 
-    if (preset === 0) {
-        form.submit();
-    } else if (preset === 1) {
-        form.querySelector('input[name="can_read"]').value = '1';
-        form.submit();
-    } else if (preset === 2) {
-        form.querySelector('input[name="can_read"]').value = '1';
-        form.querySelector('input[name="can_create"]').value = '1';
-        form.querySelector('input[name="can_update"]').value = '1';
-        form.submit();
-    } else if (preset === 3) {
-        openRoleCustomEditor(moduleId, roleId, select);
+    var access = get('access');
+    var manage = get('manage');
+    var import_ = get('import');
+    var export_ = get('export');
+    var fullAccess = get('full_access');
+
+    if (fullAccess) {
+        set('access', true);
+        set('manage', true);
+        set('import', true);
+        set('export', true);
+        return;
     }
+
+    if (!access) {
+        set('manage', false);
+        set('import', false);
+        set('export', false);
+        return;
+    }
+
+    var moduleId = formEl.querySelector('input[name="module_id"]')?.value;
+    var info = roleModulePermData[moduleId];
+    if (info) {
+        if (!info.isImportable) set('import', false);
+        if (!info.isExportable) set('export', false);
+    }
+
+    var shouldBeFull = access && manage;
+    if (info) {
+        if (info.isImportable && !get('import')) shouldBeFull = false;
+        if (info.isExportable && !get('export')) shouldBeFull = false;
+    }
+    if (!shouldBeFull) set('full_access', false);
 }
 
 function openRoleCustomEditor(moduleId, roleId, selectEl) {
     var form = selectEl.closest('form');
     var updatedAt = form.querySelector('input[name="updated_at"]').value;
-    var perms = roleModulePermData[moduleId] || {};
+    var info = roleModulePermData[moduleId] || {};
 
     document.getElementById('edit_module_id').value = moduleId;
     document.getElementById('edit_role_id').value = roleId;
     document.getElementById('edit_updated_at').value = updatedAt;
 
-    var permKeys = ['create', 'read', 'update', 'delete', 'approve', 'export', 'reveal', 'import'];
-    permKeys.forEach(function(key) {
-        var col = 'can_' + key;
-        var checkbox = document.querySelector('#permModal input[name="' + col + '"]');
+    var controlKeys = ['access', 'manage', 'import', 'export', 'full_access'];
+    controlKeys.forEach(function(key) {
+        var checkbox = document.querySelector('#permModal input[name="' + key + '"]');
         if (checkbox) {
-            checkbox.checked = !!perms[col];
+            checkbox.checked = !!info['ctl' + key.charAt(0).toUpperCase() + key.slice(1)];
         }
     });
+
+    var isImportable = !!info.isImportable;
+    var isExportable = !!info.isExportable;
+    var importLabel = document.getElementById('modalImportLabel');
+    var exportLabel = document.getElementById('modalExportLabel');
+    if (importLabel) {
+        importLabel.style.opacity = isImportable ? '1' : '0.35';
+        importLabel.querySelector('input').disabled = !isImportable;
+    }
+    if (exportLabel) {
+        exportLabel.style.opacity = isExportable ? '1' : '0.35';
+        exportLabel.querySelector('input').disabled = !isExportable;
+    }
 
     document.getElementById('permModal').classList.remove('hidden');
 }
@@ -407,9 +532,33 @@ document.querySelectorAll('[data-edit-perm]').forEach(function(el) {
         var parts = this.dataset.editPerm.split(',');
         var moduleId = parseInt(parts[0]);
         var roleId = parseInt(parts[1]);
+        var info = roleModulePermData[moduleId] || {};
+
         document.getElementById('edit_module_id').value = moduleId;
         document.getElementById('edit_role_id').value = roleId;
         document.getElementById('edit_updated_at').value = this.dataset.updatedAt;
+
+        var controlKeys = ['access', 'manage', 'import', 'export', 'full_access'];
+        controlKeys.forEach(function(key) {
+            var checkbox = document.querySelector('#permModal input[name="' + key + '"]');
+            if (checkbox) {
+                checkbox.checked = !!info['ctl' + key.charAt(0).toUpperCase() + key.slice(1)];
+            }
+        });
+
+        var isImportable = !!info.isImportable;
+        var isExportable = !!info.isExportable;
+        var importLabel = document.getElementById('modalImportLabel');
+        var exportLabel = document.getElementById('modalExportLabel');
+        if (importLabel) {
+            importLabel.style.opacity = isImportable ? '1' : '0.35';
+            importLabel.querySelector('input').disabled = !isImportable;
+        }
+        if (exportLabel) {
+            exportLabel.style.opacity = isExportable ? '1' : '0.35';
+            exportLabel.querySelector('input').disabled = !isExportable;
+        }
+
         document.getElementById('permModal').classList.remove('hidden');
     });
 });
@@ -424,6 +573,50 @@ document.getElementById('confirmRemoveBtn')?.addEventListener('click', function(
         document.getElementById('remove_role_id').value = document.getElementById('edit_role_id').value;
         document.getElementById('removeForm').submit();
     }
+});
+
+document.querySelectorAll('.perm-modal-check').forEach(function(cb) {
+    cb.addEventListener('change', function() {
+        var form = this.closest('form');
+        var get = function(name) { var el = form.querySelector('input[name="' + name + '"]'); return el && el.checked; };
+        var set = function(name, val) { var el = form.querySelector('input[name="' + name + '"]'); if (el) el.checked = val; };
+
+        var access = get('access');
+        var manage = get('manage');
+        var import_ = get('import');
+        var export_ = get('export');
+        var fullAccess = get('full_access');
+
+        if (fullAccess) {
+            set('access', true);
+            set('manage', true);
+            set('import', true);
+            set('export', true);
+            return;
+        }
+
+        if (!access) {
+            set('manage', false);
+            set('import', false);
+            set('export', false);
+            set('full_access', false);
+            return;
+        }
+
+        var moduleId = form.querySelector('input[name="module_id"]')?.value;
+        var info = roleModulePermData[moduleId];
+        if (info) {
+            if (!info.isImportable) set('import', false);
+            if (!info.isExportable) set('export', false);
+        }
+
+        var shouldBeFull = access && manage;
+        if (info) {
+            if (info.isImportable && !get('import')) shouldBeFull = false;
+            if (info.isExportable && !get('export')) shouldBeFull = false;
+        }
+        if (!shouldBeFull) set('full_access', false);
+    });
 });
 </script>
 @endsection
