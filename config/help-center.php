@@ -96,6 +96,24 @@ return [
             'searchable' => true,
         ],
 
+        'understanding-permissions' => [
+            'title' => 'Understanding Permissions',
+            'file' => 'help/getting-started/understanding-permissions.md',
+            'category' => 'getting-started',
+            'weight' => 10,
+            'audience' => 'all',
+            'searchable' => true,
+        ],
+
+        'my-permissions' => [
+            'title' => 'My Permissions',
+            'file' => 'help/getting-started/my-permissions.md',
+            'category' => 'getting-started',
+            'weight' => 20,
+            'audience' => 'all',
+            'searchable' => true,
+        ],
+
         // ── Features ──────────────────────────────────────────────────
         'dashboard' => [
             'title' => 'Dashboard',
@@ -150,6 +168,15 @@ return [
             'file' => 'help/reference/permission-reference.md',
             'category' => 'reference',
             'weight' => 0,
+            'audience' => 'all',
+            'searchable' => true,
+        ],
+
+        'credential-reveal' => [
+            'title' => 'Credential Reveal Reference',
+            'file' => 'help/reference/credential-reveal.md',
+            'category' => 'reference',
+            'weight' => 10,
             'audience' => 'all',
             'searchable' => true,
         ],
@@ -214,7 +241,7 @@ return [
         'search'             => 'quick-start',
         'export'             => 'domains',
         'profile'            => 'quick-start',
-        'my-permissions'     => 'permission-reference',
+        'my-permissions'     => 'my-permissions',
     ],
 
     /*

@@ -379,6 +379,150 @@ class HelpServiceTest extends TestCase
         $this->assertNull($this->service->getDocumentContent('nonexistent'));
     }
 
+    // ── BATCH 2: CORE DOCUMENTATION INTEGRITY ──────────────────────
+
+    public function test_batch2_docs_are_registered(): void
+    {
+        $slugs = ['understanding-permissions', 'my-permissions', 'credential-reveal'];
+        foreach ($slugs as $slug) {
+            $this->assertNotNull(
+                $this->service->getDocument($slug),
+                "Batch 2 doc '{$slug}' is not registered"
+            );
+        }
+    }
+
+    public function test_batch2_doc_files_exist(): void
+    {
+        $batch2 = [
+            'understanding-permissions' => 'help/getting-started/understanding-permissions.md',
+            'my-permissions' => 'help/getting-started/my-permissions.md',
+            'credential-reveal' => 'help/reference/credential-reveal.md',
+        ];
+        foreach ($batch2 as $slug => $file) {
+            $this->assertFileExists(
+                base_path($file),
+                "Batch 2 file for '{$slug}' does not exist: {$file}"
+            );
+        }
+    }
+
+    public function test_batch2_docs_are_searchable(): void
+    {
+        $batch2 = ['understanding-permissions', 'my-permissions', 'credential-reveal'];
+        $user = $this->createUserWithRole('admin');
+        foreach ($batch2 as $slug) {
+            $doc = $this->service->getDocument($slug);
+            $this->assertNotNull($doc, "Batch 2 doc '{$slug}' not found in registry");
+            $this->assertTrue(
+                $doc['searchable'] ?? false,
+                "Batch 2 doc '{$slug}' should be searchable"
+            );
+        }
+    }
+
+    public function test_batch2_docs_have_correct_audience(): void
+    {
+        $user = $this->createUserWithRole('admin');
+
+        $allAudience = ['understanding-permissions', 'my-permissions', 'credential-reveal'];
+        foreach ($allAudience as $slug) {
+            $this->assertTrue(
+                $this->service->canAccess($slug, $user),
+                "Batch 2 doc '{$slug}' should be accessible to normal user"
+            );
+        }
+    }
+
+    public function test_batch2_docs_have_no_legacy_root_dependency(): void
+    {
+        $batch2Files = [
+            'help/getting-started/understanding-permissions.md',
+            'help/getting-started/my-permissions.md',
+            'help/reference/credential-reveal.md',
+        ];
+        foreach ($batch2Files as $file) {
+            $this->assertStringStartsWith(
+                'help/',
+                $file,
+                "File '{$file}' is not in the help/ directory"
+            );
+            $this->assertDoesNotMatchRegularExpression(
+                '/^\d+_/',
+                basename($file),
+                "File '{$file}' has legacy numeric prefix"
+            );
+        }
+    }
+
+    public function test_redirect_destinations_remain_valid(): void
+    {
+        $legacySlugs = $this->service->getLegacySlugRedirects();
+        $documents = $this->service->getRegistry()['documents'] ?? [];
+        foreach ($legacySlugs as $old => $new) {
+            $this->assertArrayHasKey(
+                $new,
+                $documents,
+                "Legacy slug '{$old}' redirects to '{$new}' which is not registered"
+            );
+            $this->assertFileExists(
+                base_path($documents[$new]['file']),
+                "Redirect target '{$new}' file does not exist"
+            );
+        }
+    }
+
+    public function test_batch2_docs_contain_no_old_permission_terminology(): void
+    {
+        $batch2Files = [
+            'help/getting-started/understanding-permissions.md',
+            'help/getting-started/my-permissions.md',
+            'help/reference/permission-reference.md',
+            'help/reference/credential-reveal.md',
+        ];
+
+        $forbiddenPatterns = [
+            '/[Rr]eveal.*(?:is a|as a).*(?:standalone permission|assignable control)/',
+            '/[Dd]elete.*(?:is a|as a).*(?:normal|standard|assignable).*(?:control|permission)/',
+        ];
+
+        foreach ($batch2Files as $file) {
+            $path = base_path($file);
+            if (!file_exists($path)) {
+                continue;
+            }
+            $content = file_get_contents($path);
+            foreach ($forbiddenPatterns as $pattern) {
+                $this->assertDoesNotMatchRegularExpression(
+                    $pattern,
+                    $content,
+                    "File '{$file}' contains old permission terminology matching: {$pattern}"
+                );
+            }
+        }
+    }
+
+    public function test_batch2_updated_docs_load_and_render(): void
+    {
+        $slugs = ['quick-start', 'dashboard', 'permission-reference',
+                  'understanding-permissions', 'my-permissions', 'credential-reveal'];
+        $user = $this->createUserWithRole('admin');
+        $this->actingAs($user);
+
+        foreach ($slugs as $slug) {
+            $html = $this->service->getDocumentContent($slug);
+            $this->assertNotNull(
+                $html,
+                "Batch 2 doc '{$slug}' returned null content"
+            );
+            $this->assertStringContainsString(
+                '<h1',
+                $html,
+                "Batch 2 doc '{$slug}' has no <h1> tag"
+            );
+        }
+    }
+
     // ── TODAY WORKFLOW & QUICK LINKS (preserved) ───────────────────
 
     public function test_get_today_workflow_returns_super_admin_tasks(): void
