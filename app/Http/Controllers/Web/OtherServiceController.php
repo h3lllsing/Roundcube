@@ -138,7 +138,7 @@ class OtherServiceController extends BaseResourceController
         abort_unless($user->hasRole('super-admin') || ($serviceModule && $user->canOnModule($serviceModule, 'read')), 403);
         $this->userOwnedFilter();
         $service = OtherService::findOrFail($id);
-        abort_unless($user->hasRole('super-admin') || ($serviceModule && $user->canOnModule($serviceModule, 'reveal')), 403);
+        abort_unless($user->canRevealCredentialsFor($serviceModule), 403);
         activity()->event('revealed')
             ->performedOn($service)
             ->causedBy($user)
@@ -155,8 +155,7 @@ class OtherServiceController extends BaseResourceController
         abort_unless($user->hasRole('super-admin') || ($serviceModule && $user->canOnModule($serviceModule, 'read')), 403);
         $this->userOwnedFilter();
         $service = OtherService::findOrFail($id);
-        $vaultModule = \App\Helpers\ModuleCache::findBySlug('vault');
-        abort_unless($user->hasRole('super-admin') || ($vaultModule && $user->canOnModule($vaultModule, 'reveal')), 403);
+        abort_unless($user->canRevealCredentialsFor($serviceModule), 403);
         activity()->event('copied')
             ->performedOn($service)
             ->causedBy($user)

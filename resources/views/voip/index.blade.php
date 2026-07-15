@@ -64,7 +64,7 @@
                             @php
                                 $_canEdit = auth()->user()->hasRole('super-admin') || ($voip->module && auth()->user()->canOnModule($voip->module, 'update'));
                                 $_canDelete = auth()->user()->hasRole('super-admin') || ($voip->module && auth()->user()->canOnModule($voip->module, 'delete'));
-                                $_canReveal = auth()->user()->hasRole('super-admin') || ($voip->module && auth()->user()->canOnModule($voip->module, 'reveal'));
+                                $_canReveal = auth()->user()->canRevealCredentialsFor($voip->module);
                                 $_hasExtPassword = (bool)$voip->extension_password;
                             @endphp
                             <div x-data="{ open: false, style: '' }" @click.away="open = false" class="relative inline-block">

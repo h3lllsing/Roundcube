@@ -159,7 +159,7 @@ class ServiceProviderController extends BaseResourceController
         abort_unless($user->hasRole('super-admin') || ($providerModule && $user->canOnModule($providerModule, 'read')), 403);
         $this->userOwnedFilter();
         $provider = ServiceProvider::findOrFail($id);
-        abort_unless($user->hasRole('super-admin') || ($providerModule && $user->canOnModule($providerModule, 'reveal')), 403);
+        abort_unless($user->canRevealCredentialsFor($providerModule), 403);
         activity()->event('revealed')
             ->performedOn($provider)
             ->causedBy($user)

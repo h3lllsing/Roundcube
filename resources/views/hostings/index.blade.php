@@ -58,7 +58,7 @@
                             <td class="px-6 py-3 whitespace-nowrap">
                             @php
                                 $_hasCpanelUrl = $hosting->cpanel_url && Str::startsWith($hosting->cpanel_url, ['http://', 'https://']);
-                                $_canReveal = auth()->user()->hasRole('super-admin') || ($hosting->module && auth()->user()->canOnModule($hosting->module, 'reveal'));
+                                $_canReveal = auth()->user()->canRevealCredentialsFor($hosting->module);
                                 $_hasUsername = (bool)$hosting->username;
                             @endphp
                             <div x-data="{ open: false, style: '' }" @click.away="open = false" class="relative inline-block">

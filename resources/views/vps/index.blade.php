@@ -68,7 +68,7 @@
                             <td class="px-6 py-3 text-gray-500">{{ $vps->user->name ?? '—' }}</td>
                             <td class="px-6 py-3 whitespace-nowrap">
                             @php
-                                $_canReveal = auth()->user()->hasRole('super-admin') || ($vps->module && auth()->user()->canOnModule($vps->module, 'reveal'));
+                                $_canReveal = auth()->user()->canRevealCredentialsFor($vps->module);
                                 $_hasPassword = (bool)$vps->password;
                             @endphp
                             <div x-data="{ open: false, style: '' }" @click.away="open = false" class="relative inline-block">

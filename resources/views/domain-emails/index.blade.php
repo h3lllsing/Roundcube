@@ -66,7 +66,7 @@
                             @php
                                 $_canEdit = auth()->user()->hasRole('super-admin') || ($email->module && auth()->user()->canOnModule($email->module, 'update'));
                                 $_canDelete = auth()->user()->hasRole('super-admin') || ($email->module && auth()->user()->canOnModule($email->module, 'delete'));
-                                $_canReveal = auth()->user()->hasRole('super-admin') || ($email->module && auth()->user()->canOnModule($email->module, 'reveal'));
+                                $_canReveal = auth()->user()->canRevealCredentialsFor($email->module);
                                 $_hasPassword = (bool)$email->password;
                             @endphp
                             <div x-data="{ open: false, style: '' }" @click.away="open = false" class="relative inline-block">

@@ -170,7 +170,7 @@ class DomainEmailController extends Controller
         $this->userOwnedFilter();
         $email = DomainEmail::findOrFail($id);
 
-        abort_unless($user->hasRole('super-admin') || ($emailModule && $user->canOnModule($emailModule, 'reveal')), 403);
+        abort_unless($user->canRevealCredentialsFor($emailModule), 403);
 
         activity()->event('revealed')
             ->performedOn($email)

@@ -2,7 +2,9 @@
 
 namespace Tests\Feature;
 
+use App\Models\Asset;
 use App\Models\DomainEmail;
+use App\Models\GMail;
 use App\Models\Hosting;
 use App\Models\Module;
 use App\Models\ModuleRolePermission;
@@ -14,6 +16,7 @@ use App\Models\VaultEntry;
 use App\Models\Voip;
 use App\Models\Vps;
 use Database\Seeders\FeatureModuleSeeder;
+use Illuminate\Support\Facades\DB;
 use HasinHayder\Tyro\Database\Seeders\TyroSeeder;
 use HasinHayder\Tyro\Models\Role;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -525,5 +528,336 @@ class RbacPhase2B3Test extends TestCase
         $response = $this->actingAs($this->superAdmin)->get(route('service-providers.index'));
         $response->assertOk();
         $response->assertSee('Copy Password');
+    }
+
+    // ─── canRevealCredentialsFor() DIRECT UNIT TESTS ─────────────────
+
+    public function test_can_reveal_credentials_super_admin_with_module(): void
+    {
+        $this->assertTrue($this->superAdmin->canRevealCredentialsFor($this->hostingsModule));
+    }
+
+    public function test_can_reveal_credentials_super_admin_without_module(): void
+    {
+        $this->assertTrue($this->superAdmin->canRevealCredentialsFor(null));
+    }
+
+    public function test_can_reveal_credentials_null_module_denies_non_super_admin(): void
+    {
+        $this->assertFalse($this->admin->canRevealCredentialsFor(null));
+        $this->assertFalse($this->normalUser->canRevealCredentialsFor(null));
+    }
+
+    public function test_can_reveal_credentials_user_with_role_reveal(): void
+    {
+        $this->assertTrue($this->admin->canRevealCredentialsFor($this->hostingsModule));
+    }
+
+    public function test_can_reveal_credentials_auto_grant_from_read_activates_even_with_role_reveal_false(): void
+    {
+        $this->assertTrue($this->normalUser->canRevealCredentialsFor($this->hostingsModule));
+    }
+
+    public function test_can_reveal_credentials_denied_without_read_and_without_reveal(): void
+    {
+        $user = User::factory()->create();
+        $user->assignRole($this->userRole);
+        ModuleRolePermission::updateOrCreate(
+            ['module_id' => $this->hostingsModule->id, 'role_id' => $this->userRole->id],
+            ['can_read' => false, 'can_reveal' => false]
+        );
+
+        $this->assertFalse($user->canRevealCredentialsFor($this->hostingsModule));
+    }
+
+    public function test_can_reveal_credentials_explicit_override_false_denies(): void
+    {
+        UserModulePermission::create([
+            'user_id' => $this->admin->id, 'module_id' => $this->hostingsModule->id,
+            'can_reveal' => false,
+        ]);
+
+        $this->assertFalse($this->admin->canRevealCredentialsFor($this->hostingsModule));
+    }
+
+    public function test_can_reveal_credentials_explicit_override_true_grants_even_when_role_denies(): void
+    {
+        $user = User::factory()->create();
+        $user->assignRole($this->userRole);
+        UserModulePermission::create([
+            'user_id' => $user->id, 'module_id' => $this->hostingsModule->id,
+            'can_reveal' => true, 'can_read' => true,
+        ]);
+
+        $this->assertTrue($user->canRevealCredentialsFor($this->hostingsModule));
+    }
+
+    public function test_can_reveal_credentials_user_with_no_roles(): void
+    {
+        $user = User::factory()->create();
+
+        $this->assertFalse($user->canRevealCredentialsFor($this->hostingsModule));
+    }
+
+    public function test_can_reveal_credentials_multiple_roles_or_merge(): void
+    {
+        $allowRole = \HasinHayder\Tyro\Models\Role::create(['slug' => 'allow-reveal', 'name' => 'Allow Reveal']);
+        ModuleRolePermission::create([
+            'module_id' => $this->hostingsModule->id, 'role_id' => $allowRole->id,
+            'can_reveal' => true, 'can_read' => true,
+        ]);
+        $denyRole = \HasinHayder\Tyro\Models\Role::create(['slug' => 'deny-reveal', 'name' => 'Deny Reveal']);
+        ModuleRolePermission::create([
+            'module_id' => $this->hostingsModule->id, 'role_id' => $denyRole->id,
+            'can_reveal' => false,
+        ]);
+
+        $user = User::factory()->create();
+        $user->assignRole($allowRole);
+        $user->assignRole($denyRole);
+
+        $this->assertTrue($user->canRevealCredentialsFor($this->hostingsModule));
+    }
+
+    public function test_can_reveal_credentials_no_read_no_reveal_denies(): void
+    {
+        $user = User::factory()->create();
+        $user->assignRole($this->userRole);
+        $noAccessModule = Module::factory()->create(['slug' => 'no-access', 'name' => 'No Access']);
+
+        $this->assertFalse($user->canRevealCredentialsFor($noAccessModule));
+    }
+
+    public function test_vault_entry_without_module_reveal_denies_non_super_admin(): void
+    {
+        $entry = VaultEntry::factory()->create([
+            'module_id' => null,
+            'user_id' => $this->normalUser->id,
+        ]);
+
+        $this->assertFalse($this->normalUser->canRevealCredentialsFor($entry->module));
+        $this->assertTrue($this->superAdmin->canRevealCredentialsFor($entry->module));
+    }
+
+    public function test_vault_entry_with_module_reveal_grants_with_permission(): void
+    {
+        $entry = VaultEntry::factory()->create([
+            'module_id' => $this->vaultModule->id,
+            'user_id' => $this->admin->id,
+        ]);
+
+        $this->assertTrue($this->admin->canRevealCredentialsFor($entry->module));
+    }
+
+    public function test_vault_entry_owner_cannot_reveal_without_read_permission(): void
+    {
+        $user = User::factory()->create();
+        $user->assignRole($this->userRole);
+        ModuleRolePermission::updateOrCreate(
+            ['module_id' => $this->hostingsModule->id, 'role_id' => $this->userRole->id],
+            ['can_read' => false, 'can_reveal' => false]
+        );
+        $entry = VaultEntry::factory()->create([
+            'module_id' => $this->hostingsModule->id,
+            'user_id' => $user->id,
+        ]);
+
+        $this->assertFalse($user->canRevealCredentialsFor($entry->module));
+    }
+
+    // ─── 6 SCENARIO VERIFICATION (precedence rules) ────────────────
+
+    private function makeScenarioBase(): User
+    {
+        $user = User::factory()->create();
+        $user->assignRole($this->userRole);
+        return $user;
+    }
+
+    public function test_scenario_A_role_read_true_no_user_override(): void
+    {
+        $user = $this->makeScenarioBase();
+        $this->assertTrue($user->canRevealCredentialsFor($this->hostingsModule));
+    }
+
+    public function test_scenario_B_role_read_true_user_reveal_false(): void
+    {
+        $user = $this->makeScenarioBase();
+        UserModulePermission::create([
+            'user_id' => $user->id,
+            'module_id' => $this->hostingsModule->id,
+            'can_read' => null,
+            'can_reveal' => false,
+        ]);
+        $this->assertFalse($user->canRevealCredentialsFor($this->hostingsModule));
+    }
+
+    public function test_scenario_C_role_read_true_user_read_false_reveal_null(): void
+    {
+        $user = $this->makeScenarioBase();
+        UserModulePermission::create([
+            'user_id' => $user->id,
+            'module_id' => $this->hostingsModule->id,
+            'can_read' => false,
+            'can_reveal' => null,
+        ]);
+        $this->assertFalse($user->canRevealCredentialsFor($this->hostingsModule));
+    }
+
+    public function test_scenario_D_direct_user_read_true_no_role(): void
+    {
+        $user = User::factory()->create();
+        UserModulePermission::create([
+            'user_id' => $user->id,
+            'module_id' => $this->hostingsModule->id,
+            'can_read' => true,
+            'can_reveal' => null,
+        ]);
+        $this->assertTrue($user->canRevealCredentialsFor($this->hostingsModule));
+    }
+
+    public function test_scenario_E_multi_role_or_read_no_user_override(): void
+    {
+        $allowRole = \HasinHayder\Tyro\Models\Role::create(['slug' => 'read-only', 'name' => 'Read Only']);
+        ModuleRolePermission::create([
+            'module_id' => $this->hostingsModule->id,
+            'role_id' => $allowRole->id,
+            'can_read' => true,
+            'can_reveal' => false,
+        ]);
+        $denyRole = \HasinHayder\Tyro\Models\Role::create(['slug' => 'no-access', 'name' => 'No Access']);
+        ModuleRolePermission::create([
+            'module_id' => $this->hostingsModule->id,
+            'role_id' => $denyRole->id,
+            'can_read' => false,
+        ]);
+        $user = User::factory()->create();
+        $user->assignRole($allowRole);
+        $user->assignRole($denyRole);
+
+        $this->assertTrue($user->canRevealCredentialsFor($this->hostingsModule));
+    }
+
+    public function test_scenario_F_super_admin_always_allowed(): void
+    {
+        $this->assertTrue($this->superAdmin->canRevealCredentialsFor($this->deniedModule));
+        $this->assertTrue($this->superAdmin->canRevealCredentialsFor(null));
+    }
+
+    // ─── READ OVERRIDE PRECEDENCE ───────────────────────────────────
+
+    public function test_user_read_false_override_beats_role_read_true(): void
+    {
+        $user = $this->makeScenarioBase();
+        UserModulePermission::create([
+            'user_id' => $user->id,
+            'module_id' => $this->hostingsModule->id,
+            'can_read' => false,
+            'can_reveal' => null,
+        ]);
+
+        $readResult = $user->canOnModule($this->hostingsModule, 'read');
+        $revealResult = $user->canRevealCredentialsFor($this->hostingsModule);
+
+        $this->assertFalse($readResult, 'User override can_read=false must deny read');
+        $this->assertFalse($revealResult, 'Without effective read, reveal must be denied');
+    }
+
+    public function test_user_read_true_override_beats_role_read_false(): void
+    {
+        $user = $this->makeScenarioBase();
+        ModuleRolePermission::updateOrCreate(
+            ['module_id' => $this->hostingsModule->id, 'role_id' => $this->userRole->id],
+            ['can_read' => false, 'can_reveal' => false]
+        );
+        UserModulePermission::create([
+            'user_id' => $user->id,
+            'module_id' => $this->hostingsModule->id,
+            'can_read' => true,
+            'can_reveal' => null,
+        ]);
+
+        $this->assertTrue($user->canRevealCredentialsFor($this->hostingsModule));
+    }
+
+    // ─── DATA MIGRATION TESTS ──────────────────────────────────────────
+
+    public function test_migration_backfills_null_gmail_module_id(): void
+    {
+        $gmailModule = Module::where('slug', 'g-mails')->firstOrFail();
+        // Create a G-Mail record with null module_id
+        $gmail = \App\Models\GMail::factory()->create(['module_id' => null, 'user_id' => $this->superAdmin->id]);
+        $this->assertNull($gmail->fresh()->module_id);
+
+        $migration = require __DIR__ . '/../../database/migrations/2026_07_16_000001_backfill_null_module_ids.php';
+        $migration->up();
+
+        $this->assertEquals($gmailModule->id, $gmail->fresh()->module_id);
+    }
+
+    public function test_migration_is_idempotent(): void
+    {
+        $gmailModule = Module::where('slug', 'g-mails')->firstOrFail();
+        $gmail = \App\Models\GMail::factory()->create(['module_id' => null, 'user_id' => $this->superAdmin->id]);
+        $hosting = Hosting::factory()->create(['module_id' => null, 'user_id' => $this->superAdmin->id]);
+
+        $migration = require __DIR__ . '/../../database/migrations/2026_07_16_000001_backfill_null_module_ids.php';
+        $migration->up();
+
+        $firstModuleId = $gmail->fresh()->module_id;
+        $firstHostingModuleId = $hosting->fresh()->module_id;
+
+        // Run a second time
+        $migration->up();
+
+        $this->assertEquals($gmailModule->id, $gmail->fresh()->module_id);
+        $this->assertEquals($firstModuleId, $gmail->fresh()->module_id);
+        $this->assertEquals($firstHostingModuleId, $hosting->fresh()->module_id);
+    }
+
+    public function test_migration_does_not_overwrite_non_null_module_id(): void
+    {
+        $otherModule = Module::where('slug', 'tasks')->firstOrFail();
+        $gmail = GMail::factory()->create([
+            'module_id' => $otherModule->id,
+            'user_id' => $this->superAdmin->id,
+        ]);
+        $originalModuleId = $gmail->module_id;
+
+        $migration = require __DIR__ . '/../../database/migrations/2026_07_16_000001_backfill_null_module_ids.php';
+
+        try {
+            $migration->up();
+        } catch (\ErrorException $e) {
+            // Expected: migration warns about wrong module_id
+        }
+
+        $this->assertEquals($originalModuleId, $gmail->fresh()->module_id);
+    }
+
+    public function test_migration_backfills_all_resource_tables(): void
+    {
+        $entries = [
+            GMail::class          => 'g_mails',
+            Hosting::class        => 'hostings',
+            Vps::class            => 'vps',
+            Voip::class           => 'voip',
+            DomainEmail::class    => 'domain_emails',
+            ServiceProvider::class => 'service_providers',
+            OtherService::class   => 'other_services',
+            Asset::class          => 'assets',
+        ];
+
+        foreach ($entries as $model => $table) {
+            $model::factory()->create(['module_id' => null, 'user_id' => $this->superAdmin->id]);
+            $this->assertNotNull(DB::table($table)->whereNull('module_id')->first(), "Table {$table} should have a null module_id before migration");
+        }
+
+        $migration = require __DIR__ . '/../../database/migrations/2026_07_16_000001_backfill_null_module_ids.php';
+        $migration->up();
+
+        foreach ($entries as $model => $table) {
+            $this->assertNull(DB::table($table)->whereNull('module_id')->first(), "Table {$table} still has null module_id after migration");
+        }
     }
 }

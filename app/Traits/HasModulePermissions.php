@@ -62,14 +62,11 @@ trait HasModulePermissions
         }
 
         if ($action === 'reveal') {
-            $hasReadOverride = $userOverride && $userOverride->can_read !== null;
-            $hasReadPermission = $hasReadOverride ? $userOverride->can_read : ModuleRolePermission::whereIn('role_id', $this->getRoleIds())
-                ->where('module_id', $module->id)
-                ->where('can_read', true)
-                ->exists();
-            $explicitRevealDeny = $userOverride && $userOverride->can_reveal !== null && ! $userOverride->can_reveal;
+            if ($userOverride && $userOverride->can_reveal !== null && ! $userOverride->can_reveal) {
+                return false;
+            }
 
-            if ($hasReadPermission && ! $explicitRevealDeny) {
+            if ($this->canOnModule($module, 'read')) {
                 return true;
             }
         }
@@ -185,6 +182,31 @@ trait HasModulePermissions
         }
 
         return $result;
+    }
+
+    /** Centralized credential reveal gate. Used by all controllers and Blade views.
+     *
+     * - Super Admin always passes.
+     * - Null module (orphaned record or personal vault entry) → denied for non-SA.
+     * - Delegates to canOnModule(module, 'reveal'):
+     *   1. User override with can_reveal=true/false takes priority
+     *   2. Multiple roles are OR-merged
+     *   3. Auto-grant: if user has can_read (role or override) and no explicit can_reveal=false override → reveal granted
+     * - NO owner bypass (unlike canAccessVault which grants vault entry access to its owner).
+     *   Vault entry owners without can_reveal on the associated module cannot reveal their own password.
+     *
+     * For vault entries linked to a resource module (module_id set), this checks
+     * that module's permissions. For standalone/personal vault entries (module_id null),
+     * only super-admin can reveal. */
+    public function canRevealCredentialsFor(?Module $module): bool
+    {
+        if ($this->hasRole('super-admin')) {
+            return true;
+        }
+        if (!$module) {
+            return false;
+        }
+        return $this->canOnModule($module, 'reveal');
     }
 
     public function canAccessVault(VaultEntry $vault): bool

@@ -169,7 +169,7 @@ class VaultController extends Controller
     public function reveal(Request $request, VaultEntry $vault): JsonResponse
     {
         $user = $request->user();
-        abort_unless($user->hasRole('super-admin') || ($vault->module && $user->canOnModule($vault->module, 'reveal')), 403);
+        abort_unless($user->canRevealCredentialsFor($vault->module), 403);
         $password = $this->vaultService->reveal($vault, $user);
 
         return $this->success([

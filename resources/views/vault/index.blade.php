@@ -75,7 +75,7 @@
                             @php
                                 $_canEdit = auth()->user()->hasRole('super-admin') || ($entry->module && auth()->user()->canOnModule($entry->module, 'update'));
                                 $_canDelete = auth()->user()->hasRole('super-admin') || ($entry->module && auth()->user()->canOnModule($entry->module, 'delete'));
-                                $_canReveal = auth()->user()->hasRole('super-admin') || ($entry->module && auth()->user()->canOnModule($entry->module, 'reveal'));
+                                $_canReveal = auth()->user()->canRevealCredentialsFor($entry->module);
                                 $_hasPassword = (bool)$entry->encrypted_password;
                                 $_hasServiceUrl = (bool)$entry->service_url;
                                 $_hasOperationalShortcuts = $_hasServiceUrl;

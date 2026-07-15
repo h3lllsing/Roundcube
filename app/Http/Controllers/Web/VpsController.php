@@ -143,7 +143,7 @@ class VpsController extends BaseResourceController
         abort_unless($user->hasRole('super-admin') || ($vpsModule && $user->canOnModule($vpsModule, 'read')), 403);
         $this->userOwnedFilter();
         $vps = Vps::findOrFail($id);
-        abort_unless($user->hasRole('super-admin') || ($vpsModule && $user->canOnModule($vpsModule, 'reveal')), 403);
+        abort_unless($user->canRevealCredentialsFor($vpsModule), 403);
         activity()->event('revealed')
             ->performedOn($vps)
             ->causedBy($user)
@@ -160,8 +160,7 @@ class VpsController extends BaseResourceController
         abort_unless($user->hasRole('super-admin') || ($vpsModule && $user->canOnModule($vpsModule, 'read')), 403);
         $this->userOwnedFilter();
         $vps = Vps::findOrFail($id);
-        $vaultModule = \App\Helpers\ModuleCache::findBySlug('vault');
-        abort_unless($user->hasRole('super-admin') || ($vaultModule && $user->canOnModule($vaultModule, 'reveal')), 403);
+        abort_unless($user->canRevealCredentialsFor($vpsModule), 403);
         activity()->event('copied')
             ->performedOn($vps)
             ->causedBy($user)

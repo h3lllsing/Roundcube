@@ -214,7 +214,7 @@ class VaultController extends Controller
         $entry = VaultEntry::with('module', 'user')->findOrFail($id);
 
         $user = Auth::user();
-        abort_unless($user->hasRole('super-admin') || ($entry->module && $user->canOnModule($entry->module, 'reveal')), 403);
+        abort_unless($user->canRevealCredentialsFor($entry->module), 403);
 
         $password = $vaultService->reveal($entry, $user);
 
@@ -228,7 +228,7 @@ class VaultController extends Controller
         $entry = VaultEntry::with('module')->findOrFail($id);
 
         $user = Auth::user();
-        abort_unless($user->hasRole('super-admin') || ($entry->module && $user->canOnModule($entry->module, 'reveal')), 403);
+        abort_unless($user->canRevealCredentialsFor($entry->module), 403);
 
         $password = $vaultService->reveal($entry, $user);
 

@@ -260,7 +260,7 @@ class AssetController extends Controller
         abort_unless($user->hasRole('super-admin') || ($assetModule && $user->canOnModule($assetModule, 'read')), 403);
         $this->userOwnedFilter();
         $asset = Asset::findOrFail($id);
-        abort_unless($user->hasRole('super-admin') || ($assetModule && $user->canOnModule($assetModule, 'reveal')), 403);
+        abort_unless($user->canRevealCredentialsFor($assetModule), 403);
         activity()->event('revealed')
             ->performedOn($asset)
             ->causedBy($user)
