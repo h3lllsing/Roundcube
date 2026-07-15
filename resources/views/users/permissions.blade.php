@@ -1,95 +1,7 @@
 @php
-    $sensitiveSlugs = config('permissions.sensitive_modules', []);
-    $permKeys = config('permissions.keys');
-    $toggleNames = ['view', 'create', 'edit', 'delete', 'approve', 'export', 'reveal', 'import'];
-    $toggleMap = array_combine($permKeys, $toggleNames);
-    $toggleToColumn = array_combine($toggleNames, $permKeys);
-
-    $moduleList = [];
-    foreach ($modules as $module) {
-        $effective = $user->getEffectiveModulePermissions($module);
-
-        $rolePerms = [];
-        $effectivePerms = [];
-        $overridePerms = [];
-        foreach ($permKeys as $key) {
-            $roleVal = $effective[$key]['role'] ?? false;
-            $overrideVal = $effective[$key]['user_override'] ?? null;
-            $effVal = $effective[$key]['effective'] ?? false;
-
-            $rolePerms[$key] = $roleVal;
-            $effectivePerms[$key] = $effVal;
-            if ($overrideVal !== null) {
-                $overridePerms[$key] = $overrideVal;
-            }
-        }
-
-        $baselinePreset = (function ($p) {
-            if (!$p['can_read'] && !$p['can_create'] && !$p['can_update'] && !$p['can_delete'] && !$p['can_approve'] && !$p['can_export'] && !$p['can_reveal'] && !$p['can_import']) return 0;
-            if ($p['can_read'] && !$p['can_create'] && !$p['can_update'] && !$p['can_delete'] && !$p['can_approve'] && !$p['can_export'] && !$p['can_reveal'] && !$p['can_import']) return 1;
-            if ($p['can_read'] && $p['can_create'] && $p['can_update'] && !$p['can_delete'] && !$p['can_approve'] && !$p['can_reveal'] && !$p['can_import']) return 2;
-            return 3;
-        })($rolePerms);
-
-        $currentPreset = (function ($p) {
-            if (!$p['can_read'] && !$p['can_create'] && !$p['can_update'] && !$p['can_delete'] && !$p['can_approve'] && !$p['can_export'] && !$p['can_reveal'] && !$p['can_import']) return 0;
-            if ($p['can_read'] && !$p['can_create'] && !$p['can_update'] && !$p['can_delete'] && !$p['can_approve'] && !$p['can_export'] && !$p['can_reveal'] && !$p['can_import']) return 1;
-            if ($p['can_read'] && $p['can_create'] && $p['can_update'] && !$p['can_delete'] && !$p['can_approve'] && !$p['can_reveal'] && !$p['can_import']) return 2;
-            return 3;
-        })($effectivePerms);
-
-        $isSensitive = in_array($module->slug, $sensitiveSlugs);
-        $module->is_sensitive = $isSensitive;
-        if ($isSensitive) {
-            $module->sensitive_tip = 'This module handles sensitive data. Elevated permissions require confirmation.';
-        }
-
-        $toggles = [];
-        foreach ($permKeys as $key) {
-            $toggles[$toggleMap[$key]] = $effectivePerms[$key];
-        }
-
-        $moduleList[] = [
-            'id' => $module->id,
-            'name' => $module->name,
-            'category' => $module->feature->name ?? 'Uncategorized',
-            'preset' => $currentPreset,
-            'baseline' => $baselinePreset,
-            'isSensitive' => $isSensitive,
-            'hasOverride' => !empty($overridePerms),
-            'toggles' => $toggles,
-            'module' => $module,
-            'overrides' => $overridePerms,
-        ];
-    }
-
     $roleName = $user->roles->first()?->name ?? 'No Role';
-
-    $initModules = [];
-    foreach ($moduleList as $m) {
-        $initModules[$m['id']] = [
-            'id' => $m['id'],
-            'name' => $m['name'],
-            'category' => $m['category'],
-            'preset' => $m['preset'],
-            'baseline' => $m['baseline'],
-            'isSensitive' => $m['isSensitive'],
-            'hasOverride' => $m['hasOverride'],
-            'toggles' => $m['toggles'],
-        ];
-    }
-
-    $initData = [
-        'modules' => $initModules,
-        'categories' => $categories,
-        'userName' => $user->name,
-        'userRole' => $roleName,
-        'userId' => $user->id,
-        'saveUrl' => route('users.permissions.update', $user->id),
-        'backUrl' => route('users.show', $user->id),
-        'sensitivePermNames' => config('permissions.sensitive_permissions', ['can_delete', 'can_reveal', 'can_approve', 'can_import']),
-        'toggleToColumn' => $toggleToColumn,
-    ];
+    $stateLabels = ['inherit' => 'Inherit', 'allow' => 'Allow', 'deny' => 'Deny'];
+    $capabilityTip = 'This module does not support this capability.';
 @endphp
 
 @extends('layouts.admin')
@@ -98,371 +10,233 @@
 
 @section('content')
 <div
-    class="max-w-4xl mx-auto"
-    x-data="editPerms({{ Js::from($initData) }})"
-    @keydown.escape.window="if(openEditor) closeEditor()"
+    class="max-w-7xl mx-auto"
+    x-data="userPerms({{ Js::from(['moduleList' => $moduleList, 'userName' => $user->name, 'roleName' => $roleName, 'userId' => $user->id, 'saveUrl' => route('users.permissions.update', $user->id), 'backUrl' => route('users.show', $user->id)]) }})"
 >
-    {{-- Breadcrumb --}}
     <nav aria-label="Breadcrumb" class="mb-4">
         <ol class="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400">
             <li class="flex items-center gap-1.5">
                 <a href="{{ route('dashboard') }}" class="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Dashboard</a>
             </li>
             <li class="flex items-center gap-1.5">
-                <svg class="w-3.5 h-3.5 text-gray-300 dark:text-gray-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
                 <a href="{{ route('users.index') }}" class="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Users</a>
             </li>
             <li class="flex items-center gap-1.5">
-                <svg class="w-3.5 h-3.5 text-gray-300 dark:text-gray-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
                 <a href="{{ route('users.show', $user->id) }}" class="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">{{ $user->name }}</a>
             </li>
             <li class="flex items-center gap-1.5">
-                <svg class="w-3.5 h-3.5 text-gray-300 dark:text-gray-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
                 <span class="text-gray-900 dark:text-gray-100 font-medium" aria-current="page">Edit Permissions</span>
             </li>
         </ol>
     </nav>
 
-    {{-- Page header --}}
     <div class="hd">
         <h1 class="pt">Edit Permissions</h1>
         <p class="ps">
             {{ $user->name }} <span class="text-slate-500 font-normal">— {{ $roleName }}</span>
             &nbsp;<span class="text-slate-400">·</span>&nbsp;
             <span class="text-sm text-slate-500">{{ $user->email }}</span>
-            &nbsp;<span class="text-slate-400">·</span>&nbsp;
-            <span class="text-sm text-slate-500">Override role defaults for specific modules.</span>
         </p>
     </div>
 
-    {{-- Unsaved changes warning bar --}}
-    <x-permissions.unsaved-bar />
+    <form method="POST" action="{{ route('users.permissions.update', $user->id) }}" id="perms-form">
+        @csrf
+        @method('PUT')
 
-    {{-- Role changed warning --}}
-    <x-permissions.role-warning />
-
-    {{-- Mode Toggle Tabs --}}
-    <div class="mode-tabs" role="tablist">
-        <button
-            class="mode-tab"
-            :class="{ active: isSimple }"
-            role="tab"
-            :aria-selected="isSimple"
-            @click="toggleSimpleMode(true)"
-        >Simple</button>
-        <button
-            class="mode-tab"
-            :class="{ active: !isSimple }"
-            role="tab"
-            :aria-selected="!isSimple"
-            @click="toggleSimpleMode(false)"
-        >Advanced</button>
-    </div>
-
-    {{-- Main card --}}
-    <div class="card">
-        <div class="ch">
-            <h2>Module Permissions</h2>
-            <div class="flex gap-3 items-center">
-                <span class="text-xs text-slate-400">
-                    Baseline: <span class="font-medium text-slate-600">{{ $roleName }}</span>
-                </span>
+        <div class="card">
+            <div class="ch">
+                <h2>Module Permissions</h2>
+                <span class="text-xs text-slate-400">Baseline: <span class="font-medium text-slate-600">{{ $roleName }}</span></span>
             </div>
-        </div>
-        <div class="cb">
-
-            {{-- ═══ SIMPLE MODE ═══ --}}
-            <div x-show="isSimple" x-cloak>
-                <div class="sm-stats">
-                    <span class="sm-stat" x-show="overridesCount > 0">
-                        <strong x-text="overridesCount"></strong> module<span x-text="overridesCount !== 1 ? 's' : ''"></span> with custom permissions
-                    </span>
-                    <span class="sm-stat" x-show="overridesCount === 0">
-                        No custom permissions — <strong>all inherited</strong> from role
-                    </span>
-                    <span class="sm-stat text-xs text-slate-400">Baseline: {{ $roleName }}</span>
-                </div>
-
-                <div class="sm-controls">
-                    <label class="sm-toggle">
-                        <input type="checkbox" x-model="filterOverrideOnly" @change="searchQuery = ''">
-                        <span>Show only overridden modules</span>
-                    </label>
-                    <div class="sw sm-search">
-                        <i class="ic" aria-hidden="true">🔍</i>
-                        <input
-                            class="si"
-                            type="text"
-                            placeholder="Search modules..."
-                            x-model="searchQuery"
-                            @input="filterOverrideOnly = false"
-                            aria-label="Search modules"
-                        >
-                    </div>
-                </div>
-
-                {{-- Inline editor (shared with Advanced mode) --}}
-                <x-permissions.inline-editor />
-
-                {{-- Zero-overrides empty state --}}
-                <div x-show="overridesCount === 0 && !searchQuery" class="sm-empty" x-cloak>
-                    <div class="sm-empty-icon">⚙</div>
-                    <h3 class="sm-empty-title">No custom permissions yet</h3>
-                    <p class="sm-empty-desc">
-                        This user inherits all module permissions from their role (<strong>{{ $roleName }}</strong>).
-                        Override specific modules to grant or restrict access.
-                    </p>
-                    <button class="btn btn-p" @click="filterOverrideOnly = false; $nextTick(() => { searchQuery = ''; })">Browse All Modules</button>
-                </div>
-
-                {{-- Simple mode module rows --}}
-                <div x-show="!(overridesCount === 0 && !searchQuery)" x-cloak>
-                    <template x-for="mod in simpleModuleList" :key="mod.id">
-                        <div class="sm-row" :class="{ 'sm-overridden': mod.preset !== mod.baseline }">
-                            <div class="sm-info">
-                                <span class="sm-name" x-text="mod.name"></span>
-                                <span x-show="mod.isSensitive" class="sen-tag" data-tip="Contains sensitive permissions">sensitive</span>
-                                <span class="sm-baseline">
-                                    Role: <span x-text="presetLabels[mod.baseline] || 'No Access'"></span>
-                                </span>
-                            </div>
-                            <div class="sm-setting">
-                                <select
-                                    class="sm-select"
-                                    :class="{ 'sm-inherit': mod.preset === mod.baseline, 'sm-override': mod.preset !== mod.baseline && mod.preset !== 3, 'sm-custom-sel': mod.preset === 3 }"
-                                    x-on:change="
-                                        const v = parseInt($event.target.value);
-                                        if (v === -1) { modules[mod.id].preset = modules[mod.id].baseline; markUnsaved(); }
-                                        else { modules[mod.id].preset = v; markUnsaved(); }
-                                        if (v === 3) { $dispatch('open-editor', {id: mod.id}); }
-                                    "
-                                >
-                                    <option value="-1" x-bind:selected="mod.preset === mod.baseline">Inherit from Role</option>
-                                    <option value="0" x-bind:selected="mod.preset === 0">No Access</option>
-                                    <option value="1" x-bind:selected="mod.preset === 1">View Only</option>
-                                    <option value="2" x-bind:selected="mod.preset === 2">Manage</option>
-                                    <option value="3" x-bind:selected="mod.preset === 3">Custom…</option>
-                                </select>
-                            </div>
-                        </div>
-                    </template>
-                </div>
-
-                {{-- Unsaved warning --}}
-                <div class="unsaved-bar" :class="{ show: hasUnsavedChanges }">
-                    <span class="dot-pulse"></span>
-                    <span>You have unsaved permission changes.</span>
-                </div>
-            </div>
-
-            {{-- ═══ ADVANCED MODE ═══ --}}
-            <div x-show="!isSimple" x-cloak>
-                {{-- Stats bar --}}
-                <x-permissions.stats-bar />
-
-                {{-- Sensitive criteria --}}
-                <x-permissions.sensitive-criteria />
-
-                {{-- Search + Filters --}}
-                <div class="filters" role="tablist" aria-label="Permission filters">
-                    <x-permissions.filter-chip filter="all" label="All" />
-                    <x-permissions.filter-chip filter="modified" label="Modified" />
-                    <x-permissions.filter-chip filter="sensitive" label="Sensitive" />
-                    <x-permissions.filter-chip filter="2" label="Manage" />
-                    <x-permissions.filter-chip filter="3" label="Custom" />
-                    <x-permissions.filter-chip filter="inherited" label="From Role" />
-                    <div class="sw">
-                        <i class="ic" aria-hidden="true">🔍</i>
-                        <input
-                            class="si"
-                            type="text"
-                            placeholder="Search modules..."
-                            x-model="searchQuery"
-                            aria-label="Search modules"
-                        >
-                    </div>
-                </div>
-
-                {{-- Inline editor (shared) --}}
-                <x-permissions.inline-editor />
-
-                {{-- Category accordions --}}
+            <div class="cb">
                 @foreach ($categories as $cat)
-                    <x-permissions.category-accordion name="{{ $cat }}">
-                        @foreach (collect($moduleList)->where('category', $cat) as $mod)
-                            <x-permissions.module-row
-                                :module="$mod['module']"
-                                :baseline="$mod['baseline']"
-                                :overrides="$mod['overrides']"
-                            />
-                        @endforeach
-                    </x-permissions.category-accordion>
+                    <details class="group border border-gray-200 dark:border-gray-700 rounded-xl mb-4 overflow-hidden" open>
+                        <summary class="flex items-center gap-2 px-5 py-3 cursor-pointer list-none text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors bg-gray-50 dark:bg-gray-800/30">
+                            <svg class="w-4 h-4 text-gray-500 group-open:rotate-90 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                            </svg>
+                            {{ $cat }}
+                        </summary>
+                        <div class="divide-y divide-gray-100 dark:divide-gray-700/50">
+                            @foreach (collect($moduleList)->where('category', $cat) as $mod)
+                                <div class="px-5 py-4 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors">
+                                    <div class="flex flex-wrap items-start justify-between gap-3">
+                                        <div class="min-w-0 flex-1">
+                                            <div class="flex items-center gap-2 flex-wrap">
+                                                <span class="text-sm font-medium text-gray-900 dark:text-gray-100">{{ $mod['name'] }}</span>
+                                                <span class="text-xs text-gray-400">({{ $mod['slug'] }})</span>
+                                            </div>
+                                            <div class="flex flex-wrap gap-1.5 mt-1.5">
+                                                @php
+                                                    $effLabels = [];
+                                                    if ($mod['effectivePerms']['can_read'] ?? false) $effLabels[] = 'Read';
+                                                    if ($mod['effectivePerms']['can_create'] ?? false) $effLabels[] = 'Create';
+                                                    if ($mod['effectivePerms']['can_update'] ?? false) $effLabels[] = 'Update';
+                                                    if ($mod['effectivePerms']['can_export'] ?? false) $effLabels[] = 'Export';
+                                                    if ($mod['effectivePerms']['can_reveal'] ?? false) $effLabels[] = 'Reveal';
+                                                    if ($mod['effectivePerms']['can_import'] ?? false) $effLabels[] = 'Import';
+                                                @endphp
+                                                <span class="text-xs text-gray-500 dark:text-gray-400">
+                                                    Effective:
+                                                    @if (empty($effLabels))
+                                                        <span class="text-gray-400 italic">No access</span>
+                                                    @else
+                                                        <span class="font-medium text-gray-600 dark:text-gray-300">{{ implode(', ', $effLabels) }}</span>
+                                                    @endif
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div class="flex items-center gap-2 flex-wrap">
+                                            <input type="hidden" name="controls[{{ $mod['id'] }}][full_access]" value="0">
+                                            <input type="hidden" name="controls[{{ $mod['id'] }}][inherit_all]" value="0">
+                                            <input type="hidden" name="controls[{{ $mod['id'] }}][_access_unchanged]" value="1">
+                                            <input type="hidden" name="controls[{{ $mod['id'] }}][_manage_unchanged]" value="1">
+
+                                            {{-- Access --}}
+                                            <div class="flex items-center gap-1">
+                                                <span class="text-xs font-medium text-gray-500 w-12">Access</span>
+                                                <select name="controls[{{ $mod['id'] }}][access]"
+                                                    class="text-xs border border-gray-200 dark:border-gray-600 rounded-lg px-2 py-1.5 bg-white dark:bg-black text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-indigo-500"
+                                                    @change="markUnsaved(); controlChanged({{ $mod['id'] }}, 'access')">
+                                                    <option value="inherit" {{ $mod['controls']['access'] === 'inherit' ? 'selected' : '' }}>Inherit</option>
+                                                    <option value="allow" {{ $mod['controls']['access'] === 'allow' ? 'selected' : '' }}>Allow</option>
+                                                    <option value="deny" {{ $mod['controls']['access'] === 'deny' ? 'selected' : '' }}>Deny</option>
+                                                </select>
+                                            </div>
+
+                                            {{-- Manage --}}
+                                            <div class="flex items-center gap-1">
+                                                <span class="text-xs font-medium text-gray-500 w-12">Manage</span>
+                                                <select name="controls[{{ $mod['id'] }}][manage]"
+                                                    class="text-xs border border-gray-200 dark:border-gray-600 rounded-lg px-2 py-1.5 bg-white dark:bg-black text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-indigo-500"
+                                                    @change="markUnsaved(); controlChanged({{ $mod['id'] }}, 'manage')">
+                                                    <option value="inherit" {{ $mod['controls']['manage'] === 'inherit' ? 'selected' : '' }}>Inherit</option>
+                                                    <option value="allow" {{ $mod['controls']['manage'] === 'allow' ? 'selected' : '' }}>Allow</option>
+                                                    <option value="deny" {{ $mod['controls']['manage'] === 'deny' ? 'selected' : '' }}>Deny</option>
+                                                </select>
+                                            </div>
+
+                                            {{-- Import --}}
+                                            @if ($mod['isImportable'])
+                                                <div class="flex items-center gap-1">
+                                                    <span class="text-xs font-medium text-gray-500 w-12">Import</span>
+                                                    <select name="controls[{{ $mod['id'] }}][import]"
+                                                        class="text-xs border border-gray-200 dark:border-gray-600 rounded-lg px-2 py-1.5 bg-white dark:bg-black text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-indigo-500"
+                                                        @change="markUnsaved()">
+                                                        <option value="inherit" {{ $mod['controls']['import'] === 'inherit' ? 'selected' : '' }}>Inherit</option>
+                                                        <option value="allow" {{ $mod['controls']['import'] === 'allow' ? 'selected' : '' }}>Allow</option>
+                                                        <option value="deny" {{ $mod['controls']['import'] === 'deny' ? 'selected' : '' }}>Deny</option>
+                                                    </select>
+                                                </div>
+                                            @else
+                                                <span class="text-xs text-gray-400 italic px-2 py-1.5">Import unavailable</span>
+                                            @endif
+
+                                            {{-- Export --}}
+                                            @if ($mod['isExportable'])
+                                                <div class="flex items-center gap-1">
+                                                    <span class="text-xs font-medium text-gray-500 w-12">Export</span>
+                                                    <select name="controls[{{ $mod['id'] }}][export]"
+                                                        class="text-xs border border-gray-200 dark:border-gray-600 rounded-lg px-2 py-1.5 bg-white dark:bg-black text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-indigo-500"
+                                                        @change="markUnsaved()">
+                                                        <option value="inherit" {{ $mod['controls']['export'] === 'inherit' ? 'selected' : '' }}>Inherit</option>
+                                                        <option value="allow" {{ $mod['controls']['export'] === 'allow' ? 'selected' : '' }}>Allow</option>
+                                                        <option value="deny" {{ $mod['controls']['export'] === 'deny' ? 'selected' : '' }}>Deny</option>
+                                                    </select>
+                                                </div>
+                                            @else
+                                                <span class="text-xs text-gray-400 italic px-2 py-1.5">Export unavailable</span>
+                                            @endif
+
+                                            {{-- Full Access --}}
+                                            @php
+                                                $isFa = $mod['controls']['access'] === 'allow' && $mod['controls']['manage'] === 'allow'
+                                                    && (!$mod['isImportable'] || $mod['controls']['import'] === 'allow')
+                                                    && (!$mod['isExportable'] || $mod['controls']['export'] === 'allow');
+                                            @endphp
+                                            <label class="flex items-center gap-1 text-xs text-gray-500 cursor-pointer px-2 py-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
+                                                <input type="checkbox"
+                                                    {{ $isFa ? 'checked' : '' }}
+                                                    @change="toggleFullAccess($event, {{ $mod['id'] }}, {{ $mod['isImportable'] ? 'true' : 'false' }}, {{ $mod['isExportable'] ? 'true' : 'false' }})">
+                                                Full
+                                            </label>
+
+                                            {{-- Inherit All --}}
+                                            <button type="button"
+                                                class="text-xs text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 px-2 py-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                                                @click="inheritAll({{ $mod['id'] }})"
+                                                title="Set all controls to Inherit">
+                                                ↺ All
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    </details>
                 @endforeach
+
+                <div class="sticky bottom-0 bg-white dark:bg-black border-t border-gray-200 dark:border-gray-700 px-5 py-4 flex items-center justify-between rounded-b-xl">
+                    <div class="flex items-center gap-3">
+                        <a href="{{ $backUrl ?? route('users.show', $user->id) }}" class="text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">← Back to User</a>
+                        <span x-show="hasUnsaved" class="text-xs text-amber-600 flex items-center gap-1" x-cloak>
+                            <span class="w-2 h-2 bg-amber-500 rounded-full inline-block animate-pulse"></span>
+                            Unsaved changes
+                        </span>
+                    </div>
+                    <button type="submit" class="btn btn-p" id="save-btn">Save Overrides</button>
+                </div>
             </div>
-
         </div>
-
-        {{-- Summary collapsible --}}
-        <x-permissions.summary-collapsible />
-
-        {{-- Diff panel --}}
-        <x-permissions.diff-panel />
-
-        {{-- Footer actions --}}
-        <div class="fa">
-            <button class="btn btn-s" @click="if(hasUnsavedChanges) showModal('nav-modal'); else goBack()">← Back to User</button>
-            <button class="btn btn-p" @click="save()">Save Overrides</button>
-        </div>
-    </div>
-
-    {{-- Modals --}}
-    {{-- Role change modal --}}
-    <x-permissions.modal
-        id="role-modal"
-        icon="🔄"
-        icon-bg="#dbeafe"
-        title="Role Changed"
-        description="Role changed from IT Support to Administrator."
-    >
-        <p class="text-sm text-slate-600 mb-2">How should existing permission overrides be handled?</p>
-        <div class="opt-group">
-            <label class="opt">
-                <input type="radio" name="role-action" value="reset" checked>
-                <div>
-                    <strong class="text-sm">Reset to new role defaults</strong>
-                    <div class="desc">Discard all existing overrides. User permissions will match the new role exactly.</div>
-                </div>
-            </label>
-            <label class="opt">
-                <input type="radio" name="role-action" value="keep">
-                <div>
-                    <strong class="text-sm">Keep existing overrides</strong>
-                    <div class="desc">Preserve all current overrides. Review and adjust manually if needed.</div>
-                </div>
-            </label>
-        </div>
-        <x-slot name="footer">
-            <button class="btn btn-s" @click="closeModal('role-modal')">Cancel</button>
-            <button class="btn btn-p" @click="closeModal('role-modal');markUnsaved()">Confirm Role Change</button>
-        </x-slot>
-    </x-permissions.modal>
-
-    {{-- Reset all overrides modal --}}
-    <x-permissions.modal
-        id="reset-all-modal"
-        icon="↺"
-        icon-bg="#fee2e2"
-        title="Reset All Overrides"
-        description="This will reset all module overrides to the role defaults."
-    >
-        <p class="text-sm text-slate-600 mb-1">
-            The following <strong x-text="overriddenModules.length"></strong> modules will be affected:
-        </p>
-        <ul class="bg-slate-50 rounded-lg p-3 list-none mt-2.5">
-            <template x-for="mod in overriddenModules" :key="mod.id">
-                <li class="text-sm text-slate-600 py-1">
-                    • <span x-text="mod.name"></span>
-                    <span class="text-slate-400">(<span x-text="mod.currentLabel"></span> → <span x-text="mod.baselineLabel"></span>)</span>
-                </li>
-            </template>
-        </ul>
-        <p class="text-sm text-amber-800 mt-3 flex gap-1.5">⚠ This action can be undone by re-applying overrides before saving.</p>
-        <x-slot name="footer">
-            <button class="btn btn-s" @click="closeModal('reset-all-modal')">Cancel</button>
-            <button class="btn btn-d" @click="closeModal('reset-all-modal');markUnsaved()">Reset All Overrides</button>
-        </x-slot>
-    </x-permissions.modal>
-
-    {{-- Sensitive confirmation modal --}}
-    <x-permissions.modal
-        id="sen-modal"
-        icon="⚠"
-        icon-bg="#fef3c7"
-        title="Sensitive Permissions Detected"
-    >
-        <p class="text-sm text-slate-600 mb-3">
-            <span x-text="sensitiveChanges.length"></span> modules with elevated permissions will be saved:
-        </p>
-        <table class="w-full border-collapse text-sm bg-slate-50 rounded-lg overflow-hidden">
-            <template x-for="change in sensitiveChanges" :key="change.id">
-                <tr>
-                    <td class="p-2 border-b border-slate-200 font-medium" x-text="change.name"></td>
-                    <td class="p-2 border-b border-slate-200" x-text="change.sensitivePerms.join(', ')"></td>
-                    <td class="p-2 border-b border-slate-200 text-amber-800">⚠ Elevated permission</td>
-                </tr>
-            </template>
-        </table>
-        <p class="text-sm text-slate-500 mt-3">Review carefully. These actions cannot be undone. This confirmation covers all changes.</p>
-        <x-slot name="footer">
-            <span class="text-xs text-slate-500 mr-auto self-center">Super-admin bypasses this check</span>
-            <button class="btn btn-s" @click="closeModal('sen-modal')">Cancel</button>
-            <button class="btn btn-d" @click="closeModal('sen-modal');markUnsaved()">I understand, enable</button>
-        </x-slot>
-    </x-permissions.modal>
-
-    {{-- Bulk apply preview modal --}}
-    <x-permissions.modal
-        id="bulk-modal"
-        icon="⚡"
-        icon-bg="#dbeafe"
-        title="Bulk Apply"
-        description="Set all modules in this category"
-    >
-        <p class="text-sm text-slate-600 mb-2.5">
-            The following <strong x-text="bulkAffectedModules.length"></strong> modules will be affected:
-        </p>
-        <table class="w-full border-collapse text-sm">
-            <template x-for="mod in bulkAffectedModules" :key="mod.id">
-                <tr>
-                    <td class="py-1" x-text="mod.name"></td>
-                    <td class="text-right">
-                        <span class="p-std" :class="'p-' + mod.currentClass" x-text="mod.currentLabel"></span>
-                        <span class="text-slate-400 mx-2">→</span>
-                        <span class="p-std" :class="'p-' + mod.targetClass" x-text="mod.targetLabel"></span>
-                        <span x-show="mod.currentLabel === mod.targetLabel" class="text-slate-400 text-[11px] ml-1">(unchanged)</span>
-                    </td>
-                </tr>
-            </template>
-        </table>
-        <x-slot name="footer">
-            <button class="btn btn-s" @click="closeModal('bulk-modal')">Cancel</button>
-            <button class="btn btn-p" @click="bulkApply()">Apply to <span x-text="bulkAffectedModules.length"></span> modules</button>
-        </x-slot>
-    </x-permissions.modal>
-
-    {{-- Editor reset confirmation modal --}}
-    <x-permissions.modal
-        id="reset-editor-modal"
-        icon="↺"
-        icon-bg="#fef3c7"
-        title="Reset to Role Default"
-        description="This will discard all custom overrides for this module."
-    >
-        <p class="text-sm text-slate-600">The module permissions will be restored to match the role baseline. This can be undone by re-applying overrides before saving.</p>
-        <x-slot name="footer">
-            <button class="btn btn-s" @click="closeModal('reset-editor-modal')">Cancel</button>
-            <button class="btn btn-d" @click="resetModuleToBaseline(openEditor.id);closeModal('reset-editor-modal')">Reset to Default</button>
-        </x-slot>
-    </x-permissions.modal>
-
-    {{-- Unsaved navigation modal --}}
-    <x-permissions.modal
-        id="nav-modal"
-        icon="⚠"
-        icon-bg="#fee2e2"
-        title="Unsaved Changes"
-        description="You have unsaved permission changes that will be lost."
-    >
-        <p class="text-sm text-slate-600">Review your changes before leaving, or discard them and continue.</p>
-        <x-slot name="footer">
-            <button class="btn btn-s" @click="discardAndLeave()">Discard &amp; Leave</button>
-            <button class="btn btn-p" @click="closeModal('nav-modal');showModal('diff-panel')">Review Changes</button>
-        </x-slot>
-    </x-permissions.modal>
-
+    </form>
 </div>
 @endsection
 
-@push('styles')
-    @vite('resources/css/permissions.css')
+@push('scripts')
+<script>
+function userPerms(init) {
+    return {
+        hasUnsaved: false,
+        markUnsaved() {
+            this.hasUnsaved = true;
+        },
+        controlChanged(moduleId, control) {
+            const form = document.getElementById('perms-form');
+            const hidden = form.querySelector(`input[name="controls[${moduleId}][_${control}_unchanged]"]`);
+            if (hidden) hidden.value = '0';
+        },
+        toggleFullAccess(event, moduleId, isImportable, isExportable) {
+            this.markUnsaved();
+            const form = document.getElementById('perms-form');
+            this.controlChanged(moduleId, 'access');
+            this.controlChanged(moduleId, 'manage');
+            if (event.target.checked) {
+                const accessSel = form.querySelector(`select[name="controls[${moduleId}][access]"]`);
+                const manageSel = form.querySelector(`select[name="controls[${moduleId}][manage]"]`);
+                if (accessSel) accessSel.value = 'allow';
+                if (manageSel) manageSel.value = 'allow';
+                if (isImportable) {
+                    const importSel = form.querySelector(`select[name="controls[${moduleId}][import]"]`);
+                    if (importSel) importSel.value = 'allow';
+                }
+                if (isExportable) {
+                    const exportSel = form.querySelector(`select[name="controls[${moduleId}][export]"]`);
+                    if (exportSel) exportSel.value = 'allow';
+                }
+            }
+        },
+        inheritAll(moduleId) {
+            this.markUnsaved();
+            const form = document.getElementById('perms-form');
+            this.controlChanged(moduleId, 'access');
+            this.controlChanged(moduleId, 'manage');
+            const selects = form.querySelectorAll(`select[name^="controls[${moduleId}]"]`);
+            selects.forEach(sel => { sel.value = 'inherit'; });
+        }
+    };
+}
+</script>
 @endpush

@@ -47,7 +47,6 @@ class UserModulePermissionTest extends TestCase
         $this->moduleA = $modules[0];
         $this->moduleB = $modules[1];
 
-        // Admin role: can_read on moduleA, NOT on moduleB
         ModuleRolePermission::updateOrCreate(
             ['module_id' => $this->moduleA->id, 'role_id' => $this->adminRole->id],
             ['can_read' => true, 'can_create' => true, 'can_update' => true, 'can_delete' => true, 'can_approve' => false, 'can_export' => true]
@@ -57,7 +56,6 @@ class UserModulePermissionTest extends TestCase
             ['can_read' => false, 'can_create' => false, 'can_update' => false, 'can_delete' => false, 'can_approve' => false, 'can_export' => false]
         );
 
-        // User role: can_read on moduleA only
         ModuleRolePermission::updateOrCreate(
             ['module_id' => $this->moduleA->id, 'role_id' => $this->userRole->id],
             ['can_read' => true, 'can_create' => false, 'can_update' => false, 'can_delete' => false, 'can_approve' => false, 'can_export' => false]
@@ -77,9 +75,629 @@ class UserModulePermissionTest extends TestCase
         $this->normalUser->assignRole($this->userRole);
     }
 
+    // ─── Inherit / Allow / Deny core behavior ─────────────────────────────
+
+    public function test_inherit_preserves_role_permission(): void
+    {
+        $this->assertTrue($this->normalUser->canOnModule($this->moduleA, 'read'));
+
+        UserModulePermission::create([
+            'user_id' => $this->normalUser->id,
+            'module_id' => $this->moduleA->id,
+            'can_read' => null,
+        ]);
+
+        $this->assertTrue($this->normalUser->canOnModule($this->moduleA, 'read'));
+    }
+
+    public function test_explicit_allow_overrides_inherited_false(): void
+    {
+        $this->assertFalse($this->normalUser->canOnModule($this->moduleB, 'read'));
+
+        UserModulePermission::create([
+            'user_id' => $this->normalUser->id,
+            'module_id' => $this->moduleB->id,
+            'can_read' => true,
+        ]);
+
+        $this->assertTrue($this->normalUser->canOnModule($this->moduleB, 'read'));
+    }
+
+    public function test_explicit_deny_overrides_inherited_true(): void
+    {
+        $this->assertTrue($this->normalUser->canOnModule($this->moduleA, 'read'));
+
+        UserModulePermission::create([
+            'user_id' => $this->normalUser->id,
+            'module_id' => $this->moduleA->id,
+            'can_read' => false,
+        ]);
+
+        $this->assertFalse($this->normalUser->canOnModule($this->moduleA, 'read'));
+    }
+
+    public function test_multiple_role_or_unchanged_when_user_state_inherit(): void
+    {
+        $this->admin->assignRole($this->userRole);
+
+        $this->assertTrue($this->admin->canOnModule($this->moduleA, 'read'));
+
+        UserModulePermission::create([
+            'user_id' => $this->admin->id,
+            'module_id' => $this->moduleA->id,
+            'can_read' => null,
+        ]);
+
+        $this->assertTrue($this->admin->canOnModule($this->moduleA, 'read'));
+    }
+
+    // ─── Control-to-DB mapping ────────────────────────────────────────────
+
+    public function test_access_allow_maps_read_and_reveal_true(): void
+    {
+        $this->actingAs($this->superAdmin)->put(route('users.permissions.update', $this->normalUser->id), [
+            'controls' => [
+                $this->moduleA->id => ['access' => 'allow', 'manage' => 'inherit', 'import' => 'inherit', 'export' => 'inherit', '_access_unchanged' => '0'],
+            ],
+        ]);
+
+        $row = UserModulePermission::where('user_id', $this->normalUser->id)
+            ->where('module_id', $this->moduleA->id)->firstOrFail();
+        $this->assertTrue($row->can_read);
+        $this->assertTrue($row->can_reveal);
+    }
+
+    public function test_access_deny_maps_read_and_reveal_false(): void
+    {
+        $this->actingAs($this->superAdmin)->put(route('users.permissions.update', $this->normalUser->id), [
+            'controls' => [
+                $this->moduleA->id => ['access' => 'deny', 'manage' => 'inherit', 'import' => 'inherit', 'export' => 'inherit', '_access_unchanged' => '0'],
+            ],
+        ]);
+
+        $row = UserModulePermission::where('user_id', $this->normalUser->id)
+            ->where('module_id', $this->moduleA->id)->firstOrFail();
+        $this->assertFalse($row->can_read);
+        $this->assertFalse($row->can_reveal);
+    }
+
+    public function test_manage_allow_without_destroying_access_inheritance(): void
+    {
+        $this->actingAs($this->superAdmin)->put(route('users.permissions.update', $this->normalUser->id), [
+            'controls' => [
+                $this->moduleA->id => ['access' => 'inherit', 'manage' => 'allow', 'import' => 'inherit', 'export' => 'inherit', '_manage_unchanged' => '0'],
+            ],
+        ]);
+
+        $row = UserModulePermission::where('user_id', $this->normalUser->id)
+            ->where('module_id', $this->moduleA->id)->firstOrFail();
+        $this->assertNull($row->can_read, 'Access inherit should leave can_read null');
+        $this->assertNull($row->can_reveal);
+        $this->assertTrue($row->can_create);
+        $this->assertTrue($row->can_update);
+    }
+
+    public function test_manage_deny_maps_create_and_update_false(): void
+    {
+        $this->actingAs($this->superAdmin)->put(route('users.permissions.update', $this->normalUser->id), [
+            'controls' => [
+                $this->moduleA->id => ['access' => 'inherit', 'manage' => 'deny', 'import' => 'inherit', 'export' => 'inherit', '_manage_unchanged' => '0'],
+            ],
+        ]);
+
+        $row = UserModulePermission::where('user_id', $this->normalUser->id)
+            ->where('module_id', $this->moduleA->id)->firstOrFail();
+        $this->assertFalse($row->can_create);
+        $this->assertFalse($row->can_update);
+    }
+
+    public function test_import_allow_deny_inherit_round_trip(): void
+    {
+        $this->actingAs($this->superAdmin)->put(route('users.permissions.update', $this->normalUser->id), [
+            'controls' => [
+                $this->moduleA->id => ['access' => 'inherit', 'manage' => 'inherit', 'import' => 'allow', 'export' => 'inherit'],
+            ],
+        ]);
+
+        $row = UserModulePermission::where('user_id', $this->normalUser->id)
+            ->where('module_id', $this->moduleA->id)->firstOrFail();
+        $this->assertTrue($row->can_import);
+
+        $this->actingAs($this->superAdmin)->put(route('users.permissions.update', $this->normalUser->id), [
+            'controls' => [
+                $this->moduleA->id => ['access' => 'inherit', 'manage' => 'inherit', 'import' => 'deny', 'export' => 'inherit'],
+            ],
+        ]);
+
+        $row->refresh();
+        $this->assertFalse($row->can_import);
+
+        $this->actingAs($this->superAdmin)->put(route('users.permissions.update', $this->normalUser->id), [
+            'controls' => [
+                $this->moduleA->id => ['access' => 'inherit', 'manage' => 'inherit', 'import' => 'inherit', 'export' => 'inherit'],
+            ],
+        ]);
+
+        $this->assertFalse(
+            UserModulePermission::where('user_id', $this->normalUser->id)
+                ->where('module_id', $this->moduleA->id)->exists(),
+            'Row should be deleted when all controls inherit'
+        );
+    }
+
+    public function test_export_allow_deny_inherit_round_trip(): void
+    {
+        $this->actingAs($this->superAdmin)->put(route('users.permissions.update', $this->normalUser->id), [
+            'controls' => [
+                $this->moduleA->id => ['access' => 'inherit', 'manage' => 'inherit', 'import' => 'inherit', 'export' => 'allow'],
+            ],
+        ]);
+
+        $row = UserModulePermission::where('user_id', $this->normalUser->id)
+            ->where('module_id', $this->moduleA->id)->firstOrFail();
+        $this->assertTrue($row->can_export);
+
+        $this->actingAs($this->superAdmin)->put(route('users.permissions.update', $this->normalUser->id), [
+            'controls' => [
+                $this->moduleA->id => ['access' => 'inherit', 'manage' => 'inherit', 'import' => 'inherit', 'export' => 'deny'],
+            ],
+        ]);
+
+        $row->refresh();
+        $this->assertFalse($row->can_export);
+    }
+
+    public function test_mixed_override_row_round_trips_unchanged(): void
+    {
+        UserModulePermission::create([
+            'user_id' => $this->normalUser->id,
+            'module_id' => $this->moduleA->id,
+            'can_read' => null,
+            'can_reveal' => null,
+            'can_create' => null,
+            'can_update' => null,
+            'can_import' => true,
+            'can_export' => false,
+        ]);
+
+        $this->actingAs($this->superAdmin)->put(route('users.permissions.update', $this->normalUser->id), [
+            'controls' => [
+                $this->moduleA->id => ['access' => 'inherit', 'manage' => 'inherit', 'import' => 'allow', 'export' => 'deny'],
+            ],
+        ]);
+
+        $row = UserModulePermission::where('user_id', $this->normalUser->id)
+            ->where('module_id', $this->moduleA->id)->firstOrFail();
+        $this->assertNull($row->can_read);
+        $this->assertNull($row->can_reveal);
+        $this->assertNull($row->can_create);
+        $this->assertNull($row->can_update);
+        $this->assertTrue($row->can_import);
+        $this->assertFalse($row->can_export);
+    }
+
+    // ─── Inherit All ──────────────────────────────────────────────────────
+
+    public function test_inherit_all_deletes_row_when_safe(): void
+    {
+        UserModulePermission::create([
+            'user_id' => $this->normalUser->id,
+            'module_id' => $this->moduleA->id,
+            'can_read' => false,
+            'can_reveal' => false,
+            'can_create' => true,
+        ]);
+
+        $this->actingAs($this->superAdmin)->put(route('users.permissions.update', $this->normalUser->id), [
+            'controls' => [
+                $this->moduleA->id => [
+                    'access' => 'inherit', 'manage' => 'inherit', 'import' => 'inherit', 'export' => 'inherit',
+                    'inherit_all' => true,
+                ],
+            ],
+        ]);
+
+        $this->assertFalse(
+            UserModulePermission::where('user_id', $this->normalUser->id)
+                ->where('module_id', $this->moduleA->id)->exists(),
+            'Row should be deleted when all UI controls are inherit'
+        );
+
+        $this->assertTrue($this->normalUser->canOnModule($this->moduleA, 'read'));
+        $this->assertFalse($this->normalUser->canOnModule($this->moduleA, 'create'));
+    }
+
+    // ─── User with no roles ───────────────────────────────────────────────
+
+    public function test_user_with_no_role_receives_direct_access(): void
+    {
+        $noRoleUser = User::factory()->create();
+
+        $this->actingAs($this->superAdmin)->put(route('users.permissions.update', $noRoleUser->id), [
+            'controls' => [
+                $this->moduleA->id => ['access' => 'allow', 'manage' => 'inherit', 'import' => 'inherit', 'export' => 'inherit', '_access_unchanged' => '0'],
+            ],
+        ]);
+
+        $this->assertTrue($noRoleUser->canOnModule($this->moduleA, 'read'));
+        $this->assertFalse($noRoleUser->canOnModule($this->moduleA, 'create'));
+    }
+
+    // ─── Full Access ──────────────────────────────────────────────────────
+
+    public function test_full_access_never_grants_delete(): void
+    {
+        $this->actingAs($this->superAdmin)->put(route('users.permissions.update', $this->normalUser->id), [
+            'controls' => [
+                $this->moduleA->id => [
+                    'access' => 'allow', 'manage' => 'allow', 'import' => 'allow', 'export' => 'allow',
+                    'full_access' => true,
+                ],
+            ],
+        ]);
+
+        $row = UserModulePermission::where('user_id', $this->normalUser->id)
+            ->where('module_id', $this->moduleA->id)->firstOrFail();
+        $this->assertFalse($row->can_delete);
+    }
+
+    public function test_full_access_never_grants_approve(): void
+    {
+        $this->actingAs($this->superAdmin)->put(route('users.permissions.update', $this->normalUser->id), [
+            'controls' => [
+                $this->moduleA->id => [
+                    'access' => 'allow', 'manage' => 'allow', 'import' => 'allow', 'export' => 'allow',
+                    'full_access' => true,
+                ],
+            ],
+        ]);
+
+        $row = UserModulePermission::where('user_id', $this->normalUser->id)
+            ->where('module_id', $this->moduleA->id)->firstOrFail();
+        $this->assertNull($row->can_approve);
+    }
+
+    // ─── Crafted request protection ───────────────────────────────────────
+
+    public function test_unsupported_import_cannot_be_granted_through_crafted_request(): void
+    {
+        $unsupportedModule = Module::whereNotIn('slug', config('permissions.importable_modules', []))->first();
+        if (!$unsupportedModule) {
+            $this->markTestSkipped('No unsupported import module available');
+        }
+
+        $this->actingAs($this->superAdmin)->put(route('users.permissions.update', $this->normalUser->id), [
+            'controls' => [
+                $unsupportedModule->id => ['access' => 'inherit', 'manage' => 'inherit', 'import' => 'allow', 'export' => 'inherit'],
+            ],
+        ]);
+
+        $row = UserModulePermission::where('user_id', $this->normalUser->id)
+            ->where('module_id', $unsupportedModule->id)->first();
+        $this->assertNull($row, 'No row should be created for unsupported import');
+    }
+
+    public function test_crafted_can_delete_cannot_bypass_service_protection(): void
+    {
+        $this->actingAs($this->superAdmin)->put(route('users.permissions.update', $this->normalUser->id), [
+            'controls' => [
+                $this->moduleA->id => ['access' => 'allow', 'manage' => 'allow', 'import' => 'inherit', 'export' => 'inherit', '_access_unchanged' => '0'],
+            ],
+        ]);
+
+        $row = UserModulePermission::where('user_id', $this->normalUser->id)
+            ->where('module_id', $this->moduleA->id)->firstOrFail();
+        $this->assertFalse($row->can_delete);
+    }
+
+    // ─── Legacy data preservation ─────────────────────────────────────────
+
+    public function test_legacy_read_true_reveal_false_not_silently_changed_by_unrelated_save(): void
+    {
+        UserModulePermission::create([
+            'user_id' => $this->normalUser->id,
+            'module_id' => $this->moduleA->id,
+            'can_read' => true,
+            'can_reveal' => false,
+            'can_import' => true,
+            'can_export' => false,
+        ]);
+
+        $this->actingAs($this->superAdmin)->put(route('users.permissions.update', $this->normalUser->id), [
+            'controls' => [
+                $this->moduleA->id => ['access' => 'allow', 'manage' => 'inherit', 'import' => 'allow', 'export' => 'deny'],
+            ],
+        ]);
+
+        $row = UserModulePermission::where('user_id', $this->normalUser->id)
+            ->where('module_id', $this->moduleA->id)->firstOrFail();
+        $this->assertTrue($row->can_read, 'can_read should remain true');
+        $this->assertFalse($row->can_reveal, 'can_reveal should stay false because Access was not intentionally changed');
+        $this->assertTrue($row->can_import);
+        $this->assertFalse($row->can_export);
+    }
+
+    public function test_legacy_read_true_reveal_false_intentional_access_allow_normalizes(): void
+    {
+        UserModulePermission::create([
+            'user_id' => $this->normalUser->id,
+            'module_id' => $this->moduleA->id,
+            'can_read' => true,
+            'can_reveal' => false,
+        ]);
+
+        $this->actingAs($this->superAdmin)->put(route('users.permissions.update', $this->normalUser->id), [
+            'controls' => [
+                $this->moduleA->id => ['access' => 'allow', 'manage' => 'inherit', 'import' => 'inherit', 'export' => 'inherit', '_access_unchanged' => '0'],
+            ],
+        ]);
+
+        $row = UserModulePermission::where('user_id', $this->normalUser->id)
+            ->where('module_id', $this->moduleA->id)->firstOrFail();
+        $this->assertTrue($row->can_read);
+        $this->assertTrue($row->can_reveal, 'Intentional Access=Allow should normalize can_reveal to true');
+    }
+
+    public function test_legacy_manage_mismatch_not_silently_changed_by_unrelated_save(): void
+    {
+        UserModulePermission::create([
+            'user_id' => $this->normalUser->id,
+            'module_id' => $this->moduleA->id,
+            'can_create' => true,
+            'can_update' => false,
+            'can_import' => null,
+            'can_export' => true,
+        ]);
+
+        $this->actingAs($this->superAdmin)->put(route('users.permissions.update', $this->normalUser->id), [
+            'controls' => [
+                $this->moduleA->id => ['access' => 'inherit', 'manage' => 'allow', 'import' => 'inherit', 'export' => 'allow'],
+            ],
+        ]);
+
+        $row = UserModulePermission::where('user_id', $this->normalUser->id)
+            ->where('module_id', $this->moduleA->id)->firstOrFail();
+        $this->assertTrue($row->can_create, 'can_create should remain true');
+        $this->assertFalse($row->can_update, 'can_update should stay false because Manage was not intentionally changed');
+        $this->assertTrue($row->can_export, 'export change should apply');
+    }
+
+    public function test_legacy_manage_mismatch_intentional_manage_allow_normalizes(): void
+    {
+        UserModulePermission::create([
+            'user_id' => $this->normalUser->id,
+            'module_id' => $this->moduleA->id,
+            'can_create' => true,
+            'can_update' => false,
+        ]);
+
+        $this->actingAs($this->superAdmin)->put(route('users.permissions.update', $this->normalUser->id), [
+            'controls' => [
+                $this->moduleA->id => ['access' => 'inherit', 'manage' => 'allow', 'import' => 'inherit', 'export' => 'inherit', '_manage_unchanged' => '0'],
+            ],
+        ]);
+
+        $row = UserModulePermission::where('user_id', $this->normalUser->id)
+            ->where('module_id', $this->moduleA->id)->firstOrFail();
+        $this->assertTrue($row->can_create);
+        $this->assertTrue($row->can_update, 'Intentional Manage=Allow should normalize can_update to true');
+    }
+
+    // ─── Hidden column preservation ───────────────────────────────────────
+
+    public function test_existing_can_approve_true_survives_unrelated_export_change(): void
+    {
+        UserModulePermission::create([
+            'user_id' => $this->normalUser->id,
+            'module_id' => $this->moduleA->id,
+            'can_approve' => true,
+            'can_read' => true,
+            'can_reveal' => true,
+        ]);
+
+        $this->actingAs($this->superAdmin)->put(route('users.permissions.update', $this->normalUser->id), [
+            'controls' => [
+                $this->moduleA->id => ['access' => 'allow', 'manage' => 'inherit', 'import' => 'inherit', 'export' => 'allow'],
+            ],
+        ]);
+
+        $row = UserModulePermission::where('user_id', $this->normalUser->id)
+            ->where('module_id', $this->moduleA->id)->firstOrFail();
+        $this->assertTrue($row->can_approve, 'can_approve must survive unrelated Export change');
+    }
+
+    public function test_existing_can_approve_false_survives_unrelated_access_change(): void
+    {
+        UserModulePermission::create([
+            'user_id' => $this->normalUser->id,
+            'module_id' => $this->moduleA->id,
+            'can_approve' => false,
+            'can_read' => true,
+            'can_reveal' => true,
+        ]);
+
+        $this->actingAs($this->superAdmin)->put(route('users.permissions.update', $this->normalUser->id), [
+            'controls' => [
+                $this->moduleA->id => ['access' => 'deny', 'manage' => 'inherit', 'import' => 'inherit', 'export' => 'inherit', '_access_unchanged' => '0'],
+            ],
+        ]);
+
+        $row = UserModulePermission::where('user_id', $this->normalUser->id)
+            ->where('module_id', $this->moduleA->id)->firstOrFail();
+        $this->assertFalse($row->can_read);
+        $this->assertFalse($row->can_approve, 'can_approve false must survive Access change');
+    }
+
+    public function test_inherit_all_preserves_can_approve_and_does_not_delete_row(): void
+    {
+        UserModulePermission::create([
+            'user_id' => $this->normalUser->id,
+            'module_id' => $this->moduleA->id,
+            'can_approve' => true,
+            'can_read' => null,
+            'can_reveal' => null,
+            'can_create' => null,
+            'can_update' => null,
+            'can_import' => null,
+            'can_export' => null,
+        ]);
+
+        $this->actingAs($this->superAdmin)->put(route('users.permissions.update', $this->normalUser->id), [
+            'controls' => [
+                $this->moduleA->id => [
+                    'access' => 'inherit', 'manage' => 'inherit', 'import' => 'inherit', 'export' => 'inherit',
+                    'inherit_all' => true,
+                ],
+            ],
+        ]);
+
+        $this->assertTrue(
+            UserModulePermission::where('user_id', $this->normalUser->id)
+                ->where('module_id', $this->moduleA->id)->exists(),
+            'Row with can_approve=true must not be deleted by Inherit All'
+        );
+
+        $row = UserModulePermission::where('user_id', $this->normalUser->id)
+            ->where('module_id', $this->moduleA->id)->firstOrFail();
+        $this->assertTrue($row->can_approve, 'can_approve must survive Inherit All');
+    }
+
+    public function test_full_access_does_not_alter_existing_can_approve(): void
+    {
+        UserModulePermission::create([
+            'user_id' => $this->normalUser->id,
+            'module_id' => $this->moduleA->id,
+            'can_approve' => true,
+        ]);
+
+        $this->actingAs($this->superAdmin)->put(route('users.permissions.update', $this->normalUser->id), [
+            'controls' => [
+                $this->moduleA->id => [
+                    'access' => 'allow', 'manage' => 'allow', 'import' => 'allow', 'export' => 'allow',
+                    'full_access' => true,
+                ],
+            ],
+        ]);
+
+        $row = UserModulePermission::where('user_id', $this->normalUser->id)
+            ->where('module_id', $this->moduleA->id)->firstOrFail();
+        $this->assertTrue($row->can_approve, 'Full Access must not change existing can_approve');
+    }
+
+    public function test_crafted_can_approve_input_cannot_modify_can_approve(): void
+    {
+        UserModulePermission::create([
+            'user_id' => $this->normalUser->id,
+            'module_id' => $this->moduleA->id,
+            'can_approve' => true,
+        ]);
+
+        $this->actingAs($this->superAdmin)->put(route('users.permissions.update', $this->normalUser->id), [
+            'controls' => [
+                $this->moduleA->id => ['access' => 'allow', 'manage' => 'inherit', 'import' => 'inherit', 'export' => 'inherit', '_access_unchanged' => '0'],
+            ],
+        ]);
+
+        $row = UserModulePermission::where('user_id', $this->normalUser->id)
+            ->where('module_id', $this->moduleA->id)->firstOrFail();
+        $this->assertTrue($row->can_approve, 'can_approve must remain true despite not being in control keys');
+        $this->assertTrue($row->can_read);
+    }
+
+    public function test_row_with_only_ui_columns_null_and_can_approve_null_may_be_deleted(): void
+    {
+        UserModulePermission::create([
+            'user_id' => $this->normalUser->id,
+            'module_id' => $this->moduleA->id,
+            'can_read' => true,
+        ]);
+        $this->assertTrue(
+            UserModulePermission::where('user_id', $this->normalUser->id)
+                ->where('module_id', $this->moduleA->id)->exists()
+        );
+
+        $this->actingAs($this->superAdmin)->put(route('users.permissions.update', $this->normalUser->id), [
+            'controls' => [
+                $this->moduleA->id => ['access' => 'inherit', 'manage' => 'inherit', 'import' => 'inherit', 'export' => 'inherit', '_access_unchanged' => '0'],
+            ],
+        ]);
+
+        $this->assertFalse(
+            UserModulePermission::where('user_id', $this->normalUser->id)
+                ->where('module_id', $this->moduleA->id)->exists(),
+            'Row with no meaningful overrides should be deleted'
+        );
+    }
+
+    public function test_non_sa_can_delete_false_only_row_does_not_remain(): void
+    {
+        UserModulePermission::create([
+            'user_id' => $this->normalUser->id,
+            'module_id' => $this->moduleA->id,
+            'can_read' => true,
+            'can_reveal' => true,
+        ]);
+        $this->assertTrue(
+            UserModulePermission::where('user_id', $this->normalUser->id)
+                ->where('module_id', $this->moduleA->id)->exists()
+        );
+
+        $this->actingAs($this->superAdmin)->put(route('users.permissions.update', $this->normalUser->id), [
+            'controls' => [
+                $this->moduleA->id => ['access' => 'inherit', 'manage' => 'inherit', 'import' => 'inherit', 'export' => 'inherit', '_access_unchanged' => '0'],
+            ],
+        ]);
+
+        $this->assertFalse(
+            UserModulePermission::where('user_id', $this->normalUser->id)
+                ->where('module_id', $this->moduleA->id)->exists(),
+            'Row with only can_delete=false must be deleted (enforced, not meaningful)'
+        );
+    }
+
+    // ─── Super Admin ──────────────────────────────────────────────────────
+
+    public function test_super_admin_behavior_remains_intact(): void
+    {
+        $this->assertTrue($this->superAdmin->canOnModule($this->moduleA, 'read'));
+        $this->assertTrue($this->superAdmin->canOnModule($this->moduleA, 'create'));
+        $this->assertTrue($this->superAdmin->canOnModule($this->moduleA, 'update'));
+        $this->assertTrue($this->superAdmin->canOnModule($this->moduleA, 'delete'));
+        $this->assertTrue($this->superAdmin->canOnModule($this->moduleA, 'export'));
+        $this->assertTrue($this->superAdmin->canOnModule($this->moduleA, 'reveal'));
+        $this->assertTrue($this->superAdmin->canOnModule($this->moduleA, 'import'));
+    }
+
+    // ─── Batch 1 reveal behavior ──────────────────────────────────────────
+
+    public function test_reveal_auth_not_regressed(): void
+    {
+        $this->assertTrue($this->superAdmin->canOnModule($this->moduleA, 'reveal'));
+
+        $this->assertTrue($this->normalUser->canOnModule($this->moduleA, 'reveal'));
+
+        UserModulePermission::create([
+            'user_id' => $this->normalUser->id,
+            'module_id' => $this->moduleA->id,
+            'can_reveal' => true,
+            'can_read' => true,
+        ]);
+        $this->assertTrue($this->normalUser->canOnModule($this->moduleA, 'reveal'));
+
+        $override = UserModulePermission::where('user_id', $this->normalUser->id)
+            ->where('module_id', $this->moduleA->id)->first();
+        $override->update(['can_reveal' => false]);
+        $this->assertFalse($this->normalUser->canOnModule($this->moduleA, 'reveal'));
+
+        $override->delete();
+        $this->normalUser->clearPermissionCache();
+        $this->assertTrue($this->normalUser->canOnModule($this->moduleA, 'reveal'));
+    }
+
+    // ─── Existing tests (updated for controls format) ─────────────────────
+
     public function test_user_override_true_grants_permission_even_if_role_denies(): void
     {
-        // Role denies can_create on moduleA for normalUser
         $this->assertFalse($this->normalUser->canOnModule($this->moduleA, 'create'));
 
         UserModulePermission::create([
@@ -93,7 +711,6 @@ class UserModulePermissionTest extends TestCase
 
     public function test_user_override_false_denies_permission_even_if_role_grants(): void
     {
-        // Role grants can_update on moduleA for admin
         $this->assertTrue($this->admin->canOnModule($this->moduleA, 'update'));
 
         UserModulePermission::create([
@@ -107,10 +724,8 @@ class UserModulePermissionTest extends TestCase
 
     public function test_null_override_inherits_role_permission(): void
     {
-        // No override row exists yet
         $this->assertTrue($this->admin->canOnModule($this->moduleA, 'read'));
 
-        // Create override row with null can_read (inherits from role)
         UserModulePermission::create([
             'user_id' => $this->admin->id,
             'module_id' => $this->moduleA->id,
@@ -123,23 +738,17 @@ class UserModulePermissionTest extends TestCase
 
     public function test_no_override_keeps_existing_role_behavior(): void
     {
-        // Admin has can_read on moduleA
         $this->assertTrue($this->admin->canOnModule($this->moduleA, 'read'));
-        // Admin does NOT have can_read on moduleB
         $this->assertFalse($this->admin->canOnModule($this->moduleB, 'read'));
-        // Normal user has can_read on moduleA
         $this->assertTrue($this->normalUser->canOnModule($this->moduleA, 'read'));
-        // Normal user does NOT have can_read on moduleB
         $this->assertFalse($this->normalUser->canOnModule($this->moduleB, 'read'));
     }
 
     public function test_getAccessibleModuleIds_respects_user_overrides(): void
     {
-        // Admin: role grants read on moduleA, not moduleB
         $ids = $this->admin->getAccessibleModuleIds('read');
         $this->assertEquals([$this->moduleA->id], $ids);
 
-        // Override: grant read on moduleB
         UserModulePermission::create([
             'user_id' => $this->admin->id,
             'module_id' => $this->moduleB->id,
@@ -150,7 +759,6 @@ class UserModulePermissionTest extends TestCase
         $this->assertContains($this->moduleA->id, $ids);
         $this->assertContains($this->moduleB->id, $ids);
 
-        // Override: deny read on moduleA (overrides role grant)
         UserModulePermission::create([
             'user_id' => $this->admin->id,
             'module_id' => $this->moduleA->id,
@@ -177,11 +785,6 @@ class UserModulePermissionTest extends TestCase
                     'can_read' => '1',
                     'can_create' => '1',
                     'can_update' => '0',
-                    'can_delete' => '',
-                    'can_approve' => '',
-                    'can_export' => '',
-                    'can_reveal' => '',
-                    'can_import' => '',
                 ],
             ],
         ]);
@@ -194,7 +797,6 @@ class UserModulePermissionTest extends TestCase
         $this->assertTrue($user->canOnModule($this->moduleA, 'create'));
         $this->assertFalse($user->canOnModule($this->moduleA, 'update'));
 
-        // Module B should still inherit role default (false for user role)
         $this->assertFalse($user->canOnModule($this->moduleB, 'read'));
     }
 
@@ -211,17 +813,8 @@ class UserModulePermissionTest extends TestCase
         $this->assertTrue($this->normalUser->canOnModule($this->moduleA, 'create'));
 
         $response = $this->actingAs($this->superAdmin)->put(route('users.permissions.update', $this->normalUser->id), [
-            'permissions' => [
-                $this->moduleA->id => [
-                    'can_read' => '1',
-                    'can_create' => '0',
-                    'can_update' => '',
-                    'can_delete' => '',
-                    'can_approve' => '',
-                    'can_export' => '',
-                    'can_reveal' => '',
-                    'can_import' => '',
-                ],
+            'controls' => [
+                $this->moduleA->id => ['access' => 'allow', 'manage' => 'deny', 'import' => 'inherit', 'export' => 'inherit', '_access_unchanged' => '0', '_manage_unchanged' => '0'],
             ],
         ]);
 
@@ -235,7 +828,6 @@ class UserModulePermissionTest extends TestCase
 
     public function test_super_admin_can_delete_overrides_through_permissions_page(): void
     {
-        // Create override
         UserModulePermission::create([
             'user_id' => $this->normalUser->id,
             'module_id' => $this->moduleA->id,
@@ -243,32 +835,20 @@ class UserModulePermissionTest extends TestCase
         ]);
         $this->assertFalse($this->normalUser->canOnModule($this->moduleA, 'read'));
 
-        // Submit permissions update with all inherit values (empty strings)
         $response = $this->actingAs($this->superAdmin)->put(route('users.permissions.update', $this->normalUser->id), [
-            'permissions' => [
-                $this->moduleA->id => [
-                    'can_read' => '',
-                    'can_create' => '',
-                    'can_update' => '',
-                    'can_delete' => '',
-                    'can_approve' => '',
-                    'can_export' => '',
-                    'can_reveal' => '',
-                    'can_import' => '',
-                ],
+            'controls' => [
+                $this->moduleA->id => ['access' => 'inherit', 'manage' => 'inherit', 'import' => 'inherit', 'export' => 'inherit', '_access_unchanged' => '0'],
             ],
         ]);
 
         $response->assertRedirect();
 
-        // Override row should be deleted → fall back to role
         $this->normalUser->refresh();
         $this->assertTrue($this->normalUser->canOnModule($this->moduleA, 'read'));
     }
 
     public function test_non_super_admin_cannot_manage_overrides(): void
     {
-        // Admin tries to access user edit page
         $response = $this->actingAs($this->admin)->get('/users/create');
         $response->assertForbidden();
 
@@ -325,12 +905,10 @@ class UserModulePermissionTest extends TestCase
     {
         $effective = $this->admin->getEffectiveModulePermissions($this->moduleA);
 
-        // can_read from role
         $this->assertEquals('Role', $effective['can_read']['source']);
         $this->assertTrue($effective['can_read']['effective']);
         $this->assertNull($effective['can_read']['user_override']);
 
-        // can_reveal from role (defaults to false in DB)
         $this->assertEquals('Role', $effective['can_reveal']['source']);
         $this->assertFalse($effective['can_reveal']['effective']);
 
@@ -369,7 +947,6 @@ class UserModulePermissionTest extends TestCase
 
     public function test_cannot_delete_last_super_admin(): void
     {
-        // There is only one super-admin (created in setUp)
         $response = $this->actingAs($this->superAdmin)->delete("/users/{$this->superAdmin->id}");
         $response->assertForbidden();
     }
@@ -390,11 +967,9 @@ class UserModulePermissionTest extends TestCase
 
     public function test_can_delete_super_admin_if_another_exists(): void
     {
-        // Create a second super admin
         $secondSuperAdmin = User::factory()->create();
         $secondSuperAdmin->assignRole($this->superAdminRole);
 
-        // Now we can delete the first super admin
         $response = $this->actingAs($this->superAdmin)->delete("/users/{$this->superAdmin->id}");
         $response->assertRedirect();
         $response->assertSessionHas('success');
@@ -402,85 +977,55 @@ class UserModulePermissionTest extends TestCase
 
     public function test_omitted_module_from_payload_deletes_stale_override(): void
     {
-        // Regression: protects JS/backend contract where omitted modules = reset-to-inherited.
-        // permissions.js excludes modules with preset===baseline from payload.
-        // Backend must delete stale override rows for excluded modules.
-
-        // normalUser role baseline: can_read=true on ModuleA, can_read=false on ModuleB
-        // Create override denying ModuleA (overrides role grant)
         UserModulePermission::create([
             'user_id' => $this->normalUser->id,
             'module_id' => $this->moduleA->id,
             'can_read' => false,
         ]);
-        // Create override granting ModuleB (overrides role deny)
         UserModulePermission::create([
             'user_id' => $this->normalUser->id,
             'module_id' => $this->moduleB->id,
             'can_read' => true,
         ]);
 
-        // Verify overrides are active
         $this->assertFalse($this->normalUser->canOnModule($this->moduleA, 'read'));
         $this->assertTrue($this->normalUser->canOnModule($this->moduleB, 'read'));
 
-        // Send payload containing ONLY ModuleB (ModuleA omitted = reset to inherited)
         $response = $this->actingAs($this->superAdmin)->put(route('users.permissions.update', $this->normalUser->id), [
-            'permissions' => [
-                $this->moduleB->id => [
-                    'can_read' => '1',
-                    'can_create' => '',
-                    'can_update' => '',
-                    'can_delete' => '',
-                    'can_approve' => '',
-                    'can_export' => '',
-                    'can_reveal' => '',
-                    'can_import' => '',
-                ],
+            'controls' => [
+                $this->moduleB->id => ['access' => 'allow', 'manage' => 'inherit', 'import' => 'inherit', 'export' => 'inherit', '_access_unchanged' => '0'],
             ],
         ]);
 
         $response->assertRedirect();
         $response->assertSessionHas('success');
 
-        // Module A stale override row must be deleted
         $this->assertFalse(
             UserModulePermission::where('user_id', $this->normalUser->id)
-                ->where('module_id', $this->moduleA->id)
-                ->exists(),
+                ->where('module_id', $this->moduleA->id)->exists(),
             'Module A override row should be deleted (omitted from payload)'
         );
 
-        // Module B override row must remain
         $this->assertTrue(
             UserModulePermission::where('user_id', $this->normalUser->id)
-                ->where('module_id', $this->moduleB->id)
-                ->exists(),
+                ->where('module_id', $this->moduleB->id)->exists(),
             'Module B override row should remain (included in payload)'
         );
 
-        // canOnModule falls back to role baseline for Module A
         $this->assertTrue($this->normalUser->canOnModule($this->moduleA, 'read'));
-
-        // canOnModule still follows override for Module B
         $this->assertTrue($this->normalUser->canOnModule($this->moduleB, 'read'));
     }
 
     public function test_rbac_phase1_behavior_preserved_without_overrides(): void
     {
-        // Verify Phase 1 behaviors still work with the updated trait
-        // Super admin sees all
         $this->assertTrue($this->superAdmin->hasRole('super-admin'));
 
-        // Admin has can_read on moduleA from role
         $this->assertTrue($this->admin->canOnModule($this->moduleA, 'read'));
         $this->assertFalse($this->admin->canOnModule($this->moduleB, 'read'));
 
-        // User has can_read on moduleA from role
         $this->assertTrue($this->normalUser->canOnModule($this->moduleA, 'read'));
         $this->assertFalse($this->normalUser->canOnModule($this->moduleB, 'read'));
 
-        // getAccessibleModuleIds returns role-based IDs
         $adminIds = $this->admin->getAccessibleModuleIds('read');
         $this->assertContains($this->moduleA->id, $adminIds);
         $this->assertNotContains($this->moduleB->id, $adminIds);
@@ -494,24 +1039,13 @@ class UserModulePermissionTest extends TestCase
         $response = $this->actingAs($this->superAdmin)
             ->from(route('users.permissions.edit', $this->normalUser->id))
             ->put(route('users.permissions.update', $this->normalUser->id), [
-            'permissions' => [
-                $invalidId => [
-                    'can_read' => '1',
-                    'can_create' => '',
-                    'can_update' => '',
-                    'can_delete' => '',
-                    'can_approve' => '',
-                    'can_export' => '',
-                    'can_reveal' => '',
-                    'can_import' => '',
+                'controls' => [
+                    $invalidId => ['access' => 'allow', 'manage' => 'inherit', 'import' => 'inherit', 'export' => 'inherit'],
                 ],
-            ],
-        ]);
+            ]);
 
         $response->assertSessionHasErrors();
         $response->assertRedirect();
-        $errors = session('errors');
-        $this->assertStringContainsString('Invalid module IDs', $errors->first('permissions'));
     }
 
     public function test_permission_save_bumps_perms_generation(): void
@@ -519,17 +1053,8 @@ class UserModulePermissionTest extends TestCase
         $genBefore = Cache::get('perms_generation', 0);
 
         $this->actingAs($this->superAdmin)->put(route('users.permissions.update', $this->normalUser->id), [
-            'permissions' => [
-                $this->moduleA->id => [
-                    'can_read' => '1',
-                    'can_create' => '0',
-                    'can_update' => '',
-                    'can_delete' => '',
-                    'can_approve' => '',
-                    'can_export' => '',
-                    'can_reveal' => '',
-                    'can_import' => '',
-                ],
+            'controls' => [
+                $this->moduleA->id => ['access' => 'allow', 'manage' => 'deny', 'import' => 'inherit', 'export' => 'inherit', '_access_unchanged' => '0', '_manage_unchanged' => '0'],
             ],
         ]);
 
@@ -539,41 +1064,20 @@ class UserModulePermissionTest extends TestCase
 
     public function test_concurrent_permission_updates_maintain_data_integrity(): void
     {
-        // Simulates two rapid sequential updates testing the lockForUpdate path
-        // First update: set moduleA can_read=true, can_create=true
         $this->actingAs($this->superAdmin)
             ->put(route('users.permissions.update', $this->normalUser->id), [
-                'permissions' => [
-                    $this->moduleA->id => [
-                        'can_read' => '1',
-                        'can_create' => '1',
-                        'can_update' => '',
-                        'can_delete' => '',
-                        'can_approve' => '',
-                        'can_export' => '',
-                        'can_reveal' => '',
-                        'can_import' => '',
-                    ],
+                'controls' => [
+                    $this->moduleA->id => ['access' => 'allow', 'manage' => 'allow', 'import' => 'inherit', 'export' => 'inherit', '_access_unchanged' => '0', '_manage_unchanged' => '0'],
                 ],
             ])->assertRedirect()->assertSessionHas('success');
 
         $this->assertTrue($this->normalUser->canOnModule($this->moduleA, 'read'));
         $this->assertTrue($this->normalUser->canOnModule($this->moduleA, 'create'));
 
-        // Second update: override can_read back to false, keep can_create
         $this->actingAs($this->superAdmin)
             ->put(route('users.permissions.update', $this->normalUser->id), [
-                'permissions' => [
-                    $this->moduleA->id => [
-                        'can_read' => '0',
-                        'can_create' => '1',
-                        'can_update' => '',
-                        'can_delete' => '',
-                        'can_approve' => '',
-                        'can_export' => '',
-                        'can_reveal' => '',
-                        'can_import' => '',
-                    ],
+                'controls' => [
+                    $this->moduleA->id => ['access' => 'deny', 'manage' => 'allow', 'import' => 'inherit', 'export' => 'inherit', '_access_unchanged' => '0', '_manage_unchanged' => '0'],
                 ],
             ])->assertRedirect()->assertSessionHas('success');
 

@@ -367,6 +367,13 @@ class UserController extends Controller
         $modules = $this->permissionService->getModulesWithFeatures();
         $userOverrides = $this->permissionService->getUserOverrideMap($user->id);
 
+        $importableSlugs = config('permissions.importable_modules', []);
+        $exportableSlugs = config('permissions.exportable_modules', []);
+
+        $overrideRows = UserModulePermission::where('user_id', $user->id)
+            ->get()
+            ->keyBy('module_id');
+
         $categories = $modules->pluck('feature.name')
             ->filter()
             ->unique()
@@ -374,7 +381,36 @@ class UserController extends Controller
             ->values()
             ->toArray();
 
-        return view('users.permissions', compact('user', 'modules', 'userOverrides', 'categories'));
+        $moduleList = [];
+        foreach ($modules as $module) {
+            $overrideRow = $overrideRows->get($module->id);
+            $effective = $user->getEffectiveModulePermissions($module);
+
+            $baselinePerms = [];
+            $effectivePerms = [];
+            foreach (config('permissions.keys') as $key) {
+                $baselinePerms[$key] = $effective[$key]['role'] ?? null;
+                $effectivePerms[$key] = $effective[$key]['effective'] ?? false;
+            }
+
+            $controls = $this->permissionService->mapDbRowToControls($overrideRow, $module);
+            $isImportable = in_array($module->slug, $importableSlugs, true);
+            $isExportable = in_array($module->slug, $exportableSlugs, true);
+
+            $moduleList[] = [
+                'id' => $module->id,
+                'name' => $module->name,
+                'category' => $module->feature->name ?? 'Uncategorized',
+                'slug' => $module->slug,
+                'isImportable' => $isImportable,
+                'isExportable' => $isExportable,
+                'controls' => $controls,
+                'baselinePerms' => $baselinePerms,
+                'effectivePerms' => $effectivePerms,
+            ];
+        }
+
+        return view('users.permissions', compact('user', 'moduleList', 'categories', 'importableSlugs', 'exportableSlugs'));
     }
 
     public function updatePermissions(Request $request, int $id): RedirectResponse
@@ -382,11 +418,13 @@ class UserController extends Controller
         abort_unless(Auth::user()->hasRole('super-admin'), 403);
 
         $user = User::findOrFail($id);
-
-        $allowedKeys = config('permissions.keys');
+        $validControlValues = ['inherit', 'allow', 'deny'];
 
         $request->validate([
-            'permissions' => ['nullable', 'array', function ($attr, $value, $fail) use ($allowedKeys) {
+            'controls' => ['nullable', 'array', function ($attr, $value, $fail) use ($validControlValues) {
+                if (!is_array($value)) {
+                    return;
+                }
                 $moduleIds = array_keys($value);
                 $validIds = Module::whereIn('id', $moduleIds)->pluck('id')->all();
                 $invalid = array_diff($moduleIds, $validIds);
@@ -394,16 +432,54 @@ class UserController extends Controller
                     $fail('Invalid module IDs: '.implode(', ', $invalid));
                 }
 
-                foreach ($value as $moduleId => $perms) {
-                    $extraKeys = array_diff(array_keys($perms), $allowedKeys);
-                    if ($extraKeys) {
-                        $fail("Invalid permission keys for module {$moduleId}: ".implode(', ', $extraKeys));
+                foreach ($value as $moduleId => $ctrl) {
+                    if (!is_array($ctrl)) {
+                        $fail("Invalid control data for module {$moduleId}.");
+                        continue;
+                    }
+                    foreach (['access', 'manage', 'import', 'export'] as $key) {
+                        if (isset($ctrl[$key]) && !in_array($ctrl[$key], $validControlValues, true)) {
+                            $fail("Invalid value for {$key} on module {$moduleId}. Must be inherit, allow, or deny.");
+                        }
                     }
                 }
             }],
         ]);
 
-        $this->permissionService->saveUserModulePermissions($user, $request->input('permissions'));
+        $controls = $request->input('controls', []);
+        $normalized = [];
+
+        foreach ($controls as $moduleId => $ctrl) {
+            if (!is_array($ctrl)) {
+                continue;
+            }
+            $module = Module::find($moduleId);
+            if (!$module) {
+                continue;
+            }
+            $normalized[$moduleId] = [
+                'access' => in_array($ctrl['access'] ?? 'inherit', $validControlValues, true) ? $ctrl['access'] : 'inherit',
+                'manage' => in_array($ctrl['manage'] ?? 'inherit', $validControlValues, true) ? $ctrl['manage'] : 'inherit',
+                'import' => in_array($ctrl['import'] ?? 'inherit', $validControlValues, true) ? $ctrl['import'] : 'inherit',
+                'export' => in_array($ctrl['export'] ?? 'inherit', $validControlValues, true) ? $ctrl['export'] : 'inherit',
+                'full_access' => !empty($ctrl['full_access']),
+                '_access_unchanged' => $ctrl['_access_unchanged'] ?? '1',
+                '_manage_unchanged' => $ctrl['_manage_unchanged'] ?? '1',
+            ];
+
+            // Inherit All convenience
+            if (!empty($ctrl['inherit_all'])) {
+                $normalized[$moduleId]['access'] = 'inherit';
+                $normalized[$moduleId]['manage'] = 'inherit';
+                $normalized[$moduleId]['import'] = 'inherit';
+                $normalized[$moduleId]['export'] = 'inherit';
+                $normalized[$moduleId]['full_access'] = false;
+                $normalized[$moduleId]['_access_unchanged'] = '0';
+                $normalized[$moduleId]['_manage_unchanged'] = '0';
+            }
+        }
+
+        $this->permissionService->saveUserControls($user, $normalized);
 
         return redirect()->route('users.edit', $user->id)->with('success', 'Permission overrides updated successfully.');
     }
