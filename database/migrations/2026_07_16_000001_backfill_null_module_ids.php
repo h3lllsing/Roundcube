@@ -20,19 +20,18 @@ return new class extends Migration
 
     public function up(): void
     {
-        $orphans = [];
-
         foreach (self::TABLES as $table => $slug) {
             $moduleId = ModuleCache::idBySlug($slug);
             if (!$moduleId) {
                 continue;
             }
 
+            // Backfill null module_ids
             DB::table($table)
                 ->whereNull('module_id')
                 ->update(['module_id' => $moduleId]);
 
-            // Report rows whose module_id points to a different module slug
+            // Correct non-null module_ids that point to a different module slug
             $wrongIds = DB::table($table . ' as t')
                 ->join('modules as m', 't.module_id', '=', 'm.id')
                 ->where('m.slug', '!=', $slug)
@@ -40,21 +39,10 @@ return new class extends Migration
                 ->pluck('t.id');
 
             if ($wrongIds->isNotEmpty()) {
-                $orphans[] = [
-                    'table' => $table,
-                    'expected_slug' => $slug,
-                    'row_ids' => $wrongIds->toArray(),
-                ];
+                DB::table($table)
+                    ->whereIn('id', $wrongIds)
+                    ->update(['module_id' => $moduleId]);
             }
-        }
-
-        if ($orphans) {
-            $msg = 'Backfill migration found rows with module_id pointing to a different module:';
-            foreach ($orphans as $o) {
-                $msg .= sprintf("\n  %s (expected slug: %s): row IDs %s", $o['table'], $o['expected_slug'], implode(', ', $o['row_ids']));
-            }
-            $msg .= "\nThese rows were NOT modified. Review manually.";
-            trigger_error($msg, E_USER_WARNING);
         }
 
         Cache::increment('perms_generation');

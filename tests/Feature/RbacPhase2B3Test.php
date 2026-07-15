@@ -815,24 +815,82 @@ class RbacPhase2B3Test extends TestCase
         $this->assertEquals($firstHostingModuleId, $hosting->fresh()->module_id);
     }
 
-    public function test_migration_does_not_overwrite_non_null_module_id(): void
+    public function test_migration_repairs_wrong_module_id(): void
     {
+        $gmailModule = Module::where('slug', 'g-mails')->firstOrFail();
         $otherModule = Module::where('slug', 'tasks')->firstOrFail();
         $gmail = GMail::factory()->create([
             'module_id' => $otherModule->id,
             'user_id' => $this->superAdmin->id,
         ]);
-        $originalModuleId = $gmail->module_id;
+        $this->assertEquals($otherModule->id, $gmail->fresh()->module_id);
 
         $migration = require __DIR__ . '/../../database/migrations/2026_07_16_000001_backfill_null_module_ids.php';
+        $migration->up();
 
-        try {
-            $migration->up();
-        } catch (\ErrorException $e) {
-            // Expected: migration warns about wrong module_id
-        }
+        $this->assertEquals($gmailModule->id, $gmail->fresh()->module_id);
+    }
 
-        $this->assertEquals($originalModuleId, $gmail->fresh()->module_id);
+    public function test_migration_correct_module_id_unchanged(): void
+    {
+        $gmailModule = Module::where('slug', 'g-mails')->firstOrFail();
+        $hostingsModule = Module::where('slug', 'hostings')->firstOrFail();
+        $gmail = GMail::factory()->create([
+            'module_id' => $gmailModule->id,
+            'user_id' => $this->superAdmin->id,
+        ]);
+        $hosting = Hosting::factory()->create([
+            'module_id' => $hostingsModule->id,
+            'user_id' => $this->superAdmin->id,
+        ]);
+
+        $migration = require __DIR__ . '/../../database/migrations/2026_07_16_000001_backfill_null_module_ids.php';
+        $migration->up();
+
+        $this->assertEquals($gmailModule->id, $gmail->fresh()->module_id);
+        $this->assertEquals($hostingsModule->id, $hosting->fresh()->module_id);
+    }
+
+    public function test_migration_unrelated_fields_unchanged(): void
+    {
+        $gmailModule = Module::where('slug', 'g-mails')->firstOrFail();
+        $otherModule = Module::where('slug', 'tasks')->firstOrFail();
+        $gmail = GMail::factory()->create([
+            'module_id' => $otherModule->id,
+            'user_id' => $this->superAdmin->id,
+            'status' => 'active',
+            'user_name' => 'testuser',
+            'password' => 'secret123',
+        ]);
+        $original = $gmail->fresh();
+        $originalStatus = $original->status;
+        $originalUserName = $original->user_name;
+        $originalUserId = $original->user_id;
+
+        $migration = require __DIR__ . '/../../database/migrations/2026_07_16_000001_backfill_null_module_ids.php';
+        $migration->up();
+
+        $updated = $gmail->fresh();
+        $this->assertEquals($gmailModule->id, $updated->module_id);
+        $this->assertEquals($originalStatus, $updated->status);
+        $this->assertEquals($originalUserName, $updated->user_name);
+        $this->assertEquals($originalUserId, $updated->user_id);
+    }
+
+    public function test_migration_corrects_wrong_service_provider_module_id(): void
+    {
+        $hostingsModule = Module::where('slug', 'hostings')->firstOrFail();
+        $spModule = Module::where('slug', 'service-providers')->firstOrFail();
+        $sp = ServiceProvider::factory()->create([
+            'module_id' => $hostingsModule->id,
+            'user_id' => $this->superAdmin->id,
+        ]);
+        $this->assertEquals($hostingsModule->id, $sp->fresh()->module_id);
+
+        $migration = require __DIR__ . '/../../database/migrations/2026_07_16_000001_backfill_null_module_ids.php';
+        $migration->up();
+
+        $this->assertEquals($spModule->id, $sp->fresh()->module_id);
     }
 
     public function test_migration_backfills_all_resource_tables(): void
