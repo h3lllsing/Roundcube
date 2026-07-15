@@ -457,11 +457,15 @@ class UserController extends Controller
             if (!$module) {
                 continue;
             }
+            $access = $ctrl['access'] ?? 'inherit';
+            $manage = $ctrl['manage'] ?? 'inherit';
+            $import = $ctrl['import'] ?? 'inherit';
+            $export = $ctrl['export'] ?? 'inherit';
             $normalized[$moduleId] = [
-                'access' => in_array($ctrl['access'] ?? 'inherit', $validControlValues, true) ? $ctrl['access'] : 'inherit',
-                'manage' => in_array($ctrl['manage'] ?? 'inherit', $validControlValues, true) ? $ctrl['manage'] : 'inherit',
-                'import' => in_array($ctrl['import'] ?? 'inherit', $validControlValues, true) ? $ctrl['import'] : 'inherit',
-                'export' => in_array($ctrl['export'] ?? 'inherit', $validControlValues, true) ? $ctrl['export'] : 'inherit',
+                'access' => in_array($access, $validControlValues, true) ? $access : 'inherit',
+                'manage' => in_array($manage, $validControlValues, true) ? $manage : 'inherit',
+                'import' => in_array($import, $validControlValues, true) ? $import : 'inherit',
+                'export' => in_array($export, $validControlValues, true) ? $export : 'inherit',
                 'full_access' => !empty($ctrl['full_access']),
                 '_access_unchanged' => $ctrl['_access_unchanged'] ?? '1',
                 '_manage_unchanged' => $ctrl['_manage_unchanged'] ?? '1',

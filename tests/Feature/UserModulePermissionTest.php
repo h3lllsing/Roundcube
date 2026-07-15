@@ -1106,4 +1106,45 @@ class UserModulePermissionTest extends TestCase
         $this->assertFalse($this->normalUser->canOnModule($this->moduleA, 'read'), 'Second update should override can_read');
         $this->assertTrue($this->normalUser->canOnModule($this->moduleA, 'create'), 'can_create should remain true from first update');
     }
+
+    public function test_omitted_import_key_does_not_crash(): void
+    {
+        $this->actingAs($this->superAdmin)->put(route('users.permissions.update', $this->normalUser->id), [
+            'controls' => [
+                $this->moduleA->id => ['access' => 'allow', 'manage' => 'inherit', 'export' => 'inherit'],
+            ],
+        ])->assertRedirect()->assertSessionHas('success');
+    }
+
+    public function test_omitted_export_key_does_not_crash(): void
+    {
+        $this->actingAs($this->superAdmin)->put(route('users.permissions.update', $this->normalUser->id), [
+            'controls' => [
+                $this->moduleA->id => ['access' => 'inherit', 'manage' => 'allow', 'import' => 'inherit'],
+            ],
+        ])->assertRedirect()->assertSessionHas('success');
+    }
+
+    public function test_unsupported_module_omits_import_export_keys(): void
+    {
+        $this->actingAs($this->superAdmin)->put(route('users.permissions.update', $this->normalUser->id), [
+            'controls' => [
+                $this->moduleA->id => ['access' => 'allow', 'manage' => 'allow'],
+            ],
+        ])->assertRedirect()->assertSessionHas('success');
+
+        $row = UserModulePermission::where('user_id', $this->normalUser->id)
+            ->where('module_id', $this->moduleA->id)->firstOrFail();
+        $this->assertTrue($row->can_read);
+        $this->assertTrue($row->can_create);
+    }
+
+    public function test_omitted_preset_keys_does_not_crash(): void
+    {
+        $this->actingAs($this->superAdmin)->put(route('users.permissions.update', $this->normalUser->id), [
+            'controls' => [
+                $this->moduleA->id => ['access' => 'allow', 'manage' => 'allow', 'import' => 'allow', 'export' => 'allow'],
+            ],
+        ])->assertRedirect()->assertSessionHas('success');
+    }
 }
