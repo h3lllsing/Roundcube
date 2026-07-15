@@ -382,7 +382,8 @@
                     <li><strong>Permissions</strong> page par jayein</li>
                     <li>Matrix dikhega: Features/Modules × Roles</li>
                     <li>Kisi bhi cell par click karein to modal khulega</li>
-                    <li>Checkboxes select karein: <strong>Create, Read, Update, Delete, Approve, Export</strong></li>
+                    <li>Controls select karein: <strong>Access, Manage, Import, Export, Full Access</strong></li>
+                    <li><strong>Delete / Restore / Force Delete</strong> — Super Admin only (not a normal role/permission control)</li>
                     <li>Save karein — ab us role ke users ko woh permissions mil jayengi</li>
                 </ol>
 

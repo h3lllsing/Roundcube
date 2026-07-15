@@ -553,6 +553,49 @@ class ModulePermissionTest extends TestCase
         $this->assertTrue($row->can_import);
     }
 
+    public function test_crafted_can_delete_cannot_persist_for_non_sa_role(): void
+    {
+        $this->actingAs($this->admin);
+        $this->post(route('module-permissions.update'), [
+            'updated_at' => $this->module->updated_at->format('Y-m-d H:i:s'),
+            'module_id' => $this->module->id,
+            'role_id' => $this->userRole->id,
+            'access' => true,
+            'manage' => true,
+            'export' => true,
+            'import' => true,
+            'full_access' => true,
+            'can_delete' => true,
+            'can_approve' => true,
+            'can_reveal' => true,
+        ]);
+
+        $row = ModuleRolePermission::where('module_id', $this->module->id)
+            ->where('role_id', $this->userRole->id)
+            ->firstOrFail();
+        $this->assertFalse($row->can_delete, 'can_delete must remain false — no normal control maps to it');
+        $this->assertFalse($row->can_approve, 'can_approve must remain false — no normal control maps to it');
+        $this->assertTrue($row->can_reveal, 'can_reveal enabled by access control');
+    }
+
+    public function test_role_permission_ui_has_no_delete_control(): void
+    {
+        $this->actingAs($this->admin);
+        $response = $this->get(route('module-permissions.index', ['role_id' => $this->userRole->id]));
+        $response->assertOk();
+
+        $html = $response->getContent();
+
+        $this->assertStringContainsString('Access', $html);
+        $this->assertStringContainsString('Manage', $html);
+        $this->assertStringContainsString('Import', $html);
+        $this->assertStringContainsString('Export', $html);
+        $this->assertStringContainsString('Full Access', $html);
+
+        $this->assertStringNotContainsString('>Delete<', $html);
+        $this->assertStringNotContainsString('>can_delete<', $html);
+    }
+
     public function test_user_overrides_untouched_when_role_baseline_changes(): void
     {
         $user = User::factory()->create();

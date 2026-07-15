@@ -52,6 +52,12 @@
         </div>
     </div>
 
+    @php
+        $templateImportable = config('permissions.importable_modules', []);
+        $templateExportable = config('permissions.exportable_modules', []);
+        $permKeys = config('permissions.keys');
+        $permsJson = $template->permissions_json ?? [];
+    @endphp
     <div class="bg-white dark:bg-black rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 mb-6">
         <h3 class="text-md font-semibold mb-1">Permission Matrix</h3>
         <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">Read-only view of the permissions defined by this template.</p>
@@ -61,41 +67,76 @@
                     <tr class="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-black/50">
                         <th class="text-left px-4 py-3 font-medium text-gray-500 dark:text-gray-400">Module</th>
                         <th class="text-left px-4 py-3 font-medium text-gray-500 dark:text-gray-400">Feature</th>
-                        <th class="text-center px-3 py-3 font-medium text-gray-500 dark:text-gray-400">Read</th>
-                        <th class="text-center px-3 py-3 font-medium text-gray-500 dark:text-gray-400">Create</th>
-                        <th class="text-center px-3 py-3 font-medium text-gray-500 dark:text-gray-400">Update</th>
-                        <th class="text-center px-3 py-3 font-medium text-gray-500 dark:text-gray-400">Delete</th>
-                        <th class="text-center px-3 py-3 font-medium text-gray-500 dark:text-gray-400">Approve</th>
-                        <th class="text-center px-3 py-3 font-medium text-gray-500 dark:text-gray-400">Export</th>
-                        <th class="text-center px-3 py-3 font-medium text-gray-500 dark:text-gray-400">Reveal</th>
+                        <th class="text-center px-3 py-3 font-medium text-gray-500 dark:text-gray-400">Access</th>
+                        <th class="text-center px-3 py-3 font-medium text-gray-500 dark:text-gray-400">Manage</th>
                         <th class="text-center px-3 py-3 font-medium text-gray-500 dark:text-gray-400">Import</th>
+                        <th class="text-center px-3 py-3 font-medium text-gray-500 dark:text-gray-400">Export</th>
+                        <th class="text-center px-3 py-3 font-medium text-gray-500 dark:text-gray-400">Full Access</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-                    @php
-                        $permKeys = config('permissions.keys');
-                        $permsJson = $template->permissions_json ?? [];
-                    @endphp
                     @forelse ($modules as $module)
                         @php
-                            $modulePerms = $permsJson[$module->slug] ?? [];
+                            $mp = $permsJson[$module->slug] ?? [];
+                            $hasAccess = !empty($mp['can_read']);
+                            $canManage = !empty($mp['can_create']) && !empty($mp['can_update']);
+                            $canImport = !empty($mp['can_import']);
+                            $canExport = !empty($mp['can_export']);
+                            $isImportable = in_array($module->slug, $templateImportable);
+                            $isExportable = in_array($module->slug, $templateExportable);
+                            $isFullAccess = $hasAccess && $canManage
+                                && (!$isImportable || $canImport)
+                                && (!$isExportable || $canExport);
                         @endphp
                     <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                         <td class="px-4 py-2.5 font-medium">{{ $module->name }}</td>
                         <td class="px-4 py-2.5 text-xs text-gray-500">{{ $module->feature->name ?? '—' }}</td>
-                        @foreach ($permKeys as $key)
-                            @php $val = $modulePerms[$key] ?? false; @endphp
                         <td class="px-3 py-2.5 text-center">
-                            @if ($val)
+                            @if ($hasAccess)
                                 <span class="text-green-600 font-bold text-lg leading-none">&#10003;</span>
                             @else
                                 <span class="text-red-400 font-bold text-lg leading-none">&#10005;</span>
                             @endif
                         </td>
-                        @endforeach
+                        <td class="px-3 py-2.5 text-center">
+                            @if ($canManage)
+                                <span class="text-green-600 font-bold text-lg leading-none">&#10003;</span>
+                            @else
+                                <span class="text-red-400 font-bold text-lg leading-none">&#10005;</span>
+                            @endif
+                        </td>
+                        <td class="px-3 py-2.5 text-center">
+                            @if ($isImportable)
+                                @if ($canImport)
+                                    <span class="text-green-600 font-bold text-lg leading-none">&#10003;</span>
+                                @else
+                                    <span class="text-red-400 font-bold text-lg leading-none">&#10005;</span>
+                                @endif
+                            @else
+                                <span class="text-gray-300 dark:text-gray-600">—</span>
+                            @endif
+                        </td>
+                        <td class="px-3 py-2.5 text-center">
+                            @if ($isExportable)
+                                @if ($canExport)
+                                    <span class="text-green-600 font-bold text-lg leading-none">&#10003;</span>
+                                @else
+                                    <span class="text-red-400 font-bold text-lg leading-none">&#10005;</span>
+                                @endif
+                            @else
+                                <span class="text-gray-300 dark:text-gray-600">—</span>
+                            @endif
+                        </td>
+                        <td class="px-3 py-2.5 text-center">
+                            @if ($isFullAccess)
+                                <span class="text-rose-600 font-bold text-lg leading-none">&#10003;</span>
+                            @else
+                                <span class="text-gray-400 dark:text-gray-500 font-bold text-lg leading-none">&#10005;</span>
+                            @endif
+                        </td>
                     </tr>
                     @empty
-                    <tr><td colspan="10" class="px-4 py-8 text-center text-gray-500">No module permissions defined for this template.</td></tr>
+                    <tr><td colspan="7" class="px-4 py-8 text-center text-gray-500">No module permissions defined for this template.</td></tr>
                     @endforelse
                 </tbody>
             </table>

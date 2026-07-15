@@ -24,6 +24,22 @@
     </div>
     @endif
 
+    @php
+        $applyImportable = config('permissions.importable_modules', []);
+        $applyExportable = config('permissions.exportable_modules', []);
+
+        function applyCtl($vals, $slug, $importable, $exportable) {
+            $access = !empty($vals['can_read']);
+            $manage = !empty($vals['can_create']) && !empty($vals['can_update']);
+            $import_ = !empty($vals['can_import']);
+            $export_ = !empty($vals['can_export']);
+            $full = $access && $manage
+                && (!in_array($slug, $importable) || $import_)
+                && (!in_array($slug, $exportable) || $export_);
+            return [$access, $manage, $import_, $export_, $full];
+        }
+    @endphp
+
     @if(count($diff['added']) > 0)
     <div class="bg-white dark:bg-black rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 mb-6">
         <h3 class="text-md font-semibold mb-2 text-green-700 dark:text-green-400">
@@ -35,29 +51,28 @@
                 <thead>
                     <tr class="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-black/50">
                         <th class="text-left px-4 py-2 font-medium text-gray-500 dark:text-gray-400">Module</th>
-                        <th class="text-center px-3 py-2 font-medium text-gray-500 dark:text-gray-400">Read</th>
-                        <th class="text-center px-3 py-2 font-medium text-gray-500 dark:text-gray-400">Create</th>
-                        <th class="text-center px-3 py-2 font-medium text-gray-500 dark:text-gray-400">Update</th>
-                        <th class="text-center px-3 py-2 font-medium text-gray-500 dark:text-gray-400">Delete</th>
-                        <th class="text-center px-3 py-2 font-medium text-gray-500 dark:text-gray-400">Approve</th>
-                        <th class="text-center px-3 py-2 font-medium text-gray-500 dark:text-gray-400">Export</th>
-                        <th class="text-center px-3 py-2 font-medium text-gray-500 dark:text-gray-400">Reveal</th>
+                        <th class="text-center px-3 py-2 font-medium text-gray-500 dark:text-gray-400">Access</th>
+                        <th class="text-center px-3 py-2 font-medium text-gray-500 dark:text-gray-400">Manage</th>
                         <th class="text-center px-3 py-2 font-medium text-gray-500 dark:text-gray-400">Import</th>
+                        <th class="text-center px-3 py-2 font-medium text-gray-500 dark:text-gray-400">Export</th>
+                        <th class="text-center px-3 py-2 font-medium text-gray-500 dark:text-gray-400">Full Access</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
                     @foreach ($diff['added'] as $item)
+                    @php
+                        $slug = $item['module']->slug;
+                        [$ca, $cm, $ci, $ce, $cf] = applyCtl($item['template_values'], $slug, $applyImportable, $applyExportable);
+                        $showI = in_array($slug, $applyImportable);
+                        $showE = in_array($slug, $applyExportable);
+                    @endphp
                     <tr class="bg-green-50/50 dark:bg-green-900/10">
                         <td class="px-4 py-2 font-medium">{{ $item['module']->name }}</td>
-                        @foreach (config('permissions.keys') as $key)
-                        <td class="px-3 py-2 text-center">
-                            @if($item['template_values'][$key])
-                                <span class="text-green-600 font-bold">&#10003;</span>
-                            @else
-                                <span class="text-red-400">&#10005;</span>
-                            @endif
-                        </td>
-                        @endforeach
+                        <td class="px-3 py-2 text-center">{!! $ca ? '<span class="text-green-600 font-bold">&#10003;</span>' : '<span class="text-red-400">&#10005;</span>' !!}</td>
+                        <td class="px-3 py-2 text-center">{!! $cm ? '<span class="text-green-600 font-bold">&#10003;</span>' : '<span class="text-red-400">&#10005;</span>' !!}</td>
+                        <td class="px-3 py-2 text-center">{!! $showI ? ($ci ? '<span class="text-green-600 font-bold">&#10003;</span>' : '<span class="text-red-400">&#10005;</span>') : '<span class="text-gray-300 dark:text-gray-600">—</span>' !!}</td>
+                        <td class="px-3 py-2 text-center">{!! $showE ? ($ce ? '<span class="text-green-600 font-bold">&#10003;</span>' : '<span class="text-red-400">&#10005;</span>') : '<span class="text-gray-300 dark:text-gray-600">—</span>' !!}</td>
+                        <td class="px-3 py-2 text-center">{!! $cf ? '<span class="text-rose-600 font-bold">&#10003;</span>' : '<span class="text-gray-400">&#10005;</span>' !!}</td>
                     </tr>
                     @endforeach
                 </tbody>
@@ -77,35 +92,40 @@
                 <thead>
                     <tr class="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-black/50">
                         <th class="text-left px-4 py-2 font-medium text-gray-500 dark:text-gray-400">Module</th>
-                        <th class="text-center px-3 py-2 font-medium text-gray-500 dark:text-gray-400">Read</th>
-                        <th class="text-center px-3 py-2 font-medium text-gray-500 dark:text-gray-400">Create</th>
-                        <th class="text-center px-3 py-2 font-medium text-gray-500 dark:text-gray-400">Update</th>
-                        <th class="text-center px-3 py-2 font-medium text-gray-500 dark:text-gray-400">Delete</th>
-                        <th class="text-center px-3 py-2 font-medium text-gray-500 dark:text-gray-400">Approve</th>
-                        <th class="text-center px-3 py-2 font-medium text-gray-500 dark:text-gray-400">Export</th>
-                        <th class="text-center px-3 py-2 font-medium text-gray-500 dark:text-gray-400">Reveal</th>
+                        <th class="text-center px-3 py-2 font-medium text-gray-500 dark:text-gray-400">Access</th>
+                        <th class="text-center px-3 py-2 font-medium text-gray-500 dark:text-gray-400">Manage</th>
                         <th class="text-center px-3 py-2 font-medium text-gray-500 dark:text-gray-400">Import</th>
+                        <th class="text-center px-3 py-2 font-medium text-gray-500 dark:text-gray-400">Export</th>
+                        <th class="text-center px-3 py-2 font-medium text-gray-500 dark:text-gray-400">Full Access</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
                     @foreach ($diff['changed'] as $item)
+                    @php
+                        $slug = $item['module']->slug;
+                        [$oldA, $oldM, $oldI, $oldE, $oldF] = applyCtl($item['current_values'], $slug, $applyImportable, $applyExportable);
+                        [$newA, $newM, $newI, $newE, $newF] = applyCtl($item['template_values'], $slug, $applyImportable, $applyExportable);
+                        $ctlShowI = in_array($slug, $applyImportable);
+                        $ctlShowE = in_array($slug, $applyExportable);
+                        $ctlPairs = [
+                            ['old' => $oldA, 'new' => $newA],
+                            ['old' => $oldM, 'new' => $newM],
+                            ['old' => $oldI, 'new' => $newI, 'hide' => !$ctlShowI],
+                            ['old' => $oldE, 'new' => $newE, 'hide' => !$ctlShowE],
+                            ['old' => $oldF, 'new' => $newF],
+                        ];
+                    @endphp
                     <tr class="bg-amber-50/50 dark:bg-amber-900/10">
                         <td class="px-4 py-2 font-medium">{{ $item['module']->name }}</td>
-                        @foreach (config('permissions.keys') as $key)
+                        @foreach ($ctlPairs as $p)
                         <td class="px-3 py-2 text-center">
-                            @php
-                                $old = $item['current_values'][$key];
-                                $new = $item['template_values'][$key];
-                            @endphp
-                            @if($old !== $new)
-                                <span class="text-red-400 line-through mr-1">{{ $old ? '&#10003;' : '&#10005;' }}</span>
-                                <span class="text-green-600 font-bold">{{ $new ? '&#10003;' : '&#10005;' }}</span>
+                            @if (!empty($p['hide']))
+                                <span class="text-gray-300 dark:text-gray-600">—</span>
+                            @elseif ($p['old'] !== $p['new'])
+                                <span class="text-red-400 line-through mr-1">{{ $p['old'] ? '&#10003;' : '&#10005;' }}</span>
+                                <span class="text-green-600 font-bold">{{ $p['new'] ? '&#10003;' : '&#10005;' }}</span>
                             @else
-                                @if($old)
-                                    <span class="text-green-600">&#10003;</span>
-                                @else
-                                    <span class="text-red-400">&#10005;</span>
-                                @endif
+                                {!! $p['old'] ? '<span class="text-green-600">&#10003;</span>' : '<span class="text-red-400">&#10005;</span>' !!}
                             @endif
                         </td>
                         @endforeach

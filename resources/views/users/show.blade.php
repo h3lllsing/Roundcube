@@ -80,8 +80,21 @@
         $featureGroups = $modulePermissions->groupBy(fn($mp) => $mp->feature ?? 'Uncategorized');
         $expandedByDefault = ['Infrastructure', 'Productivity'];
     @endphp
-    <div class="mt-6 bg-white dark:bg-black rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-        <h3 class="text-md font-semibold mb-1">Permission Matrix</h3>
+    @php
+        $importableSlugs = config('permissions.importable_modules', []);
+        $exportableSlugs = config('permissions.exportable_modules', []);
+        $isViewerSA = auth()->user()->hasRole('super-admin');
+    @endphp
+    <div x-data="{ showRaw: false }" class="mt-6 bg-white dark:bg-black rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+        <div class="flex items-center justify-between mb-1">
+            <h3 class="text-md font-semibold">Permission Matrix</h3>
+            @if ($isViewerSA)
+            <label class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 cursor-pointer select-none">
+                <input type="checkbox" x-model="showRaw" class="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500">
+                Debug: Show raw columns
+            </label>
+            @endif
+        </div>
         <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">Shows all modules with effective permissions grouped by feature. Expand each group to inspect permissions.</p>
         <div class="space-y-3">
             @forelse ($featureGroups as $featureName => $modules)
@@ -94,19 +107,134 @@
                     </button>
                     <div x-show="expanded" x-cloak>
                         <div class="overflow-x-auto border-t border-gray-200 dark:border-gray-700">
-                            <table class="w-full text-sm">
+
+                            {{-- Conceptual columns (always shown) --}}
+                            <table class="w-full text-sm" x-show="!showRaw">
                                 <thead>
                                     <tr class="border-b border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/30">
                                         <th scope="col" class="text-left px-3 py-2 font-medium text-gray-500 dark:text-gray-400 whitespace-nowrap">Module</th>
                                         <th scope="col" class="text-left px-3 py-2 font-medium text-gray-500 dark:text-gray-400 whitespace-nowrap">Feature</th>
-                                        <th scope="col" class="text-center px-2 py-2 font-medium text-gray-500 dark:text-gray-400 text-xs whitespace-nowrap">Read</th>
-                                        <th scope="col" class="text-center px-2 py-2 font-medium text-gray-500 dark:text-gray-400 text-xs whitespace-nowrap">Create</th>
-                                        <th scope="col" class="text-center px-2 py-2 font-medium text-gray-500 dark:text-gray-400 text-xs whitespace-nowrap">Update</th>
-                                        <th scope="col" class="text-center px-2 py-2 font-medium text-gray-500 dark:text-gray-400 text-xs whitespace-nowrap">Delete</th>
-                                        <th scope="col" class="text-center px-2 py-2 font-medium text-gray-500 dark:text-gray-400 text-xs whitespace-nowrap">Approve</th>
-                                        <th scope="col" class="text-center px-2 py-2 font-medium text-gray-500 dark:text-gray-400 text-xs whitespace-nowrap">Export</th>
-                                        <th scope="col" class="text-center px-2 py-2 font-medium text-gray-500 dark:text-gray-400 text-xs whitespace-nowrap">Reveal</th>
+                                        <th scope="col" class="text-center px-2 py-2 font-medium text-gray-500 dark:text-gray-400 text-xs whitespace-nowrap">Access</th>
+                                        <th scope="col" class="text-center px-2 py-2 font-medium text-gray-500 dark:text-gray-400 text-xs whitespace-nowrap">Manage</th>
                                         <th scope="col" class="text-center px-2 py-2 font-medium text-gray-500 dark:text-gray-400 text-xs whitespace-nowrap">Import</th>
+                                        <th scope="col" class="text-center px-2 py-2 font-medium text-gray-500 dark:text-gray-400 text-xs whitespace-nowrap">Export</th>
+                                        <th scope="col" class="text-center px-2 py-2 font-medium text-gray-500 dark:text-gray-400 text-xs whitespace-nowrap">Full Access</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                                    @foreach ($modules as $mp)
+                                    @php
+                                        $cr = $mp->permissions['can_read'] ?? ['effective' => false, 'source' => 'None'];
+                                        $cc = $mp->permissions['can_create'] ?? ['effective' => false, 'source' => 'None'];
+                                        $cu = $mp->permissions['can_update'] ?? ['effective' => false, 'source' => 'None'];
+                                        $ci = $mp->permissions['can_import'] ?? ['effective' => false, 'source' => 'None'];
+                                        $ce = $mp->permissions['can_export'] ?? ['effective' => false, 'source' => 'None'];
+
+                                        $hasAccess = $cr['effective'];
+                                        $canManage = $cc['effective'] && $cu['effective'];
+                                        $canImport = $ci['effective'];
+                                        $canExport = $ce['effective'];
+
+                                        $isImportable = in_array($mp->module_slug ?? '', $importableSlugs);
+                                        $isExportable = in_array($mp->module_slug ?? '', $exportableSlugs);
+
+                                        $isFullAccess = $hasAccess && $canManage
+                                            && (!$isImportable || $canImport)
+                                            && (!$isExportable || $canExport);
+                                    @endphp
+                                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                                        <td class="px-3 py-2.5 font-medium whitespace-nowrap">{{ $mp->module_name }}</td>
+                                        <td class="px-3 py-2.5 text-gray-500 dark:text-gray-400 text-xs whitespace-nowrap">{{ $mp->feature ?? '—' }}</td>
+
+                                        {{-- Access --}}
+                                        <td class="px-2 py-2.5 text-center">
+                                            @php $src = $cr['source']; @endphp
+                                            @if ($hasAccess)
+                                                <span class="text-green-600 dark:text-green-400 font-bold text-sm">&#10003;</span>
+                                            @else
+                                                <span class="text-red-400 dark:text-red-300 font-bold text-sm">&#10005;</span>
+                                            @endif
+                                            <span class="block text-[9px] leading-tight mt-0.5 text-blue-600 dark:text-blue-400">{{ $src }}</span>
+                                        </td>
+
+                                        {{-- Manage --}}
+                                        <td class="px-2 py-2.5 text-center">
+                                            @php
+                                                $mSrc = $cc['source'] === $cu['source'] ? $cc['source'] : $cc['source'] . '/' . $cu['source'];
+                                            @endphp
+                                            @if ($canManage)
+                                                <span class="text-green-600 dark:text-green-400 font-bold text-sm">&#10003;</span>
+                                            @else
+                                                <span class="text-red-400 dark:text-red-300 font-bold text-sm">&#10005;</span>
+                                            @endif
+                                            <span class="block text-[9px] leading-tight mt-0.5 text-blue-600 dark:text-blue-400">{{ $mSrc }}</span>
+                                        </td>
+
+                                        {{-- Import --}}
+                                        <td class="px-2 py-2.5 text-center">
+                                            @if ($isImportable)
+                                                @php $iSrc = $ci['source']; @endphp
+                                                @if ($canImport)
+                                                    <span class="text-green-600 dark:text-green-400 font-bold text-sm">&#10003;</span>
+                                                @else
+                                                    <span class="text-red-400 dark:text-red-300 font-bold text-sm">&#10005;</span>
+                                                @endif
+                                                <span class="block text-[9px] leading-tight mt-0.5 text-blue-600 dark:text-blue-400">{{ $iSrc }}</span>
+                                            @else
+                                                <span class="text-gray-300 dark:text-gray-600">—</span>
+                                            @endif
+                                        </td>
+
+                                        {{-- Export --}}
+                                        <td class="px-2 py-2.5 text-center">
+                                            @if ($isExportable)
+                                                @php $eSrc = $ce['source']; @endphp
+                                                @if ($canExport)
+                                                    <span class="text-green-600 dark:text-green-400 font-bold text-sm">&#10003;</span>
+                                                @else
+                                                    <span class="text-red-400 dark:text-red-300 font-bold text-sm">&#10005;</span>
+                                                @endif
+                                                <span class="block text-[9px] leading-tight mt-0.5 text-blue-600 dark:text-blue-400">{{ $eSrc }}</span>
+                                            @else
+                                                <span class="text-gray-300 dark:text-gray-600">—</span>
+                                            @endif
+                                        </td>
+
+                                        {{-- Full Access (derived, no source) --}}
+                                        <td class="px-2 py-2.5 text-center">
+                                            @if ($isFullAccess)
+                                                <span class="text-rose-600 dark:text-rose-400 font-bold text-sm">&#10003;</span>
+                                            @else
+                                                <span class="text-gray-400 dark:text-gray-500 font-bold text-sm">&#10005;</span>
+                                            @endif
+                                        </td>
+                                    </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+
+                            @if ($isViewerSA)
+                            {{-- Raw internal columns (SA debug only) --}}
+                            <table class="w-full text-sm" x-show="showRaw" x-cloak>
+                                <thead>
+                                    @php
+                                        $rawLabels = [
+                                            'can_read' => 'can_read',
+                                            'can_create' => 'can_create',
+                                            'can_update' => 'can_update',
+                                            'can_delete' => 'can_delete',
+                                            'can_approve' => 'can_approve',
+                                            'can_export' => 'can_export',
+                                            'can_reveal' => 'can_reveal',
+                                            'can_import' => 'can_import',
+                                        ];
+                                    @endphp
+                                    <tr class="border-b border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/30">
+                                        <th scope="col" class="text-left px-3 py-2 font-medium text-gray-500 dark:text-gray-400 whitespace-nowrap">Module</th>
+                                        <th scope="col" class="text-left px-3 py-2 font-medium text-gray-500 dark:text-gray-400 whitespace-nowrap">Feature</th>
+                                        @foreach (config('permissions.keys') as $perm)
+                                        <th scope="col" class="text-center px-2 py-2 font-medium text-gray-500 dark:text-gray-400 text-xs whitespace-nowrap">{{ $rawLabels[$perm] ?? $perm }}</th>
+                                        @endforeach
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
@@ -157,6 +285,7 @@
                                     @endforeach
                                 </tbody>
                             </table>
+                            @endif
                         </div>
                     </div>
                 </div>

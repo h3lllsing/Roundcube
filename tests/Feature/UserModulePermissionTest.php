@@ -1062,6 +1062,27 @@ class UserModulePermissionTest extends TestCase
         $this->assertGreaterThan($genBefore, $genAfter, 'perms_generation must increment on permission save');
     }
 
+    public function test_user_permission_ui_has_no_delete_reveal_approve_controls(): void
+    {
+        $this->actingAs($this->superAdmin);
+        $response = $this->get(route('users.permissions.edit', $this->normalUser->id));
+        $response->assertOk();
+
+        $html = $response->getContent();
+
+        $this->assertStringContainsString('Access', $html);
+        $this->assertStringContainsString('Manage', $html);
+        $this->assertStringContainsString('Import', $html);
+        $this->assertStringContainsString('Export', $html);
+
+        $this->assertStringNotContainsString('>can_delete<', $html);
+        $this->assertStringNotContainsString('>can_reveal<', $html);
+        $this->assertStringNotContainsString('>can_approve<', $html);
+        $this->assertStringNotContainsString('>Delete<', $html);
+        $this->assertStringNotContainsString('>Reveal<', $html);
+        $this->assertStringNotContainsString('>Approve<', $html);
+    }
+
     public function test_concurrent_permission_updates_maintain_data_integrity(): void
     {
         $this->actingAs($this->superAdmin)
