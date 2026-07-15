@@ -32,7 +32,7 @@
                 @if($email->password)
                     <div class="flex items-center gap-2">
                         <span class="font-mono password-mask" data-password="{{ route('domain-emails.password', $email->id) }}">••••••••</span>
-                        <x-permission-check :module="$vaultModule" action="reveal">
+                        <x-permission-check :module="$email->module" action="reveal">
                         <x-copy-button password-route="{{ route('domain-emails.password', $email->id) }}" title="Copy password" />
                         <button type="button" aria-label="Toggle password visibility" class="px-2 py-1 text-xs font-medium text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/20 toggle-password">Show</button>
                         </x-permission-check>

@@ -189,7 +189,7 @@ class RbacPhase2B3Test extends TestCase
     public function test_admin_without_can_reveal_denied_hosting_password(): void
     {
         UserModulePermission::create([
-            'user_id' => $this->admin->id, 'module_id' => $this->vaultModule->id,
+            'user_id' => $this->admin->id, 'module_id' => $this->hostingsModule->id,
             'can_reveal' => false,
         ]);
         $hosting = Hosting::factory()->create(['module_id' => $this->hostingsModule->id, 'user_id' => $this->admin->id]);
@@ -200,6 +200,10 @@ class RbacPhase2B3Test extends TestCase
 
     public function test_user_without_can_reveal_denied(): void
     {
+        UserModulePermission::create([
+            'user_id' => $this->normalUser->id, 'module_id' => $this->hostingsModule->id,
+            'can_reveal' => false,
+        ]);
         $hosting = Hosting::factory()->create(['module_id' => $this->hostingsModule->id, 'user_id' => $this->normalUser->id]);
 
         $response = $this->actingAs($this->normalUser)->get(route('hostings.password', $hosting->id));
@@ -210,20 +214,22 @@ class RbacPhase2B3Test extends TestCase
 
     public function test_override_true_grants_reveal_when_role_denies(): void
     {
+        $user = User::factory()->create();
+        $user->assignRole($this->userRole);
         UserModulePermission::create([
-            'user_id' => $this->admin->id, 'module_id' => $this->deniedModule->id,
-            'can_reveal' => true,
+            'user_id' => $user->id, 'module_id' => $this->hostingsModule->id,
+            'can_reveal' => true, 'can_read' => true,
         ]);
-        $hosting = Hosting::factory()->create(['module_id' => $this->deniedModule->id, 'user_id' => $this->admin->id]);
+        $hosting = Hosting::factory()->create(['module_id' => $this->hostingsModule->id, 'user_id' => $user->id]);
 
-        $response = $this->actingAs($this->admin)->get(route('hostings.password', $hosting->id));
+        $response = $this->actingAs($user)->get(route('hostings.password', $hosting->id));
         $response->assertOk();
     }
 
     public function test_override_false_denies_reveal_when_role_allows(): void
     {
         UserModulePermission::create([
-            'user_id' => $this->admin->id, 'module_id' => $this->vaultModule->id,
+            'user_id' => $this->admin->id, 'module_id' => $this->hostingsModule->id,
             'can_reveal' => false,
         ]);
         $hosting = Hosting::factory()->create(['module_id' => $this->hostingsModule->id, 'user_id' => $this->admin->id]);
@@ -251,7 +257,7 @@ class RbacPhase2B3Test extends TestCase
     public function test_denied_reveal_does_not_log_activity(): void
     {
         UserModulePermission::create([
-            'user_id' => $this->admin->id, 'module_id' => $this->vaultModule->id,
+            'user_id' => $this->admin->id, 'module_id' => $this->hostingsModule->id,
             'can_reveal' => false,
         ]);
         $hosting = Hosting::factory()->create(['module_id' => $this->hostingsModule->id, 'user_id' => $this->admin->id]);
@@ -438,5 +444,86 @@ class RbacPhase2B3Test extends TestCase
 
         $response = $this->actingAs($this->superAdmin)->get(route('hostings.password', $hosting->id));
         $response->assertOk();
+    }
+
+    // ─── UI VISIBILITY (index action menu) ─────────────────────────
+
+    public function test_service_provider_access_shows_password_action_in_index(): void
+    {
+        $user = User::factory()->create();
+        $user->assignRole($this->userRole);
+        UserModulePermission::create([
+            'user_id' => $user->id, 'module_id' => $this->serviceProvidersModule->id,
+            'can_read' => true,
+        ]);
+        $provider = ServiceProvider::factory()->create([
+            'module_id' => $this->serviceProvidersModule->id, 'user_id' => $user->id,
+            'password' => 'secret',
+        ]);
+
+        $response = $this->actingAs($user)->get(route('service-providers.index'));
+        $response->assertOk();
+        $response->assertSee('Copy Password');
+    }
+
+    public function test_hosting_access_shows_password_action_in_index(): void
+    {
+        $user = User::factory()->create();
+        $user->assignRole($this->userRole);
+        UserModulePermission::create([
+            'user_id' => $user->id, 'module_id' => $this->hostingsModule->id,
+            'can_read' => true,
+        ]);
+        $hosting = Hosting::factory()->create([
+            'module_id' => $this->hostingsModule->id, 'user_id' => $user->id,
+            'password' => 'secret',
+        ]);
+
+        $response = $this->actingAs($user)->get(route('hostings.index'));
+        $response->assertOk();
+        $response->assertSee('Copy Password');
+    }
+
+    public function test_explicit_can_reveal_false_hides_password_action(): void
+    {
+        $user = User::factory()->create();
+        $user->assignRole($this->userRole);
+        UserModulePermission::create([
+            'user_id' => $user->id, 'module_id' => $this->serviceProvidersModule->id,
+            'can_read' => true, 'can_reveal' => false,
+        ]);
+        $provider = ServiceProvider::factory()->create([
+            'module_id' => $this->serviceProvidersModule->id, 'user_id' => $user->id,
+            'password' => 'secret',
+        ]);
+
+        $response = $this->actingAs($user)->get(route('service-providers.index'));
+        $response->assertOk();
+        $response->assertDontSee('Copy Password');
+    }
+
+    public function test_no_access_hides_password_action(): void
+    {
+        $user = User::factory()->create();
+        $user->assignRole($this->userRole);
+        UserModulePermission::create([
+            'user_id' => $user->id, 'module_id' => $this->serviceProvidersModule->id,
+            'can_read' => false,
+        ]);
+
+        $response = $this->actingAs($user)->get(route('service-providers.index'));
+        $response->assertForbidden();
+    }
+
+    public function test_super_admin_sees_password_action_in_index(): void
+    {
+        $provider = ServiceProvider::factory()->create([
+            'module_id' => $this->serviceProvidersModule->id, 'user_id' => $this->superAdmin->id,
+            'password' => 'secret',
+        ]);
+
+        $response = $this->actingAs($this->superAdmin)->get(route('service-providers.index'));
+        $response->assertOk();
+        $response->assertSee('Copy Password');
     }
 }

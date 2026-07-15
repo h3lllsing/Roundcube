@@ -60,7 +60,7 @@
                                 @php
                                     $_canEdit = auth()->user()->hasRole('super-admin') || ($service->module && auth()->user()->canOnModule($service->module, 'update'));
                                     $_canDelete = auth()->user()->hasRole('super-admin') || ($service->module && auth()->user()->canOnModule($service->module, 'delete'));
-                                    $_canReveal = auth()->user()->hasRole('super-admin') || ($vaultModule && auth()->user()->canOnModule($vaultModule, 'reveal'));
+                                    $_canReveal = auth()->user()->hasRole('super-admin') || ($service->module && auth()->user()->canOnModule($service->module, 'reveal'));
                                     $_hasPassword = (bool)$service->password;
                                     $_hasLoginUrl = (bool)$service->login_url;
                                     $_hasOperationalShortcuts = $_hasLoginUrl;

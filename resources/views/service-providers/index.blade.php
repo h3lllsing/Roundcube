@@ -57,7 +57,7 @@
                             @php
                                 $_canEdit = auth()->user()->hasRole('super-admin') || ($provider->module && auth()->user()->canOnModule($provider->module, 'update'));
                                 $_canDelete = auth()->user()->hasRole('super-admin') || ($provider->module && auth()->user()->canOnModule($provider->module, 'delete'));
-                                $_canReveal = auth()->user()->hasRole('super-admin') || ($vaultModule && auth()->user()->canOnModule($vaultModule, 'reveal'));
+                                $_canReveal = auth()->user()->hasRole('super-admin') || ($provider->module && auth()->user()->canOnModule($provider->module, 'reveal'));
                                 $_hasPassword = (bool)$provider->password;
                                 $_hasLoginId = (bool)$provider->login_id;
                                 $_hasWebsite = (bool)$provider->website;

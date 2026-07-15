@@ -62,7 +62,7 @@
                                 @php
                                     $_canEdit = auth()->user()->hasRole('super-admin') || ($gMail->module && auth()->user()->canOnModule($gMail->module, 'update'));
                                     $_canDelete = auth()->user()->hasRole('super-admin') || ($gMail->module && auth()->user()->canOnModule($gMail->module, 'delete'));
-                                    $_canReveal = auth()->user()->hasRole('super-admin') || ($vaultModule && auth()->user()->canOnModule($vaultModule, 'reveal'));
+                                    $_canReveal = auth()->user()->hasRole('super-admin') || ($gMail->module && auth()->user()->canOnModule($gMail->module, 'reveal'));
                                     $_hasPassword = (bool)$gMail->password;
                                 @endphp
                                 <div x-data="{ open: false, style: '' }" @click.away="open = false" class="relative inline-block">

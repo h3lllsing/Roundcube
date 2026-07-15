@@ -64,8 +64,7 @@ $badgeMap = ['available' => 'success', 'assigned' => 'primary', 'lost' => 'dange
                             @php
                                 $_canEdit = auth()->user()->hasRole('super-admin') || ($asset->module && auth()->user()->canOnModule($asset->module, 'update'));
                                 $_canDelete = auth()->user()->hasRole('super-admin') || ($asset->module && auth()->user()->canOnModule($asset->module, 'delete'));
-                                $_vaultModule = \App\Helpers\ModuleCache::findBySlug('vault');
-                                $_canReveal = auth()->user()->hasRole('super-admin') || ($_vaultModule && auth()->user()->canOnModule($_vaultModule, 'reveal'));
+                                $_canReveal = auth()->user()->hasRole('super-admin') || ($asset->module && auth()->user()->canOnModule($asset->module, 'reveal'));
                             @endphp
                             <div x-data="{ open: false, style: '' }" @click.away="open = false" class="relative inline-block">
                                 <button type="button" @click="
