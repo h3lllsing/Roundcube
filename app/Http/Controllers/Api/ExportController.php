@@ -48,6 +48,15 @@ class ExportController extends Controller
 
         $filename = $type.'-'.now()->format('Y-m-d-His').'.csv';
 
+        activity()->event('exported')
+            ->causedBy($request->user())
+            ->withProperties([
+                'type' => $type,
+                'filename' => $filename,
+                'module_slug' => $cfg['module_slug'] ?? null,
+            ])
+            ->log('Exported CSV: '.$type);
+
         return ResponseFacade::make($csv, 200, [
             'Content-Type' => 'text/csv; charset=utf-8',
             'Content-Disposition' => 'attachment; filename="'.$filename.'"',

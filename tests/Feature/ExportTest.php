@@ -68,6 +68,21 @@ class ExportTest extends TestCase
         $this->getJson('/api/export/domains')->assertUnauthorized();
     }
 
+    public function test_export_logs_activity(): void
+    {
+        Domain::factory()->create(['name' => 'log-test.com', 'service_provider_id' => \App\Models\ServiceProvider::factory()]);
+
+        $this->actingAs($this->admin)
+            ->get('/api/export/domains')
+            ->assertOk();
+
+        $this->assertDatabaseHas('activity_log', [
+            'event' => 'exported',
+            'causer_id' => $this->admin->id,
+            'causer_type' => get_class($this->admin),
+        ]);
+    }
+
     public function test_non_admin_without_export_perm_is_forbidden(): void
     {
         $user = User::factory()->create();
