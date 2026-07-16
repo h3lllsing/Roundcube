@@ -140,6 +140,7 @@ class User extends Authenticatable implements MustVerifyEmail
             ->logFillable()
             ->logOnlyDirty()
             ->dontSubmitEmptyLogs()
+            ->dontLogIfAttributesChangedOnly(['password'])
             ->setDescriptionForEvent(fn (string $eventName) => "User {$this->email} {$eventName}");
     }
 
