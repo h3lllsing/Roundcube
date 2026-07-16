@@ -68,6 +68,23 @@ class PasswordResetTest extends TestCase
         $this->assertTrue(Hash::check('NewPass123', $user->fresh()->password));
     }
 
+    public function test_reset_password_revokes_sanctum_tokens()
+    {
+        $user = User::factory()->create(['email' => 'tokens@example.com']);
+        $user->createToken('existing-token');
+
+        $token = Password::broker()->createToken($user);
+
+        $this->postJson('/api/reset-password', [
+            'email' => 'tokens@example.com',
+            'token' => $token,
+            'password' => 'NewPass123',
+            'password_confirmation' => 'NewPass123',
+        ])->assertOk();
+
+        $this->assertCount(0, $user->fresh()->tokens);
+    }
+
     public function test_reset_password_with_invalid_token()
     {
         User::factory()->create(['email' => 'fail@example.com']);

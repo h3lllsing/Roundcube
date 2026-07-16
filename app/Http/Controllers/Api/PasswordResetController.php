@@ -67,6 +67,7 @@ class PasswordResetController extends Controller
         $status = Password::reset(
             $request->only('email', 'password', 'password_confirmation', 'token'),
             function ($user, $password) {
+                $user->tokens()->delete();
                 $user->forceFill(['password' => bcrypt($password)])->save();
             }
         );
