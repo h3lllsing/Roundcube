@@ -27,6 +27,10 @@ class ImportService
             return ['error' => 'Invalid import type.'];
         }
 
+        if (! Auth::user()?->hasRole('super-admin')) {
+            return ['error' => 'Forbidden.'];
+        }
+
         $modelClass = $this->types[$type];
         $model = new $modelClass;
         $fillable = array_values(array_diff($model->getFillable(), $this->exclude));
