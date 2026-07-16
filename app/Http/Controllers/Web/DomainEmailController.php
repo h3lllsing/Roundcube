@@ -59,7 +59,7 @@ class DomainEmailController extends Controller
 
         $isSuperAdmin = $user->hasRole('super-admin');
         $canCreate = $isSuperAdmin || ($module && $user->canOnModule($module, 'create'));
-        $canExport = $isSuperAdmin;
+        $canExport = $isSuperAdmin || ($module && $user->canOnModule($module, 'export'));
 
         $domains = Domain::orderBy('name')->pluck('name', 'id');
         $vaultModule = \App\Helpers\ModuleCache::findBySlug('vault');

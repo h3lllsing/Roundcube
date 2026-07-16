@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Services\ExportService;
 use App\Support\DataTypeConfig;
 use Illuminate\Http\JsonResponse;
 use Laravel\Sanctum\PersonalAccessToken;
@@ -15,19 +16,20 @@ class ExportController extends Controller
     /** @param array<string, array{model: class-string, columns: string[], admin?: bool, module_slug?: string}> */
     private array $types = [];
 
-    public function __construct()
-    {
+    public function __construct(
+        private readonly ExportService $exportService
+    ) {
         $this->types = DataTypeConfig::exportTypes();
     }
 
     public function export(Request $request, string $type): Response|JsonResponse
     {
-        if (! $request->user()->hasRole('super-admin')) {
-            return $this->message('Forbidden', 403);
-        }
-
         if (! isset($this->types[$type])) {
             return $this->message('Invalid export type', 404);
+        }
+
+        if (! $this->exportService->canExport($request->user(), $type)) {
+            return $this->message('Forbidden', 403);
         }
 
         $cfg = $this->types[$type];

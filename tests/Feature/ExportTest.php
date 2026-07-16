@@ -51,12 +51,40 @@ class ExportTest extends TestCase
             ->assertJsonPath('message', 'Invalid export type');
     }
 
+    public function test_export_forbidden_for_user_without_export_perm(): void
+    {
+        $role = \HasinHayder\Tyro\Models\Role::where('slug', 'user')->firstOrFail();
+        $user = \App\Models\User::factory()->create();
+        $user->assignRole($role);
+        $user->load('roles');
+
+        $this->actingAs($user)
+            ->getJson('/api/export/domains')
+            ->assertForbidden();
+    }
+
     public function test_export_requires_auth(): void
     {
         $this->getJson('/api/export/domains')->assertUnauthorized();
     }
 
-    public function test_non_admin_export_is_forbidden(): void
+    public function test_non_admin_without_export_perm_is_forbidden(): void
+    {
+        $user = User::factory()->create();
+
+        $role = Role::where('slug', 'user')->firstOrFail();
+        $user->assignRole($role);
+        $user->load('roles');
+
+        $token = $user->createToken('test')->plainTextToken;
+
+        $response = $this->withHeader('Authorization', "Bearer $token")
+            ->get('/api/export/domains');
+
+        $response->assertForbidden();
+    }
+
+    public function test_non_admin_with_export_perm_can_export(): void
     {
         $user = User::factory()->create();
 
@@ -69,7 +97,7 @@ class ExportTest extends TestCase
         $response = $this->withHeader('Authorization', "Bearer $token")
             ->get('/api/export/domains');
 
-        $response->assertForbidden();
+        $response->assertOk();
     }
 
     /** @return array<string, array{0: string}> */

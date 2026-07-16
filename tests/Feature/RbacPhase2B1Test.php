@@ -223,7 +223,7 @@ class RbacPhase2B1Test extends TestCase
         $this->assertStringContainsString('override-export.com', $content);
     }
 
-    public function test_normal_user_export_is_own_record_scoped(): void
+    public function test_normal_user_export_is_module_scoped(): void
     {
         Domain::factory()->create(['name' => 'my-domain.com', 'user_id' => $this->normalUser->id, 'module_id' => $this->moduleA->id]);
         Domain::factory()->create(['name' => 'their-domain.com', 'user_id' => $this->admin->id, 'module_id' => $this->moduleA->id]);
@@ -233,7 +233,8 @@ class RbacPhase2B1Test extends TestCase
         $response->assertOk();
         $content = $response->getContent();
         $this->assertStringContainsString('my-domain.com', $content);
-        $this->assertStringNotContainsString('their-domain.com', $content);
+        // Export is module-scoped: having can_export on moduleA grants access to ALL records in it
+        $this->assertStringContainsString('their-domain.com', $content);
     }
 
     public function test_admin_only_export_types_blocked_for_non_super_admin(): void

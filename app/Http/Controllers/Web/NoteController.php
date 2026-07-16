@@ -28,7 +28,11 @@ class NoteController extends Controller
         $notes = $this->noteService->listAll($filters);
         $notableTypes = $this->noteService->getDistinctTypes();
 
-        return view('notes.index', compact('notes', 'notableTypes'));
+        $user = Auth::user();
+        $noteModule = \App\Helpers\ModuleCache::findBySlug('notes');
+        $canExport = $user->hasRole('super-admin') || ($noteModule && $user->canOnModule($noteModule, 'export'));
+
+        return view('notes.index', compact('notes', 'notableTypes', 'canExport'));
     }
 
     public function create(): View

@@ -1019,11 +1019,17 @@ class WebNewResourcesTest extends TestCase
         Domain::factory()->create(['name' => 'my-export-domain.com', 'user_id' => $user->id, 'service_provider_id' => null]);
         Domain::factory()->create(['name' => 'admin-export-domain.com', 'user_id' => $this->admin->id, 'service_provider_id' => null]);
 
+        // Both domains are in the same module — export is module-scoped
+        Domain::where('name', 'my-export-domain.com')->update(['module_id' => $module->id]);
+        Domain::where('name', 'admin-export-domain.com')->update(['module_id' => $module->id]);
+
         $this->actingAs($user);
         $response = $this->get(route('export', 'domains'));
         $response->assertStatus(200);
-        $this->assertStringContainsString('my-export-domain.com', $response->getContent());
-        $this->assertStringNotContainsString('admin-export-domain.com', $response->getContent());
+        $content = $response->getContent();
+        $this->assertStringContainsString('my-export-domain.com', $content);
+        // Having can_export on the module grants access to ALL records in it (module-scoped, not owner-scoped)
+        $this->assertStringContainsString('admin-export-domain.com', $content);
     }
 
     public function test_export_tasks_returns_csv(): void

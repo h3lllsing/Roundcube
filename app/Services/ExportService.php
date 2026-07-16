@@ -18,14 +18,38 @@ class ExportService
         $this->types = DataTypeConfig::exportTypes();
     }
 
-    public function export(User $user, string $type): array
+    public function canExport(User $user, string $type): bool
     {
-        if (! $user->hasRole('super-admin')) {
-            return ['error' => 'Forbidden.'];
+        if (! isset($this->types[$type])) {
+            return false;
         }
 
+        $cfg = $this->types[$type];
+
+        // Super Admin can export anything
+        if ($user->hasRole('super-admin')) {
+            return true;
+        }
+
+        // Admin-only types (no module_slug) are SA-only
+        if (empty($cfg['module_slug'])) {
+            return false;
+        }
+
+        // Module-typed: check effective can_export permission
+        $module = \App\Models\Module::where('slug', $cfg['module_slug'])->first();
+
+        return $module && $user->canOnModule($module, 'export');
+    }
+
+    public function export(User $user, string $type): array
+    {
         if (! isset($this->types[$type])) {
             return ['error' => 'Invalid export type.'];
+        }
+
+        if (! $this->canExport($user, $type)) {
+            return ['error' => 'Forbidden.'];
         }
 
         $cfg = $this->types[$type];
@@ -41,11 +65,17 @@ class ExportService
         } elseif ($user->hasRole('super-admin')) {
             // Super-admin: no scope — export all records
         } elseif (isset($cfg['module_slug'])) {
+            // Check if the model has module_id column — otherwise fall back to user_id scoping
             $accessibleIds = $user->getAccessibleModuleIds('export');
             if (empty($accessibleIds)) {
                 return ['error' => 'Forbidden.'];
             }
-            $query->whereIn('module_id', $accessibleIds);
+            $modelInstance = new $modelClass;
+            if ($modelInstance->getConnection()->getSchemaBuilder()->hasColumn($modelInstance->getTable(), 'module_id')) {
+                $query->whereIn('module_id', $accessibleIds);
+            } else {
+                $query->where('user_id', $user->id);
+            }
         } else {
             $query->where('user_id', $user->id);
         }

@@ -62,7 +62,7 @@ class ExpiryTrackerController extends Controller
 
         $isSuperAdmin = $user->hasRole('super-admin');
         $canCreate = $isSuperAdmin || ($module && $user->canOnModule($module, 'create'));
-        $canExport = $isSuperAdmin;
+        $canExport = $isSuperAdmin || ($module && $user->canOnModule($module, 'export'));
         $canBulkDelete = $isSuperAdmin;
         $canBulkRestore = $user->hasRole('super-admin');
         $canBulkForceDelete = $user->hasRole('super-admin');

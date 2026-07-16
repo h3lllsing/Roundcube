@@ -90,7 +90,11 @@ class TaskController extends Controller
         $modules = Module::orderBy('name')->pluck('name', 'id');
         $users = User::orderBy('name')->pluck('name', 'id');
 
-        return view('tasks.index', compact('tasks', 'modules', 'users'));
+        $user = Auth::user();
+        $taskModule = \App\Helpers\ModuleCache::findBySlug('tasks');
+        $canExport = $user->hasRole('super-admin') || ($taskModule && $user->canOnModule($taskModule, 'export'));
+
+        return view('tasks.index', compact('tasks', 'modules', 'users', 'canExport'));
     }
 
     public function myTasks(Request $request): View

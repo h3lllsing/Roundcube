@@ -21,6 +21,10 @@ class ExportController extends Controller
             return redirect()->back()->with('error', 'Invalid export type.');
         }
 
+        if (! $this->exportService->canExport(Auth::user(), $type)) {
+            return redirect()->back()->with('error', 'Forbidden.');
+        }
+
         $result = $this->exportService->export(Auth::user(), $type);
 
         if (isset($result['error'])) {

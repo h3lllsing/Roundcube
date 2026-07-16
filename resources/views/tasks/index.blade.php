@@ -7,7 +7,7 @@
     <x-page-header title="Tasks" subtitle="Track and manage all tasks.">
         <x-slot:actions>
             <x-button href="{{ route('tasks.kanban') }}{{ request('my_tasks') ? '?my_tasks=1' : '' }}" variant="outline" size="sm">Board</x-button>
-            @if(auth()->user()->hasRole('super-admin'))
+            @if($canExport ?? false)
             <x-button href="{{ route('export', 'tasks') }}" variant="success" size="sm">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                 Export CSV
