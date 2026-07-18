@@ -64,6 +64,13 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->morphMany(\Spatie\Activitylog\Models\Activity::class, 'causer');
     }
 
+    public function assignedEmailAccounts(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(EmailAccount::class, 'email_account_user')
+            ->withPivot('can_send', 'can_receive', 'assigned_by')
+            ->withTimestamps();
+    }
+
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()

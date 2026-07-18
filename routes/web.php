@@ -4,6 +4,9 @@ use App\Http\Controllers\Web\ActivityLogController;
 use App\Http\Controllers\Web\AuthController;
 use App\Http\Controllers\Web\BulkActionController;
 use App\Http\Controllers\Web\DashboardController;
+use App\Http\Controllers\Web\DomainController;
+use App\Http\Controllers\Web\EmailAccountController;
+use App\Http\Controllers\Web\EmailAssignmentController;
 use App\Http\Controllers\Web\FeatureController;
 use App\Http\Controllers\Web\LoginAuditController;
 use App\Http\Controllers\Web\ModuleController;
@@ -14,6 +17,7 @@ use App\Http\Controllers\Web\NotificationController;
 use App\Http\Controllers\Web\PrivilegeController;
 use App\Http\Controllers\Web\RoleController;
 use App\Http\Controllers\Web\UserController;
+use App\Http\Controllers\Web\WebmailController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {
@@ -56,6 +60,16 @@ Route::middleware(['auth', 'suspended'])->group(function () {
 
     Route::get('/monitor/{type}/{id}', [MonitorController::class, 'check'])->name('monitor.check');
     Route::get('/monitoring', [MonitoringOverviewController::class, 'index'])->name('monitoring.index');
+
+    Route::resource('domains', DomainController::class);
+    Route::resource('email_accounts', EmailAccountController::class);
+    Route::post('email_accounts/{email_account}/assign', [EmailAssignmentController::class, 'store'])->name('email_accounts.assign');
+    Route::delete('email_accounts/{email_account}/assign/{user}', [EmailAssignmentController::class, 'destroy'])->name('email_accounts.assign.revoke');
+
+    Route::get('webmail/auth', [WebmailController::class, 'auth'])->name('webmail.auth');
+    Route::get('webmail/open/{email_account}', [WebmailController::class, 'redirect'])->name('webmail.open');
+    Route::get('webmail/open-as/{email_account}', [WebmailController::class, 'openAs'])->name('webmail.open_as');
+    Route::get('webmail', [WebmailController::class, 'index'])->name('webmail.index');
 
     Route::get('/', fn() => redirect()->route('dashboard'));
 });
