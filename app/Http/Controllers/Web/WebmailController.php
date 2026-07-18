@@ -85,28 +85,11 @@ class WebmailController extends Controller
             'smtp_password' => $account->smtp_password,
         ];
 
+        $token = base64_encode(json_encode($config));
+
         $webmailUrl = url('/webmail/') . '?' . http_build_query([
             'auto_login' => '1',
-            'email' => $config['email'],
-            'imap_host' => $config['imap_host'],
-            'imap_port' => $config['imap_port'],
-            'imap_encryption' => $config['imap_encryption'],
-            'smtp_host' => $config['smtp_host'] ?? $config['imap_host'],
-            'smtp_port' => $config['smtp_port'] ?? 587,
-            'smtp_encryption' => $config['smtp_encryption'] ?? 'tls',
-            'smtp_username' => $config['smtp_username'] ?? $config['email'],
-            'token' => encrypt(json_encode([
-                'email' => $config['email'],
-                'password' => $config['password'],
-                'imap_host' => $config['imap_host'],
-                'imap_port' => $config['imap_port'],
-                'imap_encryption' => $config['imap_encryption'],
-                'smtp_host' => $config['smtp_host'],
-                'smtp_port' => $config['smtp_port'],
-                'smtp_encryption' => $config['smtp_encryption'],
-                'smtp_username' => $config['smtp_username'],
-                'smtp_password' => $config['smtp_password'],
-            ])),
+            'rcp_token' => $token,
         ]);
 
         return redirect()->away($webmailUrl);
