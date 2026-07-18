@@ -66,10 +66,10 @@ Route::middleware(['auth', 'suspended'])->group(function () {
     Route::post('email_accounts/{email_account}/assign', [EmailAssignmentController::class, 'store'])->name('email_accounts.assign');
     Route::delete('email_accounts/{email_account}/assign/{user}', [EmailAssignmentController::class, 'destroy'])->name('email_accounts.assign.revoke');
 
-    Route::get('webmail/auth', [WebmailController::class, 'auth'])->name('webmail.auth');
+    Route::get('webmail', [WebmailController::class, 'index'])->name('webmail.index');
     Route::get('webmail/open/{email_account}', [WebmailController::class, 'redirect'])->name('webmail.open');
     Route::get('webmail/open-as/{email_account}', [WebmailController::class, 'openAs'])->name('webmail.open_as');
-    Route::get('webmail', [WebmailController::class, 'index'])->name('webmail.index');
+    Route::get('webmail/resolve', [WebmailController::class, 'resolve'])->name('webmail.resolve');
 
     Route::get('/', fn() => redirect()->route('dashboard'));
 });

@@ -4,10 +4,11 @@ namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
 use App\Models\EmailAccount;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class WebmailController extends Controller
@@ -42,56 +43,71 @@ class WebmailController extends Controller
 
         abort_unless($canAccess, 403);
 
-        $signedUrl = URL::temporarySignedRoute(
-            'webmail.auth',
-            now()->addMinutes(5),
-            ['email_account_id' => $emailAccount->id]
-        );
+        $token = $this->generateToken($emailAccount);
 
-        return redirect()->away($signedUrl);
+        return view('webmail.launch', compact('token'));
     }
 
     public function openAs(EmailAccount $emailAccount): RedirectResponse
     {
         $this->authorize('view', $emailAccount);
 
-        $signedUrl = URL::temporarySignedRoute(
-            'webmail.auth',
-            now()->addMinutes(5),
-            ['email_account_id' => $emailAccount->id]
-        );
+        $token = $this->generateToken($emailAccount);
 
-        return redirect()->away($signedUrl);
+        return view('webmail.launch', compact('token'));
     }
 
-    public function auth(Request $request): RedirectResponse
+    public function resolve(Request $request): JsonResponse
     {
-        abort_unless($request->hasValidSignature(), 403);
+        $token = $request->query('t');
 
-        $account = EmailAccount::findOrFail($request->email_account_id);
+        $row = DB::table('webmail_tokens')
+            ->where('token', $token)
+            ->where('used', false)
+            ->where('expires_at', '>', now())
+            ->first();
 
-        $account->load('domain');
+        if (!$row) {
+            abort(403, 'Invalid or expired token');
+        }
 
-        $config = [
+        $updated = DB::table('webmail_tokens')
+            ->where('token', $token)
+            ->where('used', false)
+            ->update(['used' => true]);
+
+        if (!$updated) {
+            abort(403, 'Token already used');
+        }
+
+        $account = EmailAccount::with('domain')->findOrFail($row->email_account_id);
+
+        if ($account->status !== 'active'
+            || $account->domain->status !== 'active'
+            || !$account->sync_enabled) {
+            abort(403, 'Account not available');
+        }
+
+        return response()->json([
             'email' => $account->email,
             'password' => $account->password,
             'imap_host' => $account->imap_host,
             'imap_port' => $account->imap_port,
             'imap_encryption' => $account->imap_encryption,
-            'smtp_host' => $account->smtp_host,
-            'smtp_port' => $account->smtp_port,
-            'smtp_encryption' => $account->smtp_encryption,
-            'smtp_username' => $account->smtp_username,
-            'smtp_password' => $account->smtp_password,
-        ];
+        ]);
+    }
 
-        $token = base64_encode(json_encode($config));
+    private function generateToken(EmailAccount $account): string
+    {
+        $token = bin2hex(random_bytes(32));
 
-        $webmailUrl = url('/webmail/') . '?' . http_build_query([
-            'auto_login' => '1',
-            'rcp_token' => $token,
+        DB::table('webmail_tokens')->insert([
+            'token' => $token,
+            'email_account_id' => $account->id,
+            'created_by' => Auth::id(),
+            'expires_at' => now()->addMinutes(5),
         ]);
 
-        return redirect()->away($webmailUrl);
+        return $token;
     }
 }
