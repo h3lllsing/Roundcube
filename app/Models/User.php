@@ -79,6 +79,33 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->unreadNotifications()->count();
     }
 
+    public function isSuperAdmin(): bool
+    {
+        return $this->hasRole('super-admin');
+    }
+
+    public function hasPermission(string $permission): bool
+    {
+        if ($this->isSuperAdmin()) {
+            return true;
+        }
+
+        $parts = explode('.', $permission, 2);
+        $moduleSlug = $parts[0];
+        $action = $parts[1] ?? null;
+
+        if (!$action) {
+            return false;
+        }
+
+        $column = 'can_' . $action;
+
+        return UserModulePermission::where('user_id', $this->id)
+            ->whereHas('module', fn ($q) => $q->where('slug', $moduleSlug))
+            ->where($column, true)
+            ->exists();
+    }
+
     protected function casts(): array
     {
         return [
