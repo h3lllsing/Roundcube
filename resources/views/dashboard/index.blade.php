@@ -46,6 +46,34 @@
     </div>
     @endif
 
+    @if(isset($failed_imap_accounts) && $failed_imap_accounts > 0)
+    <div class="bg-white dark:bg-black rounded-xl shadow-sm border border-red-200 dark:border-red-800/30 p-5 mb-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300">IMAP Health</h3>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Accounts with errors in last 24h</p>
+            </div>
+            <div class="text-right">
+                <p class="text-2xl font-bold text-red-600 dark:text-red-400">{{ $failed_imap_accounts }}</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">of {{ $total_email_accounts ?? '—' }} total</p>
+            </div>
+        </div>
+    </div>
+    @elseif(isset($failed_imap_accounts))
+    <div class="bg-white dark:bg-black rounded-xl shadow-sm border border-green-200 dark:border-green-800/30 p-5 mb-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300">IMAP Health</h3>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">All accounts healthy in last 24h</p>
+            </div>
+            <div class="text-right">
+                <p class="text-2xl font-bold text-green-600 dark:text-green-400">0</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">of {{ $total_email_accounts ?? '—' }} total</p>
+            </div>
+        </div>
+    </div>
+    @endif
+
     @if(!empty($recent_activity))
     <div class="bg-white dark:bg-black rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5">
         <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Recent Activity</h3>

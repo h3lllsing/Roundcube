@@ -17,3 +17,8 @@ Schedule::command('activitylog:clean')->daily();
 Schedule::call(function () {
     \App\Models\LoginAudit::where('created_at', '<', now()->subYear())->delete();
 })->daily()->name('login-audits:clean')->onOneServer();
+
+Schedule::call(fn () => app(\App\Services\EmailStatService::class)->batchFetch())
+    ->name('email-stats:batch-fetch')
+    ->everyTenMinutes()
+    ->withoutOverlapping();

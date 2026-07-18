@@ -2,9 +2,11 @@
 
 namespace App\Services;
 
+use App\Models\EmailAccount;
 use App\Models\Feature;
 use App\Models\Module;
 use App\Models\User;
+use App\Services\EmailStatService;
 use Illuminate\Support\Facades\Cache;
 use Spatie\Activitylog\Models\Activity;
 
@@ -34,6 +36,11 @@ class DashboardService
 
         $data['unread_notifications'] = $user->unreadNotifications()->count();
         $data['total_notifications'] = $user->notifications()->count();
+
+        if ($isSuperAdmin) {
+            $data['failed_imap_accounts'] = app(EmailStatService::class)->failedAccountsCountLast24h();
+            $data['total_email_accounts'] = EmailAccount::count();
+        }
 
         $canViewAudit = $isSuperAdmin || $user->hasPermission('audit.read');
         if ($canViewAudit) {

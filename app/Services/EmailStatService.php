@@ -43,6 +43,9 @@ class EmailStatService
             ];
         } catch (\Exception $e) {
             Log::warning("EmailStat: failed to fetch counts for {$account->email}: {$e->getMessage()}");
+            activity()->event('imap_fetch_failed')
+                ->performedOn($account)
+                ->log("IMAP fetch failed for {$account->email}: {$e->getMessage()}");
 
             return [
                 'success' => false,
@@ -51,6 +54,14 @@ class EmailStatService
                 'error' => $e->getMessage(),
             ];
         }
+    }
+
+    public function failedAccountsCountLast24h(): int
+    {
+        return \Spatie\Activitylog\Models\Activity::where('event', 'imap_fetch_failed')
+            ->where('created_at', '>=', now()->subDay())
+            ->distinct('subject_id')
+            ->count('subject_id');
     }
 
     public function batchFetch(): array
