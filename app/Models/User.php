@@ -107,10 +107,14 @@ class User extends Authenticatable implements MustVerifyEmail
 
         $column = 'can_' . $action;
 
-        return UserModulePermission::where('user_id', $this->id)
-            ->whereHas('module', fn ($q) => $q->where('slug', $moduleSlug))
-            ->where($column, true)
-            ->exists();
+        try {
+            return UserModulePermission::where('user_id', $this->id)
+                ->whereHas('module', fn ($q) => $q->where('slug', $moduleSlug))
+                ->where($column, true)
+                ->exists();
+        } catch (\Illuminate\Database\QueryException) {
+            return false;
+        }
     }
 
     protected function casts(): array

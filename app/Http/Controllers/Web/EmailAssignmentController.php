@@ -29,6 +29,20 @@ class EmailAssignmentController extends Controller
             ],
         ]);
 
+        $assignedUser = User::find($validated['user_id']);
+
+        activity()->event('assign')
+            ->performedOn($emailAccount)
+            ->causedBy(Auth::user())
+            ->withProperties([
+                'user_id' => $validated['user_id'],
+                'user_email' => $assignedUser?->email,
+                'can_send' => $validated['can_send'] ?? true,
+                'can_receive' => $validated['can_receive'] ?? true,
+                'action' => 'assign',
+            ])
+            ->log("Email account {$emailAccount->email} assigned to {$assignedUser?->email}");
+
         return back()->with('success', 'Email account assigned successfully.');
     }
 
@@ -37,6 +51,16 @@ class EmailAssignmentController extends Controller
         $this->authorize('update', $emailAccount);
 
         $emailAccount->assignedUsers()->detach($user);
+
+        activity()->event('revoke')
+            ->performedOn($emailAccount)
+            ->causedBy(Auth::user())
+            ->withProperties([
+                'user_id' => $user->id,
+                'user_email' => $user->email,
+                'action' => 'revoke',
+            ])
+            ->log("Email account {$emailAccount->email} unassigned from {$user->email}");
 
         return back()->with('success', 'Assignment revoked successfully.');
     }
