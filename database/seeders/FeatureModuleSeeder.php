@@ -69,7 +69,6 @@ class FeatureModuleSeeder extends Seeder
                             'can_delete' => true,
                             'can_export' => true,
                             'can_reveal' => true,
-                            'can_import' => true,
                         ]
                     );
                 }

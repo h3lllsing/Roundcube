@@ -62,7 +62,12 @@ Route::middleware(['auth', 'suspended'])->group(function () {
     Route::get('/monitoring', [MonitoringOverviewController::class, 'index'])->name('monitoring.index');
 
     Route::resource('domains', DomainController::class);
+    Route::post('domains/{id}/restore', [DomainController::class, 'restore'])->name('domains.restore')->whereNumber('id');
+    Route::delete('domains/{id}/force-delete', [DomainController::class, 'forceDelete'])->name('domains.force-delete')->whereNumber('id');
+
     Route::resource('email_accounts', EmailAccountController::class);
+    Route::post('email-accounts/{id}/restore', [EmailAccountController::class, 'restore'])->name('email-accounts.restore')->whereNumber('id');
+    Route::delete('email-accounts/{id}/force-delete', [EmailAccountController::class, 'forceDelete'])->name('email-accounts.force-delete')->whereNumber('id');
     Route::post('email_accounts/{email_account}/assign', [EmailAssignmentController::class, 'store'])->name('email_accounts.assign');
     Route::delete('email_accounts/{email_account}/assign/{user}', [EmailAssignmentController::class, 'destroy'])->name('email_accounts.assign.revoke');
 

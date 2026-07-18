@@ -20,7 +20,11 @@ class EmailAccountController extends Controller
 
     public function index(Request $request): View
     {
-        $query = EmailAccount::query()->with('domain', 'creator');
+        if ($request->boolean('trashed')) {
+            $query = EmailAccount::onlyTrashed()->with('domain', 'creator');
+        } else {
+            $query = EmailAccount::query()->with('domain', 'creator');
+        }
 
         if (!Auth::user()->isSuperAdmin() && !Auth::user()->hasPermission('emails.manage')) {
             $query->whereHas('assignedUsers', fn ($q) => $q->where('user_id', Auth::id()));
@@ -36,7 +40,7 @@ class EmailAccountController extends Controller
             $query->where('status', $request->status);
         }
 
-        $accounts = $query->latest()->paginate(20);
+        $accounts = $query->with('deleter')->latest()->paginate(20);
         $domains = Domain::where('status', 'active')->orderBy('name')->get(['id', 'name']);
 
         return view('email-accounts.index', compact('accounts', 'domains'));
@@ -70,7 +74,7 @@ class EmailAccountController extends Controller
 
         $account = EmailAccount::create($validated);
 
-        return to_route('email-accounts.show', $account)
+        return to_route('email_accounts.show', $account)
             ->with('success', 'Email account created successfully.');
     }
 
@@ -116,15 +120,80 @@ class EmailAccountController extends Controller
 
         $emailAccount->update($validated);
 
-        return to_route('email-accounts.show', $emailAccount)
+        return to_route('email_accounts.show', $emailAccount)
             ->with('success', 'Email account updated successfully.');
     }
 
     public function destroy(EmailAccount $emailAccount): RedirectResponse
     {
+        $this->authorize('delete', $emailAccount);
+
+        $emailAccount->deleted_by = Auth::id();
+        $emailAccount->saveQuietly();
         $emailAccount->delete();
 
-        return to_route('email-accounts.index')
+        activity()
+            ->event('soft_delete')
+            ->causedBy(Auth::user())
+            ->performedOn($emailAccount)
+            ->withProperties([
+                'action' => 'soft_delete',
+                'resource_type' => EmailAccount::class,
+                'resource_id' => $emailAccount->id,
+                'deleted_by' => Auth::id(),
+                'from_route' => url()->current(),
+            ])
+            ->log('soft deleted');
+
+        return to_route('email_accounts.index')
             ->with('success', 'Email account deleted successfully.');
+    }
+
+    public function restore(int $id): RedirectResponse
+    {
+        $account = EmailAccount::withTrashed()->findOrFail($id);
+
+        $this->authorize('restore', $account);
+
+        $account->restore();
+        $account->deleted_by = null;
+        $account->saveQuietly();
+
+        activity()
+            ->event('restore')
+            ->causedBy(Auth::user())
+            ->performedOn($account)
+            ->withProperties([
+                'action' => 'restore',
+                'resource_type' => EmailAccount::class,
+                'resource_id' => $account->id,
+            ])
+            ->log('restored');
+
+        return to_route('email_accounts.index')
+            ->with('success', 'Email account restored successfully.');
+    }
+
+    public function forceDelete(int $id): RedirectResponse
+    {
+        $account = EmailAccount::withTrashed()->findOrFail($id);
+
+        $this->authorize('forceDelete', $account);
+
+        $account->forceDelete();
+
+        activity()
+            ->event('force_delete')
+            ->causedBy(Auth::user())
+            ->performedOn($account)
+            ->withProperties([
+                'action' => 'force_delete',
+                'resource_type' => EmailAccount::class,
+                'resource_id' => $id,
+            ])
+            ->log('force deleted');
+
+        return to_route('email_accounts.index')
+            ->with('success', 'Email account permanently deleted.');
     }
 }

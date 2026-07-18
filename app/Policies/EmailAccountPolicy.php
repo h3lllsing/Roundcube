@@ -39,4 +39,14 @@ class EmailAccountPolicy
     {
         return $user->isSuperAdmin() || $user->hasPermission('emails.manage');
     }
+
+    public function restore(User $user, EmailAccount $account): bool
+    {
+        return $user->isSuperAdmin() || $user->hasPermission('emails.manage');
+    }
+
+    public function forceDelete(User $user, EmailAccount $account): bool
+    {
+        return $user->isSuperAdmin();
+    }
 }

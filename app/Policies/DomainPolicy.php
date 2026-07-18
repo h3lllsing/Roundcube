@@ -31,4 +31,14 @@ class DomainPolicy
     {
         return $user->isSuperAdmin() || $user->hasPermission('domains.manage');
     }
+
+    public function restore(User $user, Domain $domain): bool
+    {
+        return $user->isSuperAdmin() || $user->hasPermission('domains.manage');
+    }
+
+    public function forceDelete(User $user, Domain $domain): bool
+    {
+        return $user->isSuperAdmin();
+    }
 }

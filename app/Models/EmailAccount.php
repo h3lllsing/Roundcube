@@ -29,6 +29,7 @@ class EmailAccount extends Model
         'status',
         'sync_enabled',
         'created_by',
+        'deleted_by',
         'last_sync_at',
     ];
 
@@ -76,5 +77,10 @@ class EmailAccount extends Model
         return $this->belongsToMany(User::class, 'email_account_user')
             ->withPivot('can_send', 'can_receive', 'assigned_by')
             ->withTimestamps();
+    }
+
+    public function deleter(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'deleted_by');
     }
 }

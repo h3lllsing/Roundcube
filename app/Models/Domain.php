@@ -17,6 +17,7 @@ class Domain extends Model
         'status',
         'notes',
         'created_by',
+        'deleted_by',
     ];
 
     protected function casts(): array
@@ -43,5 +44,10 @@ class Domain extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function deleter(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'deleted_by');
     }
 }
