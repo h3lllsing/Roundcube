@@ -51,8 +51,6 @@
         </div>
     </div>
 
-    <x-notes-thread :model="$module" notable-type="App\Models\Module" />
-
     <x-activity-timeline subjectType="App\Models\Module" :subjectId="$module->id" />
 </div>
 @endsection

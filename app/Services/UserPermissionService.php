@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Models\Module;
 use App\Models\ModuleRolePermission;
-use App\Models\RoleTemplate;
 use App\Models\User;
 use App\Models\UserModulePermission;
 use App\Models\Role;
@@ -365,15 +364,12 @@ class UserPermissionService
             ->get()
             ->groupBy('role_id');
 
-        $templates = RoleTemplate::all()->keyBy('slug');
-
         $roleSummaries = [];
         foreach ($roles as $role) {
             $perms = $rolePermissions->get($role->id, collect());
-            $template = $templates->get($role->slug);
 
             $roleSummaries[$role->id] = [
-                'template_name' => $template?->name,
+                'template_name' => null,
                 'modules_count' => $perms->count(),
                 'permissions' => [
                     'can_read' => $perms->contains('can_read', true),

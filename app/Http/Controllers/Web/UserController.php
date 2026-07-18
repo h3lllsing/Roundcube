@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\LoginAudit;
 use App\Models\Module;
 use App\Models\ModuleRolePermission;
-use App\Models\Task;
 use App\Models\User;
 use App\Models\UserModulePermission;
 use App\Services\UserPermissionService;
@@ -258,9 +257,9 @@ class UserController extends Controller
 
         $offboardingChecklist = [
             'suspended_at' => $user->suspended_at,
-            'vault_entries_count' => $user->vaultEntries()->count(),
-            'assigned_tasks_count' => Task::whereHas('assignees', fn($q) => $q->where('user_id', $user->id))->count(),
-            'assigned_assets_count' => $user->assignedAssets()->count(),
+            'vault_entries_count' => 0,
+            'assigned_tasks_count' => 0,
+            'assigned_assets_count' => 0,
             'activities_30d_count' => $user->activities()->where('created_at', '>=', now()->subDays(30))->count(),
             'can_suspend' => !$user->suspended_at && Auth::user()->hasRole('super-admin'),
             'can_unsuspend' => (bool)$user->suspended_at && Auth::user()->hasRole('super-admin'),

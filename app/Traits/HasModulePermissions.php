@@ -5,7 +5,6 @@ namespace App\Traits;
 use App\Models\Module;
 use App\Models\ModuleRolePermission;
 use App\Models\UserModulePermission;
-use App\Models\VaultEntry;
 use Illuminate\Support\Facades\Cache;
 
 trait HasModulePermissions
@@ -207,32 +206,5 @@ trait HasModulePermissions
             return false;
         }
         return $this->canOnModule($module, 'reveal');
-    }
-
-    public function canAccessVault(VaultEntry $vault): bool
-    {
-        if ($this->hasRole('super-admin')) {
-            return true;
-        }
-        if ($vault->user_id === $this->id) {
-            return true;
-        }
-        if ($vault->module_id) {
-            $allPerms = $this->getAllModulePermissionsCached();
-            if (isset($allPerms[$vault->module_id]['can_read']) && $allPerms[$vault->module_id]['can_read']) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    public function isVaultOwner(VaultEntry $vault): bool
-    {
-        if ($this->hasRole('super-admin')) {
-            return true;
-        }
-
-        return $vault->user_id === $this->id;
     }
 }

@@ -69,7 +69,7 @@ class ModuleController extends Controller
     public function show(int $id): View
     {
         abort_unless(Auth::user()->hasRole('super-admin'), 403);
-        $module = Module::with('feature', 'notes.user')->findOrFail($id);
+        $module = Module::with('feature')->findOrFail($id);
 
         return view('modules.show', compact('module'));
     }

@@ -53,7 +53,7 @@ class FeatureController extends Controller
     public function show(int $id): View
     {
         abort_unless(Auth::user()->hasRole('super-admin'), 403);
-        $feature = \App\Models\Feature::with('modules', 'notes.user')->findOrFail($id);
+        $feature = \App\Models\Feature::with('modules')->findOrFail($id);
 
         return view('features.show', compact('feature'));
     }

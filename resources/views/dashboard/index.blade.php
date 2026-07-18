@@ -4,118 +4,41 @@
 
 @section('content')
 <div class="w-full fade-in-up">
-    <x-page-header title="Dashboard" subtitle="{{ ['super-admin' => 'Enterprise Overview', 'admin' => 'Operations Overview', 'editor' => 'Support Overview', 'user' => 'My Services', 'customer' => 'My Dashboard'][$dashboardRole] ?? 'Overview' }}">
-        <x-slot:actions>
-            <button type="button" id="cmd-palette-trigger" class="hidden sm:inline-flex items-center gap-1.5 text-xs text-gray-400 dark:text-gray-500 bg-white/70 dark:bg-black/70 px-3 py-1.5 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-indigo-300 dark:hover:border-indigo-600 transition-colors cursor-pointer">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-                <span>Cmd+K</span>
-            </button>
-            <span class="text-xs text-gray-400 dark:text-gray-500 bg-white/70 dark:bg-black/70 px-3 py-1.5 rounded-xl border border-gray-200 dark:border-gray-700">
-                {{ now()->format('l, F j, Y') }}
-            </span>
-        </x-slot:actions>
+    <x-page-header title="Dashboard" subtitle="Overview">
     </x-page-header>
 
-    @php
-        $_kpi = (!empty($renewals) || !empty($monitoring) || !empty($tasks) || !empty($operations) || !empty($vault));
-    @endphp
-
-    @if($_kpi)
-    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
-        @if(!empty($renewals))
-        @php $_ft = $renewals['failed_today'] > 0; @endphp
-        <div class="rounded-xl bg-gradient-to-br border p-3.5 {{ $_ft ? 'from-rose-500/20 to-pink-500/10 dark:from-rose-500/25 dark:to-pink-500/15 border-rose-300/60 dark:border-rose-700/50 ring-1 ring-rose-400/20' : 'from-amber-500/10 to-orange-500/5 dark:from-amber-500/15 dark:to-orange-500/5 border-amber-200/50 dark:border-amber-800/30' }}">
-            <p class="text-[10px] font-semibold uppercase tracking-widest text-gray-500 dark:text-gray-400">Failed Today</p>
-            <p class="text-xl font-bold {{ $_ft ? 'text-rose-600 dark:text-rose-400' : 'text-gray-900 dark:text-white' }}">{{ $renewals['failed_today'] }}</p>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div class="rounded-xl bg-gradient-to-br from-indigo-500/10 to-purple-500/5 dark:from-indigo-500/15 dark:to-purple-500/5 border border-indigo-200/50 dark:border-indigo-800/30 p-4">
+            <p class="text-xs font-semibold uppercase tracking-widest text-gray-500 dark:text-gray-400">Users</p>
+            <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ $total_users ?? '—' }}</p>
         </div>
-        @endif
-        @if(!empty($monitoring))
-        @php $_off = $monitoring['offline'] > 0; @endphp
-        <div class="rounded-xl bg-gradient-to-br border p-3.5 {{ $_off ? 'from-rose-500/25 to-pink-500/15 dark:from-rose-500/30 dark:to-pink-500/20 border-rose-300/70 dark:border-rose-700/60 ring-1 ring-rose-400/30' : 'from-rose-500/10 to-pink-500/5 dark:from-rose-500/15 dark:to-pink-500/5 border-rose-200/50 dark:border-rose-800/30' }}">
-            <p class="text-[10px] font-semibold uppercase tracking-widest text-gray-500 dark:text-gray-400">Offline</p>
-            <p class="text-xl font-bold {{ $_off ? 'text-rose-600 dark:text-rose-400' : 'text-gray-900 dark:text-white' }}">{{ $monitoring['offline'] }}</p>
+        <div class="rounded-xl bg-gradient-to-br from-amber-500/10 to-orange-500/5 dark:from-amber-500/15 dark:to-orange-500/5 border border-amber-200/50 dark:border-amber-800/30 p-4">
+            <p class="text-xs font-semibold uppercase tracking-widest text-gray-500 dark:text-gray-400">Notifications</p>
+            <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ $total_notifications }}</p>
         </div>
-        @endif
-        @if(!empty($tasks))
-        <div class="rounded-xl bg-gradient-to-br from-rose-500/10 to-pink-500/5 dark:from-rose-500/15 dark:to-pink-500/5 border border-rose-200/50 dark:border-rose-800/30 p-3.5">
-            <p class="text-[10px] font-semibold uppercase tracking-widest text-gray-500 dark:text-gray-400">Overdue Tasks</p>
-            <p class="text-xl font-bold {{ $tasks['overdue_tasks'] > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-gray-900 dark:text-white' }}">{{ $tasks['overdue_tasks'] }}</p>
+        <div class="rounded-xl bg-gradient-to-br from-green-500/10 to-emerald-500/5 dark:from-green-500/15 dark:to-emerald-500/5 border border-green-200/50 dark:border-green-800/30 p-4">
+            <p class="text-xs font-semibold uppercase tracking-widest text-gray-500 dark:text-gray-400">Features</p>
+            <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ $total_features ?? '—' }}</p>
         </div>
-        @endif
-        @if(!empty($operations))
-        <div class="rounded-xl bg-gradient-to-br from-violet-500/10 to-purple-500/5 dark:from-violet-500/15 dark:to-purple-500/5 border border-violet-200/50 dark:border-violet-800/30 p-3.5">
-            <p class="text-[10px] font-semibold uppercase tracking-widest text-gray-500 dark:text-gray-400">Active Services</p>
-            <p class="text-xl font-bold text-gray-900 dark:text-white">{{ $operations['total_active_services'] }}</p>
+        <div class="rounded-xl bg-gradient-to-br from-violet-500/10 to-purple-500/5 dark:from-violet-500/15 dark:to-purple-500/5 border border-violet-200/50 dark:border-violet-800/30 p-4">
+            <p class="text-xs font-semibold uppercase tracking-widest text-gray-500 dark:text-gray-400">Modules</p>
+            <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ $total_modules ?? '—' }}</p>
         </div>
-        @endif
-        @if(!empty($vault))
-        <div class="rounded-xl bg-gradient-to-br from-indigo-500/10 to-purple-500/5 dark:from-indigo-500/15 dark:to-purple-500/5 border border-indigo-200/50 dark:border-indigo-800/30 p-3.5">
-            <p class="text-[10px] font-semibold uppercase tracking-widest text-gray-500 dark:text-gray-400">Reveals 30d</p>
-            <p class="text-xl font-bold {{ $vault['total_reveals_30d'] > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-gray-900 dark:text-white' }}">{{ $vault['total_reveals_30d'] }}</p>
-        </div>
-        @endif
-
-    </div>
-    @endif
-
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
-        @if(!empty($renewals))
-            @include('dashboard.widgets.renewals')
-        @endif
-        @if(!empty($monitoring))
-            @include('dashboard.widgets.monitoring')
-        @endif
-        @if(!empty($tasks))
-            @include('dashboard.widgets.tasks')
-        @endif
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
-        @if(!empty($operations))
-            @include('dashboard.widgets.operations')
-        @endif
-        @if(!empty($assets))
-            @include('dashboard.widgets.assets')
-        @endif
-    </div>
-
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
-        @if(!empty($vault))
-            @include('dashboard.widgets.vault')
-        @endif
-        @if(!empty($quick_actions))
-            @include('dashboard.widgets.quick-actions')
-        @endif
-    </div>
-
-    @if(!empty($activity))
-        @include('dashboard.widgets.activity')
-    @endif
-
-    @if(!empty($smtp))
-        <details class="mt-6 group rounded-xl bg-white dark:bg-black border border-gray-200 dark:border-gray-700 overflow-hidden">
-            <summary class="flex items-center gap-2 px-5 py-3 cursor-pointer list-none text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-                <svg class="w-4 h-4 text-rose-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-                <span class="flex-1">SMTP Profiles</span>
-                <svg class="w-4 h-4 text-gray-400 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-            </summary>
-            <div class="px-5 pb-4">
-                @include('dashboard.widgets.smtp')
+    @if(!empty($recent_activity))
+    <div class="bg-white dark:bg-black rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5">
+        <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Recent Activity</h3>
+        <div class="space-y-2">
+            @foreach($recent_activity as $log)
+            <div class="flex items-center gap-3 text-sm">
+                <span class="w-1.5 h-1.5 rounded-full bg-indigo-500 shrink-0"></span>
+                <span class="text-gray-600 dark:text-gray-400">{{ $log['description'] }}</span>
+                <span class="ml-auto text-xs text-gray-400 dark:text-gray-500">{{ \Carbon\Carbon::parse($log['created_at'])->diffForHumans() }}</span>
             </div>
-        </details>
-    @endif
-
-    @if(!empty($server_health))
-        <details class="mt-4 group rounded-xl bg-white dark:bg-black border border-gray-200 dark:border-gray-700 overflow-hidden">
-            <summary class="flex items-center gap-2 px-5 py-3 cursor-pointer list-none text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-                <svg class="w-4 h-4 text-gray-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-                <span class="flex-1">Server Health</span>
-                <svg class="w-4 h-4 text-gray-400 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-            </summary>
-            <div class="px-5 pb-4">
-                @include('dashboard.widgets.server-health')
-            </div>
-        </details>
+            @endforeach
+        </div>
+    </div>
     @endif
 </div>
 @endsection

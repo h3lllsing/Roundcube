@@ -28,19 +28,7 @@
             <div id="sidebarContents" class="flex flex-col flex-1 min-h-0 overflow-y-auto">
             <x-sidebar-search />
             <x-sidebar-nav-groups
-                :show-providers="$showProviders"
-                :show-hostings="$showHostings"
-                :show-domains="$showDomains"
-                :show-emails="$showEmails"
-                :show-vps="$showVps"
-                :show-voip="$showVoip"
-                :show-other-services="$showOtherServices"
-                :show-expiry-trackers="$showExpiryTrackers"
-                :show-assets="$showAssets"
-                :show-g-mails="$showGMails"
                 :show-monitoring="$showMonitoring"
-                :show-vault="$showVault"
-                :show-my-vault="$showMyVault"
             />
             <x-user-card />
             </div>
