@@ -38,6 +38,7 @@ class FeatureModuleSeeder extends Seeder
                 'modules' => [
                     ['name' => 'Dashboard', 'slug' => 'dashboard'],
                     ['name' => 'Monitor', 'slug' => 'monitor'],
+                    ['name' => 'Audit', 'slug' => 'audit'],
                 ],
             ],
         ];

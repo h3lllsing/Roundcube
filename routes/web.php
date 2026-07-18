@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Web\ActivityLogController;
+use App\Http\Controllers\Web\AuditController;
 use App\Http\Controllers\Web\AuthController;
 use App\Http\Controllers\Web\BulkActionController;
 use App\Http\Controllers\Web\DashboardController;
@@ -70,6 +71,8 @@ Route::middleware(['auth', 'suspended'])->group(function () {
     Route::delete('email-accounts/{id}/force-delete', [EmailAccountController::class, 'forceDelete'])->name('email-accounts.force-delete')->whereNumber('id');
     Route::post('email_accounts/{email_account}/assign', [EmailAssignmentController::class, 'store'])->name('email_accounts.assign');
     Route::delete('email_accounts/{email_account}/assign/{user}', [EmailAssignmentController::class, 'destroy'])->name('email_accounts.assign.revoke');
+
+    Route::get('audit', [AuditController::class, 'index'])->name('audit.index');
 
     Route::get('webmail', [WebmailController::class, 'index'])->name('webmail.index');
     Route::get('webmail/open/{email_account}', [WebmailController::class, 'redirect'])->name('webmail.open');
