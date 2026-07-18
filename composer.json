@@ -19,7 +19,8 @@
         "hasinhayder/tyro": "^1.6",
         "laravel/framework": "^12.0",
         "laravel/sanctum": "^4.0",
-        "spatie/laravel-activitylog": "^4.0"
+        "spatie/laravel-activitylog": "^4.0",
+        "webklex/php-imap": "^6.2"
     },
     "require-dev": {
         "darkaonline/l5-swagger": "^11.0",
