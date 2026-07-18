@@ -24,6 +24,10 @@ class AuditController extends Controller
             $query->where('event', $request->event);
         }
 
+        if ($request->filled('action')) {
+            $query->where('event', $request->action);
+        }
+
         if ($request->filled('causer_id')) {
             $query->where('causer_id', $request->causer_id);
         }
@@ -42,7 +46,8 @@ class AuditController extends Controller
 
         $activities = $query->latest()->paginate(50);
         $users = User::orderBy('name')->pluck('name', 'id');
+        $actions = Activity::distinct()->pluck('event')->sort()->values();
 
-        return view('audit.index', compact('activities', 'users'));
+        return view('audit.index', compact('activities', 'users', 'actions'));
     }
 }

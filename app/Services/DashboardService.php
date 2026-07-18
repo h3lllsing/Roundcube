@@ -35,6 +35,16 @@ class DashboardService
         $data['unread_notifications'] = $user->unreadNotifications()->count();
         $data['total_notifications'] = $user->notifications()->count();
 
+        $canViewAudit = $isSuperAdmin || $user->hasPermission('audit.read');
+        if ($canViewAudit) {
+            $lastWeek = now()->subDays(7);
+            $data['audit_actions'] = Activity::selectRaw('event, count(*) as c')
+                ->where('created_at', '>=', $lastWeek)
+                ->whereIn('event', ['soft_delete', 'force_delete', 'restored'])
+                ->groupBy('event')
+                ->pluck('c', 'event');
+        }
+
         $activityQuery = Activity::with('causer');
         if (! $isSuperAdmin) {
             $activityQuery->where('causer_id', $user->id);

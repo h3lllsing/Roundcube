@@ -26,6 +26,26 @@
         </div>
     </div>
 
+    @if(isset($audit_actions) && count($audit_actions))
+    <div class="bg-white dark:bg-black rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 mb-6">
+        <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Audit Actions (Last 7 Days)</h3>
+        <div class="grid grid-cols-3 gap-4">
+            <div class="text-center">
+                <p class="text-2xl font-bold text-red-600 dark:text-red-400">{{ $audit_actions['soft_delete'] ?? 0 }}</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Soft Deletes</p>
+            </div>
+            <div class="text-center">
+                <p class="text-2xl font-bold text-purple-600 dark:text-purple-400">{{ $audit_actions['restored'] ?? 0 }}</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Restores</p>
+            </div>
+            <div class="text-center">
+                <p class="text-2xl font-bold text-gray-600 dark:text-gray-400">{{ $audit_actions['force_delete'] ?? 0 }}</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Force Deletes</p>
+            </div>
+        </div>
+    </div>
+    @endif
+
     @if(!empty($recent_activity))
     <div class="bg-white dark:bg-black rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5">
         <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Recent Activity</h3>

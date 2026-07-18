@@ -9,18 +9,12 @@
     <form method="GET" class="flex flex-wrap gap-3 mb-6">
         <input type="text" name="search" value="{{ request('search') }}" placeholder="Search description..."
             class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl input-focus outline-none">
-        <select name="event"
+        <select name="action"
             class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm bg-white dark:bg-black text-gray-900 dark:text-white input-focus outline-none">
-            <option value="">All events</option>
-            <option value="created" @selected(request('event') === 'created')>Created</option>
-            <option value="updated" @selected(request('event') === 'updated')>Updated</option>
-            <option value="deleted" @selected(request('event') === 'deleted')>Deleted</option>
-            <option value="restored" @selected(request('event') === 'restored')>Restored</option>
-            <option value="soft_delete" @selected(request('event') === 'soft_delete')>Soft Deleted</option>
-            <option value="force_delete" @selected(request('event') === 'force_delete')>Force Deleted</option>
-            <option value="revealed" @selected(request('event') === 'revealed')>Revealed</option>
-            <option value="login" @selected(request('event') === 'login')>Login</option>
-            <option value="logout" @selected(request('event') === 'logout')>Logout</option>
+            <option value="">All actions</option>
+            @foreach ($actions as $a)
+                <option value="{{ $a }}" @selected(request('action') === $a || request('event') === $a)>{{ ucfirst($a) }}</option>
+            @endforeach
         </select>
         <select name="causer_id"
             class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm bg-white dark:bg-black text-gray-900 dark:text-white input-focus outline-none">
@@ -41,7 +35,7 @@
         <input type="date" name="date_to" value="{{ request('date_to') }}" placeholder="To"
             class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl input-focus outline-none">
         <x-button type="submit" variant="primary" size="sm">Filter</x-button>
-        @if(request()->anyFilled(['search', 'event', 'causer_id', 'subject_type', 'date_from', 'date_to']))
+        @if(request()->anyFilled(['search', 'event', 'action', 'causer_id', 'subject_type', 'date_from', 'date_to']))
             <x-button href="{{ route('audit.index') }}" variant="outline" size="sm">Clear</x-button>
         @endif
     </form>
