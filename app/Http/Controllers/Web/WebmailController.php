@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Web;
 
+use App\Enums\AccountStatus;
+use App\Enums\DomainStatus;
 use App\Http\Controllers\Controller;
 use App\Models\EmailAccount;
 use Illuminate\Http\JsonResponse;
@@ -18,16 +20,15 @@ class WebmailController extends Controller
 
         if ($user->isAdmin()) {
             $accounts = EmailAccount::with('domain')
-                ->where('status', 'active')
+                ->where('status', AccountStatus::Active)
                 ->orderBy('email')
                 ->get();
         } else {
             $accounts = $user->assignedEmailAccounts()
                 ->with('domain')
-                ->where('status', 'active')
+                ->where('status', AccountStatus::Active)
                 ->orderBy('email')
                 ->get();
-        }
 
         return view('webmail.index', compact('accounts'));
     }
@@ -45,16 +46,15 @@ class WebmailController extends Controller
 
         if ($user->isAdmin()) {
             $accounts = EmailAccount::with('domain')
-                ->where('status', 'active')
+                ->where('status', AccountStatus::Active)
                 ->orderBy('email')
                 ->get();
         } else {
             $accounts = $user->assignedEmailAccounts()
                 ->with('domain')
-                ->where('status', 'active')
+                ->where('status', AccountStatus::Active)
                 ->orderBy('email')
                 ->get();
-        }
 
         return view('webmail.launch', [
             'token' => $token,
@@ -71,7 +71,7 @@ class WebmailController extends Controller
         $token = $this->generateToken($emailAccount);
 
         $accounts = EmailAccount::with('domain')
-            ->where('status', 'active')
+            ->where('status', AccountStatus::Active)
             ->orderBy('email')
             ->get();
 
@@ -107,8 +107,8 @@ class WebmailController extends Controller
 
         $account = EmailAccount::with('domain')->findOrFail($row->email_account_id);
 
-        if ($account->status !== 'active'
-            || $account->domain->status !== 'active'
+        if ($account->status !== AccountStatus::Active
+            || $account->domain->status !== DomainStatus::Active
             || !$account->sync_enabled) {
             abort(403, 'Account not available');
         }

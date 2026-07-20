@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\AccountStatus;
 use App\Models\EmailAccount;
 use App\Models\User;
 use Illuminate\Support\Facades\Cache;
@@ -18,14 +19,15 @@ class DashboardService
         return $data;
     }
 
-    public function computeDashboardData(User $user): array
+    public function computeDashboardData(User $user, ?int $version = null): array
     {
+        $version ??= Cache::get('dashboard:version', 0);
         $isSuperAdmin = $user->isSuperAdmin();
 
         $data = [];
 
         if ($isSuperAdmin) {
-            $data['total_users'] = User::count();
+            $data['total_users'] = Cache::remember('dashboard:total_users:v'.$version, 300, fn () => User::count());
         }
 
         $data['unread_notifications'] = $user->unreadNotifications()->count();
@@ -33,13 +35,13 @@ class DashboardService
 
         if ($isSuperAdmin) {
             $data['failed_imap_accounts'] = app(EmailStatService::class)->failedAccountsCountLast24h();
-            $data['total_email_accounts'] = EmailAccount::count();
+            $data['total_email_accounts'] = Cache::remember('dashboard:total_email_accounts:v'.$version, 300, fn () => EmailAccount::count());
         }
 
         // Email accounts for all users
         if ($isSuperAdmin) {
             $data['assigned_accounts'] = EmailAccount::with('domain')
-                ->where('status', 'active')
+                ->where('status', AccountStatus::Active)
                 ->orderBy('email')
                 ->get();
             $data['total_assigned'] = $data['assigned_accounts']->count();
@@ -50,7 +52,7 @@ class DashboardService
         } else {
             $accounts = $user->assignedEmailAccounts()
                 ->with('domain')
-                ->where('status', 'active')
+                ->where('status', AccountStatus::Active)
                 ->orderBy('email')
                 ->get();
             $data['assigned_accounts'] = $accounts;
@@ -61,14 +63,15 @@ class DashboardService
                 ->values();
         }
 
-        $canViewAudit = $isSuperAdmin;
-        if ($canViewAudit) {
-            $lastWeek = now()->subDays(7);
-            $data['audit_actions'] = Activity::selectRaw('event, count(*) as c')
-                ->where('created_at', '>=', $lastWeek)
-                ->whereIn('event', ['soft_delete', 'force_delete', 'restored'])
-                ->groupBy('event')
-                ->pluck('c', 'event');
+        if ($isSuperAdmin) {
+            $data['audit_actions'] = Cache::remember('dashboard:audit_actions:v'.$version, 300, function () {
+                $lastWeek = now()->subDays(7);
+                return Activity::selectRaw('event, count(*) as c')
+                    ->where('created_at', '>=', $lastWeek)
+                    ->whereIn('event', ['soft_delete', 'force_delete', 'restored'])
+                    ->groupBy('event')
+                    ->pluck('c', 'event');
+            });
         }
 
         $activityQuery = Activity::with('causer');

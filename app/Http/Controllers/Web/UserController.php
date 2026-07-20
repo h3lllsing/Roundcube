@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Web;
 
+use App\Enums\LoginEvent;
 use App\Http\Controllers\Controller;
 use App\Models\LoginAudit;
 use App\Models\User;
@@ -21,7 +22,7 @@ class UserController extends Controller
 
         $query = User::query()->select(['id', 'name', 'email', 'role', 'suspended_at', 'created_at'])->addSelect([
             'last_login_at' => LoginAudit::whereColumn('user_id', 'users.id')
-                ->where('event', 'login_success')
+                ->where('event', LoginEvent::LoginSuccess)
                 ->latest()
                 ->take(1)
                 ->select('created_at'),
@@ -108,7 +109,7 @@ class UserController extends Controller
         $user = User::findOrFail($id);
 
         $lastLogin = LoginAudit::where('user_id', $user->id)
-            ->where('event', 'login_success')
+            ->where('event', LoginEvent::LoginSuccess)
             ->latest()
             ->first();
 

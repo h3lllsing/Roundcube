@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Web;
 
+use App\Enums\LoginEvent;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Services\AuthService;
@@ -32,7 +33,7 @@ class AuthController extends Controller
         $user = User::where('email', $credentials['email'])->first();
 
         if ($user && $user->suspended_at) {
-            $this->authService->logAudit($user->id, $credentials['email'], 'login_suspended', $request);
+            $this->authService->logAudit($user->id, $credentials['email'], LoginEvent::LoginSuspended->value, $request);
 
             return back()->withErrors([
                 'email' => 'Your account has been suspended.',
@@ -41,12 +42,12 @@ class AuthController extends Controller
 
         if (Auth::attempt($credentials, $request->boolean('remember'))) {
             $request->session()->regenerate();
-            $this->authService->logAudit(Auth::id(), $credentials['email'], 'login_success', $request);
+            $this->authService->logAudit(Auth::id(), $credentials['email'], LoginEvent::LoginSuccess->value, $request);
 
             return redirect()->intended(route('dashboard'));
         }
 
-        $this->authService->logAudit(null, $credentials['email'], 'login_failed', $request);
+        $this->authService->logAudit(null, $credentials['email'], LoginEvent::LoginFailed->value, $request);
 
         return back()->withErrors([
             'email' => 'The provided credentials do not match our records.',
@@ -55,7 +56,7 @@ class AuthController extends Controller
 
     public function logout(Request $request): RedirectResponse
     {
-        $this->authService->logAudit(Auth::id(), Auth::user()->email, 'logout', $request);
+        $this->authService->logAudit(Auth::id(), Auth::user()->email, LoginEvent::Logout->value, $request);
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();

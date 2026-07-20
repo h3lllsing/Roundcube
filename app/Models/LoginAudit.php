@@ -21,6 +21,7 @@ class LoginAudit extends Model
     protected function casts(): array
     {
         return [
+            'event' => \App\Enums\LoginEvent::class,
             'created_at' => 'datetime',
             'updated_at' => 'datetime',
         ];

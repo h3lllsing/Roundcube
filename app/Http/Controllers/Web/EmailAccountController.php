@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Web;
 
+use App\Enums\AccountStatus;
+use App\Enums\DomainStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Domain;
 use App\Models\EmailAccount;
@@ -40,7 +42,7 @@ class EmailAccountController extends Controller
         }
 
         $accounts = $query->with('deleter')->latest()->paginate(20);
-        $domains = Domain::where('status', 'active')->orderBy('name')->get(['id', 'name']);
+        $domains = Domain::where('status', DomainStatus::Active)->orderBy('name')->get(['id', 'name']);
 
         return view('email-accounts.index', compact('accounts', 'domains'));
     }
@@ -49,7 +51,7 @@ class EmailAccountController extends Controller
     {
         abort_unless(Auth::user()->isAdmin(), 403);
 
-        $domains = Domain::where('status', 'active')->orderBy('name')->get(['id', 'name']);
+        $domains = Domain::where('status', DomainStatus::Active)->orderBy('name')->get(['id', 'name']);
 
         return view('email-accounts.create', compact('domains'));
     }
@@ -86,7 +88,7 @@ class EmailAccountController extends Controller
             'smtp_encryption' => 'nullable|in:ssl,tls,none',
             'smtp_username' => 'nullable|string|max:255',
             'smtp_password' => 'nullable|string',
-            'status' => 'required|in:active,suspended',
+            'status' => 'required|in:' . AccountStatus::Active->value . ',' . AccountStatus::Suspended->value,
             'sync_enabled' => 'boolean',
         ]);
 
@@ -118,7 +120,7 @@ class EmailAccountController extends Controller
     {
         abort_unless(Auth::user()->isAdmin(), 403);
 
-        $domains = Domain::where('status', 'active')->orderBy('name')->get(['id', 'name']);
+        $domains = Domain::where('status', DomainStatus::Active)->orderBy('name')->get(['id', 'name']);
 
         return view('email-accounts.edit', compact('emailAccount', 'domains'));
     }
@@ -141,7 +143,7 @@ class EmailAccountController extends Controller
             'smtp_encryption' => 'nullable|in:ssl,tls,none',
             'smtp_username' => 'nullable|string|max:255',
             'smtp_password' => 'nullable|string',
-            'status' => 'required|in:active,suspended',
+            'status' => 'required|in:' . AccountStatus::Active->value . ',' . AccountStatus::Suspended->value,
             'sync_enabled' => 'boolean',
         ]);
 

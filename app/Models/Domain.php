@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\AccountStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -23,6 +24,7 @@ class Domain extends Model
     protected function casts(): array
     {
         return [
+            'status' => \App\Enums\DomainStatus::class,
             'created_at' => 'datetime',
             'updated_at' => 'datetime',
             'deleted_at' => 'datetime',
@@ -38,7 +40,7 @@ class Domain extends Model
     {
         return $this->hasMany(EmailAccount::class)
             ->where('sync_enabled', true)
-            ->where('status', 'active');
+            ->where('status', AccountStatus::Active);
     }
 
     public function creator(): BelongsTo

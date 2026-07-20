@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Enums\AccountStatus;
 use App\Jobs\EmailSyncJob;
 use App\Models\EmailAccount;
 use Illuminate\Console\Command;
@@ -13,7 +14,7 @@ class DispatchEmailSync extends Command
 
     public function handle(): int
     {
-        $accounts = EmailAccount::where('status', 'active')
+        $accounts = EmailAccount::where('status', AccountStatus::Active)
             ->where('sync_enabled', true)
             ->assignedToActiveUsers()
             ->get();

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Web;
 
+use App\Enums\DomainStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Domain;
 use Illuminate\Http\RedirectResponse;
@@ -46,7 +47,7 @@ class DomainController extends Controller
 
         $validated = $request->validate([
             'name' => 'required|string|max:255|unique:domains,name,NULL,id,deleted_at,NULL',
-            'status' => 'required|in:active,suspended,expired',
+            'status' => 'required|in:' . DomainStatus::Active->value . ',' . DomainStatus::Suspended->value . ',' . DomainStatus::Expired->value,
             'notes' => 'nullable|string',
         ]);
 
@@ -88,7 +89,7 @@ class DomainController extends Controller
 
         $validated = $request->validate([
             'name' => 'required|string|max:255|unique:domains,name,' . $domain->id . ',id,deleted_at,NULL',
-            'status' => 'required|in:active,suspended,expired',
+            'status' => 'required|in:' . DomainStatus::Active->value . ',' . DomainStatus::Suspended->value . ',' . DomainStatus::Expired->value,
             'notes' => 'nullable|string',
         ]);
 

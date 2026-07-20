@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\AccountStatus;
 use App\Models\EmailAccount;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
@@ -146,7 +147,7 @@ class EmailStatService
         }
 
         try {
-            $accounts = EmailAccount::where('status', 'active')
+            $accounts = EmailAccount::where('status', AccountStatus::Active)
                 ->where('sync_enabled', true)
                 ->assignedToActiveUsers()
                 ->get();

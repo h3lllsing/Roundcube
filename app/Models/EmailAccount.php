@@ -44,6 +44,7 @@ class EmailAccount extends Model
             'imap_port' => 'integer',
             'smtp_port' => 'integer',
             'sync_enabled' => 'boolean',
+            'status' => \App\Enums\AccountStatus::class,
             'last_sync_at' => 'datetime',
             'created_at' => 'datetime',
             'updated_at' => 'datetime',
