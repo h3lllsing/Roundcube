@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 use Spatie\Activitylog\Models\Activity;
 
@@ -11,6 +12,8 @@ class ActivityLogController extends Controller
 {
     public function index(): View
     {
+        abort_unless(Auth::user()->isSuperAdmin(), 403);
+
         $activities = Activity::with('causer')->latest()->paginate(50);
         $users = User::orderBy('name')->pluck('name', 'id');
         return view('activity-logs.index', compact('activities', 'users'));
@@ -18,6 +21,8 @@ class ActivityLogController extends Controller
 
     public function show(int $id): View
     {
+        abort_unless(Auth::user()->isSuperAdmin(), 403);
+
         $activity = Activity::with('causer')->findOrFail($id);
         return view('activity-logs.show', compact('activity'));
     }

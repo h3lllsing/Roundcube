@@ -11,13 +11,9 @@ use Illuminate\View\View;
 
 class DomainController extends Controller
 {
-    public function __construct()
-    {
-        $this->middleware(fn ($req, $next) => Auth::user()->isSuperAdmin() ? $next($req) : abort(403));
-    }
-
     public function index(Request $request): View
     {
+        abort_unless(Auth::user()->isSuperAdmin(), 403);
         if ($request->boolean('trashed')) {
             $query = Domain::onlyTrashed();
         } else {
@@ -38,11 +34,15 @@ class DomainController extends Controller
 
     public function create(): View
     {
+        abort_unless(Auth::user()->isSuperAdmin(), 403);
+
         return view('domains.create');
     }
 
     public function store(Request $request): RedirectResponse
     {
+        abort_unless(Auth::user()->isSuperAdmin(), 403);
+
         $validated = $request->validate([
             'name' => 'required|string|max:255|unique:domains,name',
             'status' => 'required|in:active,suspended,expired',
@@ -63,6 +63,8 @@ class DomainController extends Controller
 
     public function show(Domain $domain): View
     {
+        abort_unless(Auth::user()->isSuperAdmin(), 403);
+
         $domain->load('creator', 'emailAccounts');
 
         return view('domains.show', compact('domain'));
@@ -70,11 +72,15 @@ class DomainController extends Controller
 
     public function edit(Domain $domain): View
     {
+        abort_unless(Auth::user()->isSuperAdmin(), 403);
+
         return view('domains.edit', compact('domain'));
     }
 
     public function update(Request $request, Domain $domain): RedirectResponse
     {
+        abort_unless(Auth::user()->isSuperAdmin(), 403);
+
         $this->checkOptimisticLock($domain, $request);
 
         $validated = $request->validate([
@@ -95,6 +101,8 @@ class DomainController extends Controller
 
     public function destroy(Domain $domain): RedirectResponse
     {
+        abort_unless(Auth::user()->isSuperAdmin(), 403);
+
         $domain->deleted_by = Auth::id();
         $domain->saveQuietly();
         $domain->delete();
@@ -118,6 +126,8 @@ class DomainController extends Controller
 
     public function restore(int $id): RedirectResponse
     {
+        abort_unless(Auth::user()->isSuperAdmin(), 403);
+
         $domain = Domain::withTrashed()->findOrFail($id);
 
         $domain->restore();
@@ -141,6 +151,8 @@ class DomainController extends Controller
 
     public function forceDelete(int $id): RedirectResponse
     {
+        abort_unless(Auth::user()->isSuperAdmin(), 403);
+
         $domain = Domain::withTrashed()->findOrFail($id);
 
         $domain->forceDelete();

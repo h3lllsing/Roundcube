@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Web;
 use App\Http\Controllers\Controller;
 use App\Models\Domain;
 use App\Models\EmailAccount;
-use App\Models\User;
 use App\Services\SmtpAutoDiscover;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -15,13 +14,10 @@ use Illuminate\View\View;
 
 class EmailAccountController extends Controller
 {
-    public function __construct()
-    {
-        $this->middleware(fn ($req, $next) => Auth::user()->isAdmin() ? $next($req) : abort(403));
-    }
-
     public function index(Request $request): View
     {
+        abort_unless(Auth::user()->isAdmin(), 403);
+
         if ($request->boolean('trashed')) {
             $query = EmailAccount::onlyTrashed()->with('domain', 'creator');
         } else {
@@ -50,6 +46,8 @@ class EmailAccountController extends Controller
 
     public function create(): View
     {
+        abort_unless(Auth::user()->isAdmin(), 403);
+
         $domains = Domain::where('status', 'active')->orderBy('name')->get(['id', 'name']);
 
         return view('email-accounts.create', compact('domains'));
@@ -57,6 +55,8 @@ class EmailAccountController extends Controller
 
     public function autoDiscover(Request $request): JsonResponse
     {
+        abort_unless(Auth::user()->isAdmin(), 403);
+
         $request->validate(['email' => 'required|email']);
         $email = $request->input('email');
 
@@ -71,6 +71,8 @@ class EmailAccountController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+        abort_unless(Auth::user()->isAdmin(), 403);
+
         $validated = $request->validate([
             'domain_id' => 'required|exists:domains,id',
             'email' => 'required|email|max:255|unique:email_accounts,email,NULL,id,deleted_at,NULL',
@@ -102,6 +104,8 @@ class EmailAccountController extends Controller
 
     public function show(EmailAccount $emailAccount): View
     {
+        abort_unless(Auth::user()->isAdmin(), 403);
+
         $emailAccount->load('domain', 'creator', 'assignedUsers');
 
         return view('email-accounts.show', compact('emailAccount'));
@@ -109,6 +113,8 @@ class EmailAccountController extends Controller
 
     public function edit(EmailAccount $emailAccount): View
     {
+        abort_unless(Auth::user()->isAdmin(), 403);
+
         $domains = Domain::where('status', 'active')->orderBy('name')->get(['id', 'name']);
 
         return view('email-accounts.edit', compact('emailAccount', 'domains'));
@@ -116,6 +122,8 @@ class EmailAccountController extends Controller
 
     public function update(Request $request, EmailAccount $emailAccount): RedirectResponse
     {
+        abort_unless(Auth::user()->isAdmin(), 403);
+
         $this->checkOptimisticLock($emailAccount, $request);
 
         $validated = $request->validate([
@@ -154,6 +162,8 @@ class EmailAccountController extends Controller
 
     public function destroy(EmailAccount $emailAccount): RedirectResponse
     {
+        abort_unless(Auth::user()->isAdmin(), 403);
+
         $emailAccount->deleted_by = Auth::id();
         $emailAccount->saveQuietly();
         $emailAccount->delete();
@@ -177,6 +187,8 @@ class EmailAccountController extends Controller
 
     public function restore(int $id): RedirectResponse
     {
+        abort_unless(Auth::user()->isAdmin(), 403);
+
         $account = EmailAccount::withTrashed()->findOrFail($id);
 
         $account->restore();
@@ -200,6 +212,8 @@ class EmailAccountController extends Controller
 
     public function forceDelete(int $id): RedirectResponse
     {
+        abort_unless(Auth::user()->isAdmin(), 403);
+
         $account = EmailAccount::withTrashed()->findOrFail($id);
 
         $account->forceDelete();
