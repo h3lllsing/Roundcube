@@ -84,6 +84,19 @@ class WebmailController extends Controller
 
     public function resolve(Request $request): JsonResponse
     {
+        $referer = $request->header('Referer');
+        $origin = $request->header('Origin');
+        $allowed = $referer || $origin;
+        if ($allowed) {
+            $host = parse_url($referer ?: $origin, PHP_URL_HOST);
+            $allowed = $host && ($host === $request->getHost() || str_ends_with($host, '.'.$request->getHost()));
+        } else {
+            $allowed = $request->isMethod('POST');
+        }
+        if (!$allowed) {
+            abort(403, 'Invalid request origin');
+        }
+
         $token = $request->query('t');
 
         $row = DB::table('webmail_tokens')

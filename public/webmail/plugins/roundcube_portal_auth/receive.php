@@ -19,6 +19,8 @@ $app = require_once $projectRoot . '/bootstrap/app.php';
 $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
 $kernel->bootstrap();
 
+use App\Enums\AccountStatus;
+use App\Enums\DomainStatus;
 use Illuminate\Support\Facades\DB;
 use App\Models\EmailAccount;
 
@@ -41,8 +43,8 @@ DB::table('webmail_tokens')
 
 $account = EmailAccount::with('domain')->findOrFail($row->email_account_id);
 
-if ($account->status !== 'active'
-    || $account->domain->status !== 'active'
+if ($account->status !== AccountStatus::Active
+    || $account->domain->status !== DomainStatus::Active
     || !$account->sync_enabled) {
     http_response_code(403);
     echo 'Account not available';
