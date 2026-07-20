@@ -15,7 +15,7 @@
             <div class="space-y-5">
                 <x-form.input name="name" label="Domain Name" value="{{ $domain->name }}" required />
 
-                <x-form.select name="status" label="Status" :options="['active' => 'Active', 'suspended' => 'Suspended', 'expired' => 'Expired']" value="{{ $domain->status }}" required />
+                <x-form.select name="status" label="Status" :options="['active' => 'Active', 'suspended' => 'Suspended', 'expired' => 'Expired']" value="{{ $domain->status?->value }}" required />
 
                 <x-form.textarea name="notes" label="Notes" rows="3" value="{{ $domain->notes }}" />
 

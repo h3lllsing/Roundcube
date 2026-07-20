@@ -20,7 +20,7 @@
                 <a href="{{ route('domains.show', $emailAccount->domain) }}" class="text-indigo-600 dark:text-indigo-400 hover:underline">{{ $emailAccount->domain->name ?? 'N/A' }}</a>
             </x-field>
             <x-field label="Status">
-                <x-badge variant="{{ $emailAccount->status === 'active' ? 'success' : 'danger' }}">{{ ucfirst($emailAccount->status) }}</x-badge>
+                <x-badge variant="{{ $emailAccount->status?->value === 'active' ? 'success' : 'danger' }}">{{ ucfirst($emailAccount->status?->value) }}</x-badge>
             </x-field>
             <x-field label="Sync Enabled">
                 <x-badge variant="{{ $emailAccount->sync_enabled ? 'success' : 'default' }}">{{ $emailAccount->sync_enabled ? 'Yes' : 'No' }}</x-badge>

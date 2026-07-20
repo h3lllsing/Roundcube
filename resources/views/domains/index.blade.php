@@ -56,9 +56,9 @@
                             <a href="{{ route('domains.show', $domain) }}" class="text-indigo-600 dark:text-indigo-400 hover:underline">{{ $domain->name }}</a>
                         </td>
                         <td class="px-6 py-3">
-                            @if ($domain->status === 'active')
+                            @if ($domain->status?->value === 'active')
                                 <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">Active</span>
-                            @elseif ($domain->status === 'suspended')
+                            @elseif ($domain->status?->value === 'suspended')
                                 <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300">Suspended</span>
                             @else
                                 <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300">Expired</span>

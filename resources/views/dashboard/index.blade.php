@@ -92,7 +92,7 @@
             @foreach($assigned_accounts as $account)
             <a href="{{ route('webmail.open', $account) }}"
                class="flex items-center gap-3 p-2.5 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group">
-                <span class="w-2 h-2 rounded-full {{ $account->status === 'active' ? 'bg-green-500' : 'bg-red-500' }} shrink-0"></span>
+                <span class="w-2 h-2 rounded-full {{ $account->status?->value === 'active' ? 'bg-green-500' : 'bg-red-500' }} shrink-0"></span>
                 <div class="flex-1 min-w-0">
                     <p class="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{{ $account->email }}</p>
                     <p class="text-xs text-gray-500 dark:text-gray-400 truncate">

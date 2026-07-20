@@ -60,7 +60,7 @@
                         </td>
                         <td class="px-6 py-3 text-gray-500">{{ $account->domain->name ?? 'N/A' }}</td>
                         <td class="px-6 py-3">
-                            @if ($account->status === 'active')
+                            @if ($account->status?->value === 'active')
                                 <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">Active</span>
                             @else
                                 <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300">Suspended</span>

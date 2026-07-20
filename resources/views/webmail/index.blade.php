@@ -39,7 +39,7 @@ $grouped = $accounts->groupBy(fn($a) => $a->domain->name);
                 <div class="flex-1 min-w-0">
                     <p class="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{{ $account->email }}</p>
                     <div class="flex items-center gap-2 mt-0.5">
-                        <x-badge variant="{{ $account->status === 'active' ? 'success' : 'danger' }}" class="text-[10px] px-1.5 py-0">{{ $account->status }}</x-badge>
+                        <x-badge variant="{{ $account->status?->value === 'active' ? 'success' : 'danger' }}" class="text-[10px] px-1.5 py-0">{{ $account->status?->value }}</x-badge>
                         @if($account->imap_host)
                         <span class="text-[10px] text-gray-400 dark:text-gray-500">{{ $account->imap_host }}:{{ $account->imap_port }}</span>
                         @endif

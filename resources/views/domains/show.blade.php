@@ -17,7 +17,7 @@
         <div class="space-y-3">
             <x-field label="Name" value="{{ $domain->name }}" />
             <x-field label="Status">
-                <x-badge variant="{{ $domain->status }}">{{ ucfirst($domain->status) }}</x-badge>
+                <x-badge variant="{{ $domain->status?->value }}">{{ ucfirst($domain->status?->value) }}</x-badge>
             </x-field>
             @if($domain->notes)
                 <x-field label="Notes" value="{{ $domain->notes }}" />
@@ -49,7 +49,7 @@
                             <a href="{{ route('email_accounts.show', $account) }}" class="text-indigo-600 dark:text-indigo-400 hover:underline">{{ $account->email }}</a>
                         </td>
                         <td>
-                            <x-badge variant="{{ $account->status === 'active' ? 'success' : 'danger' }}">{{ ucfirst($account->status) }}</x-badge>
+                            <x-badge variant="{{ $account->status?->value === 'active' ? 'success' : 'danger' }}">{{ ucfirst($account->status?->value) }}</x-badge>
                         </td>
                         <td>
                             <a href="{{ route('email_accounts.show', $account) }}" class="text-sm text-indigo-600 dark:text-indigo-400 hover:underline">View</a>

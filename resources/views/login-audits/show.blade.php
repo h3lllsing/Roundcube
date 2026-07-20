@@ -19,7 +19,7 @@
             </div>
             <div>
                 <p class="text-sm text-gray-500 dark:text-gray-400">Event</p>
-                <p class="font-medium">{{ str_replace('_', ' ', $audit->event) }}</p>
+                <p class="font-medium">{{ str_replace('_', ' ', $audit->event?->value ?? '') }}</p>
             </div>
             <div>
                 <p class="text-sm text-gray-500 dark:text-gray-400">IP Address</p>

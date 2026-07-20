@@ -47,9 +47,9 @@
                         <td class="px-6 py-3">
                             <span @class([
                                 'inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium',
-                                'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' => $audit->event === 'login_success',
-                                'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' => $audit->event === 'login_failed',
-                            ])>{{ str_replace('_', ' ', $audit->event) }}</span>
+                                'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' => $audit->event?->value === 'login_success',
+                                'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' => $audit->event?->value === 'login_failed',
+                            ])>{{ str_replace('_', ' ', $audit->event->value) }}</span>
                         </td>
                         <td class="px-6 py-3 text-gray-500 dark:text-gray-400 font-mono text-xs">{{ $audit->ip_address }}</td>
                         <td class="px-6 py-3 text-gray-500 dark:text-gray-400 whitespace-nowrap">{{ $audit->created_at->format('Y-m-d H:i') }}</td>
