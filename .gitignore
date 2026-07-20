@@ -40,6 +40,9 @@ _tmp_*
 /opspilot_test
 /.env.example.bak
 
+# Vite build output
+/public/build/
+
 # Runtime storage — contents are ephemeral; inner .gitignore placeholders preserve directories
 /storage/app/public/*
 /storage/logs/*

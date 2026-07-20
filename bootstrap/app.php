@@ -1,6 +1,5 @@
 <?php
 
-use App\Providers\MorphMapServiceProvider;
 use App\Providers\RateLimiterServiceProvider;
 use App\Providers\ViewServiceProvider;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -18,7 +17,6 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withProviders([
-        MorphMapServiceProvider::class,
         RateLimiterServiceProvider::class,
         ViewServiceProvider::class,
     ])
