@@ -6,62 +6,78 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 $token = $_POST['t'] ?? null;
-$baseUrl = $_POST['base_url'] ?? null;
-
-if (!$token || !$baseUrl) {
+if (!$token) {
     http_response_code(403);
-    echo 'Missing parameters';
+    echo 'Missing token';
     exit;
 }
 
-$resolveUrl = rtrim($baseUrl, '/') . '/webmail-auth/resolve?t=' . urlencode($token);
+$projectRoot = dirname(__DIR__, 4);
+require_once $projectRoot . '/vendor/autoload.php';
 
-$ch = curl_init($resolveUrl);
-curl_setopt_array($ch, [
-    CURLOPT_RETURNTRANSFER => true,
-    CURLOPT_TIMEOUT => 10,
-    CURLOPT_SSL_VERIFYPEER => false,
-    CURLOPT_HTTPHEADER => ['Accept: application/json'],
-]);
-$res = curl_exec($ch);
-$http = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-curl_close($ch);
+$app = require_once $projectRoot . '/bootstrap/app.php';
+$kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
+$kernel->bootstrap();
 
-if ($http !== 200) {
+use Illuminate\Support\Facades\DB;
+use App\Models\EmailAccount;
+
+$row = DB::table('webmail_tokens')
+    ->where('token', $token)
+    ->where('used', false)
+    ->where('expires_at', '>', now())
+    ->first();
+
+if (!$row) {
     http_response_code(403);
-    echo 'Unauthorized';
+    echo 'Invalid or expired token';
     exit;
 }
 
-$data = json_decode($res, true);
-if (!$data || empty($data['email'])) {
+DB::table('webmail_tokens')
+    ->where('token', $token)
+    ->where('used', false)
+    ->update(['used' => true]);
+
+$account = EmailAccount::with('domain')->findOrFail($row->email_account_id);
+
+if ($account->status !== 'active'
+    || $account->domain->status !== 'active'
+    || !$account->sync_enabled) {
     http_response_code(403);
-    echo 'Invalid response';
+    echo 'Account not available';
     exit;
 }
+
+$storageDir = $projectRoot . '/storage/app/webmail';
+if (!is_dir($storageDir)) {
+    mkdir($storageDir, 0700, true);
+}
+
+$emailHash = md5($account->email);
+$settingsFile = $storageDir . '/sm_imap_' . $emailHash . '.json';
+
+file_put_contents($settingsFile, json_encode([
+    'email' => $account->email,
+    'password' => $account->password,
+    'imap_host' => $account->imap_host,
+    'imap_port' => (int)$account->imap_port,
+    'imap_encryption' => $account->imap_encryption ?? 'ssl',
+    'smtp_host' => $account->smtp_host ?? '',
+    'smtp_port' => (int)($account->smtp_port ?? 587),
+    'smtp_encryption' => $account->smtp_encryption ?? 'tls',
+    'smtp_username' => $account->smtp_username ?? $account->email,
+    'smtp_password' => $account->smtp_password ?? $account->password,
+    'created_at' => time(),
+]), LOCK_EX);
+
+@chmod($settingsFile, 0600);
 
 $_ENV['SNAPPYMAIL_INCLUDE_AS_API'] = '1';
 require_once __DIR__ . '/../../index.php';
 
-$settingsFile = sys_get_temp_dir() . '/sm_imap_' . md5($data['email']) . '.json';
-$settingsData = json_encode([
-    'email' => $data['email'],
-    'password' => $data['password'],
-    'imap_host' => $data['imap_host'] ?? '',
-    'imap_port' => (int)($data['imap_port'] ?? 993),
-    'imap_encryption' => $data['imap_encryption'] ?? 'ssl',
-    'smtp_host' => $data['smtp_host'] ?? '',
-    'smtp_port' => (int)($data['smtp_port'] ?? 587),
-    'smtp_encryption' => $data['smtp_encryption'] ?? 'tls',
-    'smtp_username' => $data['smtp_username'] ?? $data['email'],
-    'smtp_password' => $data['smtp_password'] ?? $data['password'],
-    'created_at' => time(),
-]);
-file_put_contents($settingsFile, $settingsData, LOCK_EX);
-@chmod($settingsFile, 0600);
-
 try {
-    $ssoHash = \RainLoop\Api::CreateUserSsoHash($data['email'], $data['password']);
+    $ssoHash = \RainLoop\Api::CreateUserSsoHash($account->email, $account->password);
     if ($ssoHash) {
         $webmailRoot = dirname(dirname(dirname($_SERVER['SCRIPT_NAME'] ?? '/')));
         header('Location: ' . $webmailRoot . '/?sso&hash=' . urlencode($ssoHash));
@@ -69,7 +85,7 @@ try {
     }
 } catch (\Throwable $e) {
     http_response_code(500);
-    echo 'SSO generation failed: ' . $e->getMessage();
+    echo 'SSO generation failed';
     exit;
 }
 

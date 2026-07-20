@@ -13,7 +13,7 @@
             <div class="space-y-5">
                 <x-form.input name="name" label="Domain Name" placeholder="example.com" required />
 
-                <x-form.select name="status" label="Status" :options="['active' => 'Active', 'suspended' => 'Suspended', 'expired' => 'Expired']" required />
+                <x-form.select name="status" label="Status" :options="['active' => 'Active', 'suspended' => 'Suspended', 'expired' => 'Expired']" value="active" required />
 
                 <x-form.textarea name="notes" label="Notes" rows="3" />
 

@@ -68,6 +68,7 @@
     var emailInput = document.getElementById('email-input');
     if (!emailInput) return;
     var debounceTimer;
+    var originalValues = {};
     emailInput.addEventListener('input', function() {
         clearTimeout(debounceTimer);
         debounceTimer = setTimeout(doAutoDiscover, 600);
@@ -78,16 +79,16 @@
         var statusEls = {imap: document.getElementById('imap-status'), smtp: document.getElementById('smtp-status')};
         var errorEls = {imap: document.getElementById('imap-error'), smtp: document.getElementById('smtp-error')};
         var fields = ['imap_host','imap_port','imap_encryption','smtp_host','smtp_port','smtp_encryption','smtp_username'];
+        originalValues = {};
         fields.forEach(function(f) {
             var el = document.getElementById(f);
-            if (el) { el.value = ''; el.disabled = true; }
+            if (el) { originalValues[f] = el.value; el.value = ''; el.disabled = true; }
         });
-        if (document.getElementById('smtp_host')) document.getElementById('smtp_host').value = '';
-        if (document.getElementById('smtp_port')) document.getElementById('smtp_port').value = '';
-        if (document.getElementById('smtp_username')) document.getElementById('smtp_username').value = '';
         Object.values(errorEls).forEach(function(el) { if (el) { el.textContent = ''; el.classList.add('hidden'); } });
         Object.values(statusEls).forEach(function(el) { if (el) el.textContent = 'detecting...'; });
-        fetch('{{ route("email-accounts.auto-discover") }}?email=' + encodeURIComponent(email))
+        var controller = new AbortController();
+        var timeoutId = setTimeout(function() { controller.abort(); }, 15000);
+        fetch('{{ route("email-accounts.auto-discover") }}?email=' + encodeURIComponent(email), { signal: controller.signal })
             .then(function(r) {
                 if (!r.ok) throw new Error('HTTP ' + r.status);
                 return r.json();
@@ -106,8 +107,14 @@
                     document.getElementById('smtp_username').value = email;
                     if (statusEls.smtp) statusEls.smtp.textContent = '\u2713 ' + data.smtp_host + ':' + data.smtp_port;
                 }
+                clearTimeout(timeoutId);
             })
             .catch(function() {
+                clearTimeout(timeoutId);
+                Object.keys(originalValues).forEach(function(f) {
+                    var el = document.getElementById(f);
+                    if (el) el.value = originalValues[f];
+                });
                 Object.values(statusEls).forEach(function(el) { if (el) el.textContent = ''; });
                 if (errorEls.imap) { errorEls.imap.textContent = 'Auto-detect failed'; errorEls.imap.classList.remove('hidden'); }
                 if (errorEls.smtp) { errorEls.smtp.textContent = 'Auto-detect failed'; errorEls.smtp.classList.remove('hidden'); }

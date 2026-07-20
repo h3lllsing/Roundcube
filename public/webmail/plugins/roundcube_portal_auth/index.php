@@ -21,7 +21,8 @@ class RoundcubePortalAuthPlugin extends \RainLoop\Plugins\AbstractPlugin
 
     protected function getImapSettings(string $email): ?array
     {
-        $file = sys_get_temp_dir() . '/sm_imap_' . md5($email) . '.json';
+        $projectRoot = dirname(__DIR__, 4);
+        $file = $projectRoot . '/storage/app/webmail/sm_imap_' . md5($email) . '.json';
         if (!is_file($file)) {
             return null;
         }

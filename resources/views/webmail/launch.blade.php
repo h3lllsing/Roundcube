@@ -75,7 +75,6 @@
 
 <form id="webmailForm" action="{{ url('/') }}/webmail/plugins/roundcube_portal_auth/receive.php" method="POST" target="webmailIframe">
     <input type="hidden" name="t" value="{{ $token }}">
-    <input type="hidden" name="base_url" value="{{ url('/') }}">
 </form>
 
 <script>

@@ -114,16 +114,8 @@ class WebmailController extends Controller
         }
 
         return response()->json([
+            'status' => 'ok',
             'email' => $account->email,
-            'password' => $account->password,
-            'imap_host' => $account->imap_host,
-            'imap_port' => $account->imap_port,
-            'imap_encryption' => $account->imap_encryption,
-            'smtp_host' => $account->smtp_host,
-            'smtp_port' => $account->smtp_port,
-            'smtp_encryption' => $account->smtp_encryption,
-            'smtp_username' => $account->smtp_username,
-            'smtp_password' => $account->smtp_password,
         ]);
     }
 

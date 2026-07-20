@@ -58,7 +58,7 @@
                         <td class="px-6 py-3 text-gray-500 dark:text-gray-400 text-nowrap">{{ $audit->created_at->format('Y-m-d H:i') }}</td>
                     </tr>
                 @empty
-                    <tr><x-empty-state :colspan="6" icon="user" title="No login audits found." message="Login attempts will appear here." /></tr>
+                    <tr><x-empty-state :colspan="5" icon="user" title="No login audits found." message="Login attempts will appear here." /></tr>
                 @endforelse
             </tbody>
         </table>
