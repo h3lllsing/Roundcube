@@ -33,7 +33,7 @@
             <x-button href="{{ route('users.show', $user->id) }}" variant="outline" size="sm">View Profile</x-button>
 
             <div class="flex items-center gap-3 pt-4">
-                <x-button type="submit" variant="primary" size="sm">Save</x-button>
+                <x-button type="submit" variant="primary" size="sm" x-on:click="startLoading($el)">Save</x-button>
                 <x-button href="{{ route('users.index') }}" variant="outline" size="sm">Cancel</x-button>
             </div>
         </form>

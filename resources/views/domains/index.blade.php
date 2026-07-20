@@ -30,7 +30,7 @@
         @endif
         <x-filter-input name="search" placeholder="Search domains..." />
         <x-filter-select name="status" placeholder="All statuses" :options="['active' => 'Active', 'suspended' => 'Suspended', 'expired' => 'Expired']" />
-        <x-button type="submit" variant="primary" size="sm">Filter</x-button>
+        <x-button type="submit" variant="primary" size="sm" x-on:click="startLoading($el)">Filter</x-button>
         @if(request()->anyFilled(['search', 'status']))
             <x-button href="{{ request('trashed') ? route('domains.index', ['trashed' => 1]) : route('domains.index') }}" variant="outline" size="sm">Clear</x-button>
         @endif

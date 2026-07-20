@@ -8,7 +8,7 @@
         <x-slot:actions>
             <form method="POST" action="{{ route('notifications.read-all') }}" class="inline">
                 @csrf
-                <x-button type="submit" variant="primary" size="sm">Mark All as Read</x-button>
+                <x-button type="submit" variant="primary" size="sm" x-on:click="startLoading($el)">Mark All as Read</x-button>
             </form>
         </x-slot:actions>
     </x-page-header>
@@ -22,7 +22,7 @@
         <input type="hidden" name="unread" value="{{ request('unread') }}">
         <input type="text" name="search" value="{{ request('search') }}" placeholder="Search notifications..."
             class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm bg-white dark:bg-black text-gray-900 dark:text-white input-focus outline-none">
-        <x-button type="submit" variant="primary" size="sm">Search</x-button>
+        <x-button type="submit" variant="primary" size="sm" x-on:click="startLoading($el)">Search</x-button>
         @if(request()->filled('search'))
             <x-button href="{{ route('notifications.index', request()->only('unread')) }}" variant="outline" size="sm">Clear</x-button>
         @endif
@@ -69,7 +69,7 @@
                         @if (! $notification->read_at)
                             <form method="POST" action="{{ route('notifications.read', $notification->id) }}" class="inline">
                                 @csrf
-                                <button type="submit" class="text-xs text-indigo-600 hover:text-indigo-800">Read</button>
+                                <button type="submit" x-on:click="startLoading($el)" class="text-xs text-indigo-600 hover:text-indigo-800">Read</button>
                             </form>
                         @endif
                         <form method="POST" action="{{ route('notifications.destroy', $notification->id) }}" class="inline">

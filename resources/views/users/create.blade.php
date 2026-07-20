@@ -29,7 +29,7 @@
                 </div>
 
                 <div class="flex items-center gap-3 pt-2">
-                    <x-button type="submit" variant="primary">Create User</x-button>
+                    <x-button type="submit" variant="primary" x-on:click="startLoading($el)">Create User</x-button>
                     <x-button href="{{ route('users.index') }}" variant="outline">Cancel</x-button>
                 </div>
             </div>

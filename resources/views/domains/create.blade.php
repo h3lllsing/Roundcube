@@ -18,7 +18,7 @@
                 <x-form.textarea name="notes" label="Notes" rows="3" />
 
                 <div class="flex items-center gap-3 pt-2">
-                    <x-button type="submit" variant="primary">Create Domain</x-button>
+                    <x-button type="submit" variant="primary" x-on:click="startLoading($el)">Create Domain</x-button>
                     <x-button href="{{ route('domains.index') }}" variant="outline">Cancel</x-button>
                 </div>
             </div>

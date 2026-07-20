@@ -91,7 +91,7 @@
                         <x-form.checkbox name="can_send" label="Can Send" checked />
                         <x-form.checkbox name="can_receive" label="Can Receive" checked />
                     </div>
-                    <x-button type="submit" variant="primary" size="sm">Assign</x-button>
+                    <x-button type="submit" variant="primary" size="sm" x-on:click="startLoading($el)">Assign</x-button>
                 </form>
             </div>
         </x-card>

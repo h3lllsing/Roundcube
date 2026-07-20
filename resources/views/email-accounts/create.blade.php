@@ -53,7 +53,7 @@
                 <x-form.select name="status" label="Status" :options="['active' => 'Active', 'suspended' => 'Suspended']" value="active" required />
 
                 <div class="flex items-center gap-3 pt-2">
-                    <x-button type="submit" variant="primary">Create Email Account</x-button>
+                    <x-button type="submit" variant="primary" x-on:click="startLoading($el)">Create Email Account</x-button>
                     <x-button href="{{ route('email_accounts.index') }}" variant="outline">Cancel</x-button>
                 </div>
             </div>

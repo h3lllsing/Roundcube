@@ -35,7 +35,7 @@
             class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl input-focus outline-none">
         <input type="date" name="date_to" value="{{ request('date_to') }}" placeholder="To"
             class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl input-focus outline-none">
-        <x-button type="submit" variant="primary" size="sm">Filter</x-button>
+        <x-button type="submit" variant="primary" size="sm" x-on:click="startLoading($el)">Filter</x-button>
         @if(request()->anyFilled(['search', 'event', 'causer_id', 'date_from', 'date_to']))
             <x-button href="{{ route('activity-logs.index') }}" variant="outline" size="sm">Clear</x-button>
         @endif

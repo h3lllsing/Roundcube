@@ -31,7 +31,7 @@
         <x-filter-input name="search" placeholder="Search email..." />
         <x-filter-select name="domain_id" placeholder="All domains" :options="$domains->pluck('name', 'id')->toArray()" />
         <x-filter-select name="status" placeholder="All statuses" :options="['active' => 'Active', 'suspended' => 'Suspended']" />
-        <x-button type="submit" variant="primary" size="sm">Filter</x-button>
+        <x-button type="submit" variant="primary" size="sm" x-on:click="startLoading($el)">Filter</x-button>
         @if(request()->anyFilled(['search', 'domain_id', 'status']))
             <x-button href="{{ request('trashed') ? route('email_accounts.index', ['trashed' => 1]) : route('email_accounts.index') }}" variant="outline" size="sm">Clear</x-button>
         @endif
