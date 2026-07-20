@@ -50,7 +50,7 @@
 
                 <x-form.checkbox name="sync_enabled" label="Enable Sync" checked />
 
-                <x-form.select name="status" label="Status" :options="['active' => 'Active', 'suspended' => 'Suspended']" required />
+                <x-form.select name="status" label="Status" :options="['active' => 'Active', 'suspended' => 'Suspended']" value="active" required />
 
                 <div class="flex items-center gap-3 pt-2">
                     <x-button type="submit" variant="primary">Create Email Account</x-button>
