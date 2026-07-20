@@ -73,7 +73,7 @@
     <iframe name="webmailIframe" src="about:blank" allow="fullscreen" title="Webmail"></iframe>
 </div>
 
-<form id="webmailForm" action="{{ url('/') }}/webmail/plugins/roundcube_portal_auth/receive.php" method="POST" target="webmailIframe">
+<form id="webmailForm" action="{{ url('/') }}/webmail/plugins/roundcube-portal-auth/receive.php" method="POST" target="webmailIframe">
     <input type="hidden" name="t" value="{{ $token }}">
 </form>
 

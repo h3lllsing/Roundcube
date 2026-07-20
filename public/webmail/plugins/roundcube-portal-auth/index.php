@@ -19,9 +19,14 @@ class RoundcubePortalAuthPlugin extends \RainLoop\Plugins\AbstractPlugin
         $this->addHook('smtp.before-login', 'PluginSmtpBeforeLogin');
     }
 
+    private function getProjectRoot(): string
+    {
+        return dirname(APP_INDEX_ROOT_PATH, 2);
+    }
+
     protected function getImapSettings(string $email): ?array
     {
-        $projectRoot = dirname(__DIR__, 4);
+        $projectRoot = $this->getProjectRoot();
         $file = $projectRoot . '/storage/app/webmail/sm_imap_' . md5($email) . '.json';
         if (!is_file($file)) {
             return null;
