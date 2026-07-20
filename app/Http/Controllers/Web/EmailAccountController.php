@@ -50,7 +50,7 @@ class EmailAccountController extends Controller
 
     public function create(): View
     {
-        $domains = Domain::orderBy('name')->get(['id', 'name']);
+        $domains = Domain::where('status', 'active')->orderBy('name')->get(['id', 'name']);
 
         return view('email-accounts.create', compact('domains'));
     }
@@ -109,7 +109,7 @@ class EmailAccountController extends Controller
 
     public function edit(EmailAccount $emailAccount): View
     {
-        $domains = Domain::orderBy('name')->get(['id', 'name']);
+        $domains = Domain::where('status', 'active')->orderBy('name')->get(['id', 'name']);
 
         return view('email-accounts.edit', compact('emailAccount', 'domains'));
     }

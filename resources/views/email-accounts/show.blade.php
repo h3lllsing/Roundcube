@@ -25,6 +25,7 @@
             <x-field label="Sync Enabled">
                 <x-badge variant="{{ $emailAccount->sync_enabled ? 'success' : 'default' }}">{{ $emailAccount->sync_enabled ? 'Yes' : 'No' }}</x-badge>
             </x-field>
+            <x-field label="Last Sync" value="{{ $emailAccount->last_sync_at?->format('M d, Y g:i A') ?? 'Never' }}" />
             <x-field label="Created" value="{{ $emailAccount->created_at->format('M d, Y g:i A') }}" />
             <x-field label="Created By" value="{{ $emailAccount->creator?->email ?? 'N/A' }}" />
         </div>

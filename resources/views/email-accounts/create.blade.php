@@ -80,8 +80,11 @@
         var fields = ['imap_host','imap_port','imap_encryption','smtp_host','smtp_port','smtp_encryption','smtp_username'];
         fields.forEach(function(f) {
             var el = document.getElementById(f);
-            if (el) el.disabled = true;
+            if (el) { el.value = ''; el.disabled = true; }
         });
+        if (document.getElementById('smtp_host')) document.getElementById('smtp_host').value = '';
+        if (document.getElementById('smtp_port')) document.getElementById('smtp_port').value = '';
+        if (document.getElementById('smtp_username')) document.getElementById('smtp_username').value = '';
         Object.values(errorEls).forEach(function(el) { if (el) { el.textContent = ''; el.classList.add('hidden'); } });
         Object.values(statusEls).forEach(function(el) { if (el) el.textContent = 'detecting...'; });
         fetch('{{ route("email-accounts.auto-discover") }}?email=' + encodeURIComponent(email))
