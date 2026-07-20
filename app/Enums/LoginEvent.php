@@ -8,4 +8,5 @@ enum LoginEvent: string
     case LoginFailed = 'login_failed';
     case Logout = 'logout';
     case LoginSuspended = 'login_suspended';
+    case PasswordReset = 'password_reset';
 }

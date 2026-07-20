@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Rules\NotCommonPassword;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreUserRequest extends FormRequest
@@ -16,10 +17,10 @@ class StoreUserRequest extends FormRequest
     {
         return [
             'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email',
-            'password' => 'required|string|min:8|regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/|confirmed',
-            'roles' => 'sometimes|array',
-            'roles.*' => 'exists:roles,id',
+            'email' => 'required|email|max:255|unique:users,email,NULL,id,deleted_at,NULL',
+            'password' => ['required', 'string', 'min:8', 'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^a-zA-Z0-9]).+$/', 'confirmed', new NotCommonPassword],
+            'role' => 'nullable|in:user,admin',
+            'status' => 'nullable|in:active,suspended',
         ];
     }
 }

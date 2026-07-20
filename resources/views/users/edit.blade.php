@@ -17,7 +17,6 @@
             <p class="text-xs text-gray-500 dark:text-gray-400 -mt-3">Leave blank to keep current password.</p>
             <x-form.input type="password" name="password_confirmation" label="Confirm Password" autocomplete="new-password" />
             <p class="text-xs text-gray-500 dark:text-gray-400 -mt-3">Only required when setting a new password.</p>
-            <x-form.input type="date" name="suspended_at" label="Suspended At" :value="old('suspended_at', $user->suspended_at?->format('Y-m-d'))" />
             <x-form.select name="role" label="Role" :options="[
                 '' => '— Select a role —',
                 'super-admin' => 'Super Admin',

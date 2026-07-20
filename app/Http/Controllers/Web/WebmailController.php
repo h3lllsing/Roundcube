@@ -16,20 +16,7 @@ class WebmailController extends Controller
 {
     public function index(): View
     {
-        $user = Auth::user();
-
-        if ($user->isAdmin()) {
-            $accounts = EmailAccount::with('domain')
-                ->where('status', AccountStatus::Active)
-                ->orderBy('email')
-                ->get();
-        } else {
-            $accounts = $user->assignedEmailAccounts()
-                ->with('domain')
-                ->where('status', AccountStatus::Active)
-                ->orderBy('email')
-                ->get();
-        }
+        $accounts = $this->getAccessibleAccounts();
 
         return view('webmail.index', compact('accounts'));
     }
@@ -41,47 +28,46 @@ class WebmailController extends Controller
         $canAccess = $user->isAdmin()
             || $emailAccount->assignedUsers()->where('user_id', $user->id)->exists();
 
-        abort_unless($canAccess, 403);
+        abort_unless($canAccess, 403, 'You do not have access to this email account.');
 
         $token = $this->generateToken($emailAccount);
 
-        if ($user->isAdmin()) {
-            $accounts = EmailAccount::with('domain')
-                ->where('status', AccountStatus::Active)
-                ->orderBy('email')
-                ->get();
-        } else {
-            $accounts = $user->assignedEmailAccounts()
-                ->with('domain')
-                ->where('status', AccountStatus::Active)
-                ->orderBy('email')
-                ->get();
-        }
-
         return view('webmail.launch', [
             'token' => $token,
-            'accounts' => $accounts,
+            'accounts' => $this->getAccessibleAccounts(),
             'currentAccount' => $emailAccount,
         ]);
     }
 
     public function openAs(EmailAccount $emailAccount): View
     {
-        $user = Auth::user();
-        abort_unless($user->isAdmin(), 403);
+        $this->authorize('view', $emailAccount);
 
         $token = $this->generateToken($emailAccount);
 
-        $accounts = EmailAccount::with('domain')
+        return view('webmail.launch', [
+            'token' => $token,
+            'accounts' => $this->getAccessibleAccounts(),
+            'currentAccount' => $emailAccount,
+        ]);
+    }
+
+    private function getAccessibleAccounts()
+    {
+        $user = Auth::user();
+
+        if ($user->isAdmin()) {
+            return EmailAccount::with('domain')
+                ->where('status', AccountStatus::Active)
+                ->orderBy('email')
+                ->get();
+        }
+
+        return $user->assignedEmailAccounts()
+            ->with('domain')
             ->where('status', AccountStatus::Active)
             ->orderBy('email')
             ->get();
-
-        return view('webmail.launch', [
-            'token' => $token,
-            'accounts' => $accounts,
-            'currentAccount' => $emailAccount,
-        ]);
     }
 
     public function resolve(Request $request): JsonResponse

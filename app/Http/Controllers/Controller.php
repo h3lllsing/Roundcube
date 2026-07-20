@@ -17,7 +17,10 @@ abstract class Controller extends BaseController
         if ($submittedUpdatedAt === null) {
             abort(409, 'Optimistic lock field (updated_at) is required.');
         }
-        $currentUpdatedAt = $model->updated_at;
+
+        $fresh = $model->fresh();
+        $currentUpdatedAt = $fresh ? $fresh->updated_at : $model->updated_at;
+
         try {
             $submitted = \Carbon\Carbon::parse($submittedUpdatedAt);
         } catch (\Exception $e) {

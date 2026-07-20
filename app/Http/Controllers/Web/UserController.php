@@ -3,22 +3,34 @@
 namespace App\Http\Controllers\Web;
 
 use App\Enums\LoginEvent;
+use App\Events\UserCreated;
+use App\Events\UserDeleted;
+use App\Events\UserForceDeleted;
+use App\Events\UserRestored;
+use App\Events\UserSuspended;
+use App\Events\UserUnsuspended;
+use App\Events\UserUpdated;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\StoreUserRequest;
+use App\Http\Requests\SuspendUserRequest;
+use App\Http\Requests\UpdateUserRequest;
 use App\Models\LoginAudit;
 use App\Models\User;
+use App\Services\CsvExportService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 use Illuminate\View\View;
 
 class UserController extends Controller
 {
     public function index(Request $request): View
     {
-        abort_unless(Auth::user()->isSuperAdmin(), 403);
+        $this->authorize('viewAny', User::class);
 
         $query = User::query()->select(['id', 'name', 'email', 'role', 'suspended_at', 'created_at'])->addSelect([
             'last_login_at' => LoginAudit::whereColumn('user_id', 'users.id')
@@ -28,13 +40,13 @@ class UserController extends Controller
                 ->select('created_at'),
         ]);
 
-        if ($request->filled('search')) {
+        if ($request->filled('search') && strlen($request->search) >= 2) {
             $query->where(function ($q) use ($request) {
                 $q->where('name', 'like', '%'.$request->search.'%')
                     ->orWhere('email', 'like', '%'.$request->search.'%');
             });
         }
-        if ($request->filled('role')) {
+        if ($request->filled('role') && in_array($request->role, ['user', 'admin', 'super-admin'], true)) {
             $query->where('role', $request->role);
         }
         if ($request->filled('status')) {
@@ -44,10 +56,10 @@ class UserController extends Controller
                 $query->whereNull('suspended_at');
             }
         }
-        if ($request->filled('date_from')) {
+        if ($request->filled('date_from') && \Illuminate\Support\Facades\Validator::make(['date_from' => $request->date_from], ['date_from' => 'date'])->passes()) {
             $query->whereDate('created_at', '>=', $request->date_from);
         }
-        if ($request->filled('date_to')) {
+        if ($request->filled('date_to') && \Illuminate\Support\Facades\Validator::make(['date_to' => $request->date_to], ['date_to' => 'date'])->passes()) {
             $query->whereDate('created_at', '<=', $request->date_to);
         }
 
@@ -58,22 +70,16 @@ class UserController extends Controller
 
     public function create(): View
     {
-        abort_unless(Auth::user()->isSuperAdmin(), 403);
+        $this->authorize('create', User::class);
 
         return view('users.create');
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(StoreUserRequest $request): RedirectResponse
     {
-        abort_unless(Auth::user()->isSuperAdmin(), 403);
+        $this->authorize('create', User::class);
 
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|email|max:255|unique:users,email,NULL,id,deleted_at,NULL',
-            'password' => 'required|string|min:8|confirmed',
-            'role' => 'nullable|in:user,admin',
-            'status' => 'nullable|in:active,suspended',
-        ]);
+        $request->validated();
 
         $user = DB::transaction(function () use ($request) {
             $user = User::create([
@@ -81,6 +87,7 @@ class UserController extends Controller
                 'email' => $request->email,
                 'role' => $request->input('role', 'user'),
                 'password' => Hash::make($request->password),
+                'password_changed_at' => now(),
             ]);
 
             if ($request->input('status') === 'suspended') {
@@ -88,11 +95,7 @@ class UserController extends Controller
                 $user->save();
             }
 
-            activity()->event('created')
-                ->performedOn($user)
-                ->causedBy(Auth::user())
-                ->withProperties(['role' => $user->role])
-                ->log('User created: '.$user->email);
+            event(new UserCreated($user));
 
             return $user;
         });
@@ -104,7 +107,7 @@ class UserController extends Controller
 
     public function show(int $id): View
     {
-        abort_unless(Auth::user()->isSuperAdmin(), 403);
+        $this->authorize('view', User::class);
 
         $user = User::findOrFail($id);
 
@@ -118,28 +121,20 @@ class UserController extends Controller
 
     public function edit(int $id): View
     {
-        abort_unless(Auth::user()->isSuperAdmin(), 403);
+        $this->authorize('update', User::class);
 
         $user = User::findOrFail($id);
 
         return view('users.edit', compact('user'));
     }
 
-    public function update(Request $request, int $id): RedirectResponse
+    public function update(UpdateUserRequest $request, int $id): RedirectResponse
     {
-        abort_unless(Auth::user()->isSuperAdmin(), 403);
-
         $user = User::findOrFail($id);
+        $this->authorize('update', $user);
 
         $this->checkOptimisticLock($user, $request);
-        $validated = $request->validate([
-            'updated_at' => 'required|date',
-            'name' => 'required|string|max:255',
-            'email' => 'required|email|max:255|unique:users,email,'.$user->id.',id,deleted_at,NULL',
-            'password' => 'nullable|string|min:8|confirmed',
-            'role' => 'nullable|in:user,admin',
-            'suspended_at' => 'nullable|date',
-        ]);
+        $validated = $request->validated();
 
         if ($request->filled('password')) {
             $validated['password'] = Hash::make($validated['password']);
@@ -156,12 +151,6 @@ class UserController extends Controller
                 $user->forceFill(['suspended_at' => $suspendedAt])->save();
             }
 
-            if (isset($validated['role'])) {
-                if ($currentUser->id === $user->id && $user->role === 'super-admin' && $validated['role'] !== 'super-admin') {
-                    abort(403, 'Cannot remove your own Super Admin role.');
-                }
-            }
-
             $original = $user->getOriginal();
             $user->update($validated);
 
@@ -169,14 +158,7 @@ class UserController extends Controller
             $dirty = array_diff_key($changed, array_flip(['updated_at']));
             $oldValues = array_intersect_key($original, $dirty);
 
-            activity()->event('updated')
-                ->performedOn($user)
-                ->causedBy(Auth::user())
-                ->withProperties([
-                    'old' => $oldValues,
-                    'attributes' => $dirty,
-                ])
-                ->log('User updated: '.$user->email);
+            event(new UserUpdated($user, $oldValues, $dirty));
         });
 
         Cache::increment('dashboard:version');
@@ -184,24 +166,18 @@ class UserController extends Controller
         return redirect()->route('users.index')->with('success', 'User updated successfully.');
     }
 
-    public function suspend(Request $request, int $id): RedirectResponse
+    public function suspend(SuspendUserRequest $request, int $id): RedirectResponse
     {
-        abort_unless(Auth::user()->isSuperAdmin(), 403);
-
-        $request->validate(['reason' => 'nullable|string|max:1000']);
-
         $user = User::findOrFail($id);
+        $this->authorize('suspend', $user);
+
         DB::transaction(function () use ($user, $request) {
             $user->forceFill([
                 'suspended_at' => now(),
                 'suspension_reason' => $request->input('reason'),
             ])->save();
 
-            activity()->event('suspended')
-                ->performedOn($user)
-                ->causedBy(Auth::user())
-                ->withProperties(['reason' => $request->input('reason')])
-                ->log('User suspended: '.$user->email);
+            event(new UserSuspended($user, $request->input('reason')));
         });
 
         Cache::increment('dashboard:version');
@@ -211,19 +187,16 @@ class UserController extends Controller
 
     public function unsuspend(int $id): RedirectResponse
     {
-        abort_unless(Auth::user()->isSuperAdmin(), 403);
-
         $user = User::findOrFail($id);
+        $this->authorize('unsuspend', $user);
+
         DB::transaction(function () use ($user) {
             $user->forceFill([
                 'suspended_at' => null,
                 'suspension_reason' => null,
             ])->save();
 
-            activity()->event('unsuspended')
-                ->performedOn($user)
-                ->causedBy(Auth::user())
-                ->log('User unsuspended: '.$user->email);
+            event(new UserUnsuspended($user));
         });
 
         Cache::increment('dashboard:version');
@@ -233,16 +206,8 @@ class UserController extends Controller
 
     public function destroy(int $id): RedirectResponse
     {
-        abort_unless(Auth::user()->isSuperAdmin(), 403);
-
         $user = User::findOrFail($id);
-
-        if ($user->role === 'super-admin') {
-            $superAdminCount = User::where('role', 'super-admin')->count();
-            if ($superAdminCount <= 1) {
-                abort(403, 'Cannot delete the last Super Admin user.');
-            }
-        }
+        $this->authorize('delete', $user);
 
         $userEmail = $user->email;
         $userName = $user->name;
@@ -252,14 +217,7 @@ class UserController extends Controller
             $user->saveQuietly();
             $user->delete();
 
-            activity()->event('deleted')
-                ->performedOn($user)
-                ->causedBy(Auth::user())
-                ->withProperties([
-                    'email' => $userEmail,
-                    'name' => $userName,
-                ])
-                ->log('User deleted: '.$userEmail);
+            event(new UserDeleted($user, $userEmail, $userName));
         });
 
         Cache::increment('dashboard:version');
@@ -269,16 +227,12 @@ class UserController extends Controller
 
     public function restore(int $id): RedirectResponse
     {
-        abort_unless(Auth::user()->isSuperAdmin(), 403);
+        $this->authorize('restore', User::class);
 
         $user = User::withTrashed()->findOrFail($id);
         $user->restore();
 
-        activity()->event('restored')
-            ->performedOn($user)
-            ->causedBy(Auth::user())
-            ->withProperties(['email' => $user->email, 'name' => $user->name])
-            ->log('User restored: '.$user->email);
+        event(new UserRestored($user, $user->email, $user->name));
 
         Cache::increment('dashboard:version');
 
@@ -287,21 +241,59 @@ class UserController extends Controller
 
     public function forceDelete(int $id): RedirectResponse
     {
-        abort_unless(Auth::user()->isSuperAdmin(), 403);
+        $this->authorize('forceDelete', User::class);
 
         $user = User::withTrashed()->findOrFail($id);
+
+        if ($user->assignedEmailAccounts()->count() > 0) {
+            return redirect()->route('users.index')
+                ->with('error', 'Cannot delete user with email account assignments. Revoke assignments first.');
+        }
+
         $userEmail = $user->email;
         $userName = $user->name;
         $user->forceDelete();
 
-        activity()->event('permanently_deleted')
-            ->performedOn($user)
-            ->causedBy(Auth::user())
-            ->withProperties(['email' => $userEmail, 'name' => $userName])
-            ->log('User permanently deleted: '.$userEmail);
+        event(new UserForceDeleted($user, $userEmail, $userName));
 
         Cache::increment('dashboard:version');
 
         return redirect()->route('users.index')->with('success', 'User permanently deleted.');
+    }
+
+    public function bulkDelete(Request $request): RedirectResponse
+    {
+        $this->authorize('bulkDelete', User::class);
+
+        $ids = $request->validate(['ids' => 'required|array', 'ids.*' => 'integer|exists:users,id'])['ids'];
+        $count = count($ids);
+
+        DB::transaction(function () use ($ids) {
+            User::whereIn('id', $ids)->each(function (User $user) {
+                $user->deleted_by = Auth::id();
+                $user->saveQuietly();
+                $user->delete();
+            });
+        });
+
+        Cache::increment('dashboard:version');
+
+        return back()->with('success', "{$count} users deleted.");
+    }
+
+    public function export(): StreamedResponse
+    {
+        $this->authorize('viewAny', User::class);
+
+        $users = User::latest()->get();
+        $rows = $users->map(fn ($u) => [
+            'name' => $u->name,
+            'email' => $u->email,
+            'role' => $u->role,
+            'suspended' => $u->isSuspended() ? 'Yes' : 'No',
+            'created_at' => $u->created_at?->toDateTimeString(),
+        ]);
+
+        return (new CsvExportService)->export($rows, ['name', 'email', 'role', 'suspended', 'created_at'], 'users');
     }
 }

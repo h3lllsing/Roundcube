@@ -29,12 +29,9 @@ Route::middleware(['auth', 'suspended'])->group(function () {
     Route::post('logout', [AuthController::class, 'logout'])->name('logout');
 
     Route::get('/profile', [AuthController::class, 'profile'])->name('profile');
-    Route::put('/profile', [AuthController::class, 'updateProfile'])->name('profile.update');
+    Route::put('/profile', [AuthController::class, 'updateProfile'])->name('profile.update')->middleware('throttle:profile-update');
 
-    Route::get('/email/verify/{id}/{hash}', [AuthController::class, 'verifyEmail'])->name('verification.verify');
-    Route::post('/email/verification-notification', [AuthController::class, 'resendVerification'])->name('verification.send');
-
-    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard')->middleware('throttle:search');
 
 
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index')->middleware('throttle:search');
@@ -54,6 +51,8 @@ Route::middleware(['auth', 'suspended'])->group(function () {
     Route::delete('domains/{domain}', [DomainController::class, 'destroy'])->name('domains.destroy');
     Route::post('domains/{id}/restore', [DomainController::class, 'restore'])->name('domains.restore')->whereNumber('id');
     Route::delete('domains/{id}/force-delete', [DomainController::class, 'forceDelete'])->name('domains.force-delete')->whereNumber('id');
+    Route::post('domains/bulk-delete', [DomainController::class, 'bulkDelete'])->name('domains.bulk-delete')->middleware('throttle:bulk');
+    Route::get('domains/export', [DomainController::class, 'export'])->name('domains.export');
 
     Route::get('email_accounts', [EmailAccountController::class, 'index'])->name('email_accounts.index')->middleware('throttle:search');
     Route::get('email_accounts/create', [EmailAccountController::class, 'create'])->name('email_accounts.create');
@@ -64,13 +63,22 @@ Route::middleware(['auth', 'suspended'])->group(function () {
     Route::delete('email_accounts/{email_account}', [EmailAccountController::class, 'destroy'])->name('email_accounts.destroy');
     Route::post('email-accounts/{id}/restore', [EmailAccountController::class, 'restore'])->name('email-accounts.restore')->whereNumber('id');
     Route::delete('email-accounts/{id}/force-delete', [EmailAccountController::class, 'forceDelete'])->name('email-accounts.force-delete')->whereNumber('id');
-    Route::post('email_accounts/{email_account}/assign', [EmailAssignmentController::class, 'store'])->name('email_accounts.assign');
-    Route::delete('email_accounts/{email_account}/assign/{user}', [EmailAssignmentController::class, 'destroy'])->name('email_accounts.assign.revoke');
-    Route::get('email-accounts/auto-discover', [EmailAccountController::class, 'autoDiscover'])->name('email_accounts.auto-discover');
+    Route::post('email-accounts/bulk-delete', [EmailAccountController::class, 'bulkDelete'])->name('email-accounts.bulk-delete')->middleware('throttle:bulk');
+    Route::get('email-accounts/export', [EmailAccountController::class, 'export'])->name('email-accounts.export');
+    Route::post('email_accounts/{email_account}/assign', [EmailAssignmentController::class, 'store'])->name('email_accounts.assign')->middleware('throttle:email-assignment');
+    Route::delete('email_accounts/{email_account}/assign/{user}', [EmailAssignmentController::class, 'destroy'])->name('email_accounts.assign.revoke')->middleware('throttle:email-assignment');
+    Route::get('email-accounts/auto-discover', [EmailAccountController::class, 'autoDiscover'])->name('email_accounts.auto-discover')->middleware('throttle:auto-discover');
 
     Route::get('web-mail', [WebmailController::class, 'index'])->name('webmail.index');
     Route::get('web-mail/open/{email_account}', [WebmailController::class, 'redirect'])->name('webmail.open');
     Route::get('web-mail/open-as/{email_account}', [WebmailController::class, 'openAs'])->name('webmail.open_as');
+
+    Route::get('/queue-monitor', [App\Http\Controllers\Web\QueueMonitorController::class, 'index'])->name('queue-monitor.index');
+    Route::post('/queue-monitor/{id}/retry', [App\Http\Controllers\Web\QueueMonitorController::class, 'retry'])->name('queue-monitor.retry');
+    Route::post('/queue-monitor/retry-all', [App\Http\Controllers\Web\QueueMonitorController::class, 'retryAll'])->name('queue-monitor.retry-all');
+    Route::delete('/queue-monitor/{id}', [App\Http\Controllers\Web\QueueMonitorController::class, 'destroy'])->name('queue-monitor.destroy');
+
+    Route::get('/search', [App\Http\Controllers\Web\SearchController::class, 'index'])->name('search.index');
 
     Route::get('/', fn() => redirect()->route('dashboard'));
 });
@@ -102,5 +110,7 @@ Route::middleware(['auth', 'suspended'])->group(function () {
     Route::delete('/users/{id}', [UserController::class, 'destroy'])->name('users.destroy');
     Route::patch('/users/{id}/restore', [UserController::class, 'restore'])->name('users.restore');
     Route::delete('/users/{id}/force-delete', [UserController::class, 'forceDelete'])->name('users.force-delete');
+    Route::post('/users/bulk-delete', [UserController::class, 'bulkDelete'])->name('users.bulk-delete')->middleware('throttle:bulk');
+    Route::get('/users/export', [UserController::class, 'export'])->name('users.export');
 
 });

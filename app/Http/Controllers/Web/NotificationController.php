@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\BulkNotificationRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -18,7 +19,7 @@ class NotificationController extends Controller
             $query->whereNull('read_at');
         }
 
-        if ($request->filled('search')) {
+        if ($request->filled('search') && strlen($request->search) >= 2) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('type', 'like', '%'.$search.'%')
@@ -41,7 +42,7 @@ class NotificationController extends Controller
 
     public function markAllAsRead(): RedirectResponse
     {
-        Auth::user()->unreadNotifications->markAsRead();
+        Auth::user()->unreadNotifications()->update(['read_at' => now()]);
 
         return redirect()->back()->with('success', 'All notifications marked as read.');
     }
@@ -54,11 +55,8 @@ class NotificationController extends Controller
         return redirect()->back()->with('success', 'Notification deleted.');
     }
 
-    public function bulkDelete(Request $request): RedirectResponse
+    public function bulkDelete(BulkNotificationRequest $request): RedirectResponse
     {
-        $request->validate([
-            'ids' => 'required|array|min:1',
-        ]);
 
         $ids = array_map('strval', $request->input('ids', []));
 
@@ -69,11 +67,8 @@ class NotificationController extends Controller
         return redirect()->back()->with('success', "Deleted {$count} notification(s).");
     }
 
-    public function bulkMarkAsRead(Request $request): RedirectResponse
+    public function bulkMarkAsRead(BulkNotificationRequest $request): RedirectResponse
     {
-        $request->validate([
-            'ids' => 'required|array|min:1',
-        ]);
 
         $ids = array_map('strval', $request->input('ids', []));
 

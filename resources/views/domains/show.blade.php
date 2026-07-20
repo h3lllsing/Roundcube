@@ -43,7 +43,7 @@
                     <th>Status</th>
                     <th>Action</th>
                 </x-slot:head>
-                @forelse ($domain->emailAccounts as $account)
+                @forelse ($emailAccounts as $account)
                     <tr>
                         <td>
                             <a href="{{ route('email_accounts.show', $account) }}" class="text-indigo-600 dark:text-indigo-400 hover:underline">{{ $account->email }}</a>
@@ -63,7 +63,13 @@
                     </tr>
                 @endforelse
             </x-table>
-        </x-card>
+            </x-card>
+
+            @if ($emailAccounts->hasPages())
+                <div class="mt-4">
+                    {{ $emailAccounts->links() }}
+                </div>
+            @endif
     </div>
 </div>
 @endsection

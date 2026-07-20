@@ -32,7 +32,11 @@ return [
     |
     */
 
-    'lifetime' => (int) env('SESSION_LIFETIME', 120),
+    'lifetime' => (int) env('SESSION_LIFETIME', 60),
+
+    'ip_binding' => env('SESSION_IP_BINDING', false),
+
+    'concurrent_limit' => env('SESSION_CONCURRENT_LIMIT', false),
 
     'expire_on_close' => env('SESSION_EXPIRE_ON_CLOSE', false),
 

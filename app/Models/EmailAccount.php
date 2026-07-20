@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Traits\Sortable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -10,7 +11,9 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class EmailAccount extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes, Sortable;
+
+    protected array $sortableColumns = ['email', 'status', 'created_at'];
 
     protected $hidden = [
         'password',

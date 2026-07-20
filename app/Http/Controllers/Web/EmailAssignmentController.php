@@ -2,24 +2,24 @@
 
 namespace App\Http\Controllers\Web;
 
+use App\Events\EmailAccountAssigned;
+use App\Events\EmailAccountRevoked;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\StoreAssignmentRequest;
 use App\Models\EmailAccount;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Gate;
 
 class EmailAssignmentController extends Controller
 {
-    public function store(Request $request, EmailAccount $emailAccount): RedirectResponse
+    public function store(StoreAssignmentRequest $request, EmailAccount $emailAccount): RedirectResponse
     {
-        abort_unless(Auth::user()->isSuperAdmin(), 403);
+        Gate::authorize('assign-accounts');
 
-        $validated = $request->validate([
-            'user_id' => 'required|exists:users,id',
-            'can_send' => 'boolean',
-            'can_receive' => 'boolean',
-        ]);
+        $validated = $request->validated();
 
         $emailAccount->assignedUsers()->syncWithoutDetaching([
             $validated['user_id'] => [
@@ -31,36 +31,23 @@ class EmailAssignmentController extends Controller
 
         $assignedUser = User::find($validated['user_id']);
 
-        activity()->event('assign')
-            ->performedOn($emailAccount)
-            ->causedBy(Auth::user())
-            ->withProperties([
-                'user_id' => $validated['user_id'],
-                'user_email' => $assignedUser?->email,
-                'can_send' => $validated['can_send'] ?? true,
-                'can_receive' => $validated['can_receive'] ?? true,
-                'action' => 'assign',
-            ])
-            ->log("Email account {$emailAccount->email} assigned to {$assignedUser?->email}");
+        event(new EmailAccountAssigned(
+            $emailAccount,
+            $assignedUser,
+            $validated['can_send'] ?? true,
+            $validated['can_receive'] ?? true,
+        ));
 
         return back()->with('success', 'Email account assigned successfully.');
     }
 
     public function destroy(EmailAccount $emailAccount, User $user): RedirectResponse
     {
-        abort_unless(Auth::user()->isSuperAdmin(), 403);
+        Gate::authorize('assign-accounts');
 
         $emailAccount->assignedUsers()->detach($user);
 
-        activity()->event('revoke')
-            ->performedOn($emailAccount)
-            ->causedBy(Auth::user())
-            ->withProperties([
-                'user_id' => $user->id,
-                'user_email' => $user->email,
-                'action' => 'revoke',
-            ])
-            ->log("Email account {$emailAccount->email} unassigned from {$user->email}");
+        event(new EmailAccountRevoked($emailAccount, $user));
 
         return back()->with('success', 'Assignment revoked successfully.');
     }

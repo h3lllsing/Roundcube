@@ -14,28 +14,24 @@ class DispatchEmailSync extends Command
 
     public function handle(): int
     {
-        $accounts = EmailAccount::where('status', AccountStatus::Active)
+        $count = 0;
+
+        EmailAccount::where('status', AccountStatus::Active)
             ->where('sync_enabled', true)
             ->assignedToActiveUsers()
-            ->get();
+            ->chunk(100, function ($accounts) use (&$count) {
+                foreach ($accounts as $account) {
+                    EmailSyncJob::dispatch($account);
+                    $count++;
+                }
+            });
 
-        if ($accounts->isEmpty()) {
+        if ($count === 0) {
             $this->info('No accounts to sync.');
             return self::SUCCESS;
         }
 
-        $this->info("Dispatching {$accounts->count()} email sync jobs...");
-        $bar = $this->output->createProgressBar($accounts->count());
-        $bar->start();
-
-        foreach ($accounts as $account) {
-            EmailSyncJob::dispatch($account);
-            $bar->advance();
-        }
-
-        $bar->finish();
-        $this->newLine();
-        $this->info('All jobs dispatched to queue.');
+        $this->info("Dispatched {$count} email sync jobs.");
 
         return self::SUCCESS;
     }

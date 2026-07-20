@@ -32,6 +32,10 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->append(\App\Http\Middleware\AddSecurityHeaders::class);
 
+        $middleware->appendToGroup('web', \App\Http\Middleware\SessionIpBinding::class);
+        $middleware->appendToGroup('web', \App\Http\Middleware\ConcurrentSession::class);
+        $middleware->appendToGroup('web', \App\Http\Middleware\CheckPasswordExpiry::class);
+
 
     })
     ->withExceptions(function (Exceptions $exceptions): void {

@@ -2,8 +2,7 @@
 
 namespace App\Models;
 
-use Illuminate\Auth\MustVerifyEmail as MustVerifyEmailTrait;
-use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Traits\Sortable;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -12,23 +11,21 @@ use Illuminate\Notifications\Notifiable;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 
-class User extends Authenticatable implements MustVerifyEmail
+class User extends Authenticatable
 {
-    use LogsActivity, MustVerifyEmailTrait;
+    use LogsActivity;
 
     /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable, SoftDeletes;
+    use HasFactory, Notifiable, SoftDeletes, Sortable;
 
-    public function sendEmailVerificationNotification(): void
-    {
-        $this->notify(new \App\Notifications\VerifyEmail);
-    }
+    protected array $sortableColumns = ['name', 'email', 'role', 'created_at'];
 
     protected $fillable = [
         'name',
         'email',
         'role',
         'password',
+        'password_changed_at',
         'suspension_reason',
         'deleted_by',
     ];
@@ -95,6 +92,7 @@ class User extends Authenticatable implements MustVerifyEmail
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'password_changed_at' => 'datetime',
             'suspended_at' => 'datetime',
             'suspension_reason' => 'string',
         ];

@@ -12,11 +12,24 @@ class DashboardService
 {
     public function compute(User $user): array
     {
-        $version = Cache::get('dashboard:version', 0);
-        $cacheKey = 'dashboard:'.$user->id.':v'.$version;
-        $data = Cache::remember($cacheKey, 300, fn () => $this->computeDashboardData($user));
+        try {
+            $version = Cache::get('dashboard:version', 0);
+            $cacheKey = 'dashboard:'.$user->id.':v'.$version;
+            $data = Cache::remember($cacheKey, 300, fn () => $this->computeDashboardData($user));
 
-        return $data;
+            return $data;
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Dashboard computation failed: ' . $e->getMessage());
+
+            return [
+                'total_users' => null,
+                'unread_notifications' => 0,
+                'total_notifications' => 0,
+                'assigned_accounts' => collect(),
+                'active_domains' => collect(),
+                'recent_activity' => collect(),
+            ];
+        }
     }
 
     public function computeDashboardData(User $user, ?int $version = null): array
@@ -30,8 +43,8 @@ class DashboardService
             $data['total_users'] = Cache::remember('dashboard:total_users:v'.$version, 300, fn () => User::count());
         }
 
-        $data['unread_notifications'] = $user->unreadNotifications()->count();
-        $data['total_notifications'] = $user->notifications()->count();
+        $data['unread_notifications'] = Cache::remember('dashboard:unread:'.$user->id.':v'.$version, 300, fn () => $user->unreadNotifications()->count());
+        $data['total_notifications'] = Cache::remember('dashboard:notifications:'.$user->id.':v'.$version, 300, fn () => $user->notifications()->count());
 
         if ($isSuperAdmin) {
             $data['failed_imap_accounts'] = app(EmailStatService::class)->failedAccountsCountLast24h();
@@ -44,7 +57,6 @@ class DashboardService
                 ->where('status', AccountStatus::Active)
                 ->orderBy('email')
                 ->get();
-            $data['total_assigned'] = $data['assigned_accounts']->count();
             $data['active_domains'] = $data['assigned_accounts']
                 ->pluck('domain')
                 ->unique('id')
@@ -56,7 +68,6 @@ class DashboardService
                 ->orderBy('email')
                 ->get();
             $data['assigned_accounts'] = $accounts;
-            $data['total_assigned'] = $accounts->count();
             $data['active_domains'] = $accounts
                 ->pluck('domain')
                 ->unique('id')

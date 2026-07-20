@@ -2,15 +2,15 @@
 
 return [
 
-    'paths' => ['api/*', 'sanctum/csrf-cookie', 'docs', 'api/documentation'],
+    'paths' => ['api/*', 'sanctum/csrf-cookie'],
 
-    'allowed_methods' => ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    'allowed_methods' => ['*'],
 
-    'allowed_origins' => [env('FRONTEND_URL', 'http://localhost:3000')],
+    'allowed_origins' => [env('FRONTEND_URL', '*')],
 
     'allowed_origins_patterns' => [],
 
-    'allowed_headers' => ['Content-Type', 'X-Requested-With', 'Authorization', 'X-CSRF-TOKEN', 'X-Socket-Id'],
+    'allowed_headers' => ['*'],
 
     'exposed_headers' => [],
 

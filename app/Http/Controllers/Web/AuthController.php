@@ -4,8 +4,13 @@ namespace App\Http\Controllers\Web;
 
 use App\Enums\LoginEvent;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\LoginRequest;
+use App\Http\Requests\RegisterRequest;
+use App\Http\Requests\ResetPasswordRequest;
+use App\Http\Requests\UpdateProfileRequest;
 use App\Models\User;
 use App\Services\AuthService;
+use App\Services\LoginLockoutService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -15,7 +20,8 @@ use Illuminate\View\View;
 class AuthController extends Controller
 {
     public function __construct(
-        private readonly AuthService $authService
+        private readonly AuthService $authService,
+        private readonly LoginLockoutService $lockoutService,
     ) {}
 
     public function showLoginForm(): View
@@ -23,30 +29,35 @@ class AuthController extends Controller
         return view('auth.login');
     }
 
-    public function login(Request $request): RedirectResponse
+    public function login(LoginRequest $request): RedirectResponse
     {
-        $credentials = $request->validate([
-            'email' => ['required', 'email'],
-            'password' => ['required'],
-        ]);
+        $credentials = $request->validated();
+        $email = $credentials['email'];
 
-        $user = User::where('email', $credentials['email'])->first();
+        if ($this->lockoutService->tooManyAttempts($email)) {
+            $seconds = $this->lockoutService->availableIn($email);
+
+            return back()->withErrors([
+                'email' => 'Too many login attempts. Please try again in ' . ceil($seconds / 60) . ' minutes.',
+            ])->onlyInput('email');
+        }
+
+        $user = User::where('email', $email)->first();
 
         if ($user && $user->suspended_at) {
             $this->authService->logAudit($user->id, $credentials['email'], LoginEvent::LoginSuspended->value, $request);
-
-            return back()->withErrors([
-                'email' => 'Your account has been suspended.',
-            ])->onlyInput('email');
         }
 
         if (Auth::attempt($credentials, $request->boolean('remember'))) {
             $request->session()->regenerate();
+            $request->session()->put('_login_ip', $request->ip());
+            $this->lockoutService->clear($email);
             $this->authService->logAudit(Auth::id(), $credentials['email'], LoginEvent::LoginSuccess->value, $request);
 
             return redirect()->intended(route('dashboard'));
         }
 
+        $this->lockoutService->hit($request, $email);
         $this->authService->logAudit(null, $credentials['email'], LoginEvent::LoginFailed->value, $request);
 
         return back()->withErrors([
@@ -71,19 +82,15 @@ class AuthController extends Controller
         return view('auth.register');
     }
 
-    public function register(Request $request): RedirectResponse
+    public function register(RegisterRequest $request): RedirectResponse
     {
         abort_unless(config('app.allow_registration', false), 403, 'Registration is disabled.');
 
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|email|max:255|unique:users,email',
-            'password' => 'required|string|min:8|regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/|confirmed',
-        ]);
+        $validated = $request->validated();
 
         $this->authService->register($validated);
 
-        return redirect()->route('login')->with('success', 'Account created successfully. Please check your email to verify your account.');
+        return redirect()->route('login')->with('success', 'Account created successfully.');
     }
 
     public function showForgotPasswordForm(): View
@@ -105,18 +112,14 @@ class AuthController extends Controller
         return view('auth.reset-password', compact('token'));
     }
 
-    public function resetPassword(Request $request): RedirectResponse
+    public function resetPassword(ResetPasswordRequest $request): RedirectResponse
     {
-        $request->validate([
-            'token' => 'required',
-            'email' => 'required|email',
-            'password' => 'required|string|min:8|confirmed',
-        ]);
+        $password = $request->validated('password');
 
         $status = Password::reset(
             $request->only('email', 'password', 'password_confirmation', 'token'),
-            function (User $user) {
-                $this->authService->logPasswordReset($user);
+            function (User $user) use ($password) {
+                $this->authService->logPasswordReset($user, $password);
             }
         );
 
@@ -130,48 +133,16 @@ class AuthController extends Controller
         return view('auth.profile', ['user' => Auth::user()]);
     }
 
-    public function updateProfile(Request $request): RedirectResponse
+    public function updateProfile(UpdateProfileRequest $request): RedirectResponse
     {
         $user = Auth::user();
 
         $this->checkOptimisticLock($user, $request);
 
-        $validated = $request->validate([
-            'updated_at' => 'required|date',
-            'name' => 'required|string|max:255',
-            'email' => 'required|email|max:255|unique:users,email,'.$user->id,
-            'password' => 'nullable|string|min:8|regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/|confirmed',
-            'current_password' => 'required_with:password|string|current_password',
-        ]);
+        $validated = $request->validated();
 
         $this->authService->updateProfile($user, $validated);
 
         return redirect()->route('profile')->with('success', 'Profile updated successfully.');
-    }
-
-    public function verifyEmail(Request $request, int $id, string $hash): RedirectResponse
-    {
-        $user = User::findOrFail($id);
-
-        $result = $this->authService->verifyEmail($user, $hash);
-
-        return match ($result) {
-            'invalid_link' => redirect()->route('dashboard')->with('error', 'Invalid verification link.'),
-            'already_verified' => redirect()->route('dashboard')->with('info', 'Email already verified.'),
-            default => redirect()->route('dashboard')->with('success', 'Email verified successfully.'),
-        };
-    }
-
-    public function resendVerification(Request $request): RedirectResponse
-    {
-        $user = $request->user();
-
-        if ($user->hasVerifiedEmail()) {
-            return redirect()->route('dashboard')->with('info', 'Email already verified.');
-        }
-
-        $user->sendEmailVerificationNotification();
-
-        return redirect()->back()->with('success', 'Verification email sent.');
     }
 }

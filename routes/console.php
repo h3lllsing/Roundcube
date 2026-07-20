@@ -1,11 +1,31 @@
 <?php
 
 use App\Models\LoginAudit;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schedule;
 
 Schedule::command('sanctum:prune-expired')->daily();
 
 Schedule::command('activitylog:clean')->daily();
+
+Schedule::call(function () {
+    DB::table('webmail_tokens')->where('expires_at', '<', now())->delete();
+})->hourly()->name('webmail-tokens:clean')->onOneServer();
+
+Schedule::call(function () {
+    $threshold = config('auth.login_threshold_attempts', 5);
+    $window = config('auth.login_threshold_minutes', 15);
+
+    LoginAudit::where('event', \App\Enums\LoginEvent::LoginFailed)
+        ->where('created_at', '>=', now()->subMinutes($window))
+        ->selectRaw('email, COUNT(*) as attempts')
+        ->groupBy('email')
+        ->having('attempts', '>=', $threshold)
+        ->get()
+        ->each(function ($row) {
+            logger()->warning("Repeated failed logins detected for {$row->email}: {$row->attempts} attempts in the last window.");
+        });
+})->everyFiveMinutes()->name('login-threshold:check')->onOneServer();
 
 Schedule::call(function () {
     LoginAudit::where('created_at', '<', now()->subYear())->delete();

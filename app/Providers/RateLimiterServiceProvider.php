@@ -19,16 +19,24 @@ class RateLimiterServiceProvider extends ServiceProvider
             return Limit::perMinute(config('ratelimits.search', 20))->by($request->user()?->id ?: $request->ip());
         });
 
-        RateLimiter::for('export', function (Request $request) {
-            return Limit::perMinute(config('ratelimits.export', 5))->by($request->user()?->id ?: $request->ip());
-        });
-
         RateLimiter::for('bulk', function (Request $request) {
             return Limit::perMinute(config('ratelimits.bulk', 10))->by($request->user()?->id ?: $request->ip());
         });
 
         RateLimiter::for('import', function (Request $request) {
             return Limit::perMinute(config('ratelimits.import', 5))->by($request->user()?->id ?: $request->ip());
+        });
+
+        RateLimiter::for('profile-update', function (Request $request) {
+            return Limit::perMinute(5)->by($request->user()?->id ?: $request->ip());
+        });
+
+        RateLimiter::for('auto-discover', function (Request $request) {
+            return Limit::perMinute(10)->by($request->user()?->id ?: $request->ip());
+        });
+
+        RateLimiter::for('email-assignment', function (Request $request) {
+            return Limit::perMinute(30)->by($request->user()?->id ?: $request->ip());
         });
     }
 }

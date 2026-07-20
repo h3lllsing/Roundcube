@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\AccountStatus;
+use App\Traits\Sortable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -11,7 +12,23 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Domain extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes, Sortable;
+
+    protected array $sortableColumns = ['name', 'status', 'created_at'];
+
+    protected static function booted(): void
+    {
+        static::deleted(function (Domain $domain) {
+            if ($domain->isForceDeleting()) {
+                return;
+            }
+            $domain->emailAccounts()->delete();
+        });
+
+        static::restored(function (Domain $domain) {
+            $domain->emailAccounts()->withTrashed()->restore();
+        });
+    }
 
     protected $fillable = [
         'name',

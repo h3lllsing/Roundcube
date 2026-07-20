@@ -36,6 +36,14 @@
         </div>
     </div>
 
+    <div class="mt-6">
+        <form action="{{ route('login-audits.destroy', $audit->id) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this login audit entry? This cannot be undone.')">
+            @csrf
+            @method('DELETE')
+            <x-button type="submit" variant="danger" size="sm">Delete Audit</x-button>
+        </form>
+    </div>
+
     <x-activity-timeline subjectType="App\Models\LoginAudit" :subjectId="$audit->id" />
 </div>
 @endsection

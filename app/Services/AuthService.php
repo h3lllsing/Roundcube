@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\LoginEvent;
 use App\Models\LoginAudit;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -25,16 +26,16 @@ class AuthService
     public function register(array $data): User
     {
         $data['password'] = Hash::make($data['password']);
-        $user = User::create($data);
-        $user->sendEmailVerificationNotification();
-
-        return $user;
+        $data['password_changed_at'] = now();
+        return User::create($data);
     }
 
     public function updateProfile(User $user, array $data): void
     {
         if (! empty($data['password'])) {
             $data['password'] = Hash::make($data['password']);
+            $data['password_changed_at'] = now();
+            $user->tokens()->delete();
         } else {
             unset($data['password']);
         }
@@ -42,31 +43,23 @@ class AuthService
         $user->update($data);
     }
 
-    public function verifyEmail(User $user, string $hash): string
-    {
-        if (! hash_equals($hash, hash('sha256', $user->getEmailForVerification()))) {
-            return 'invalid_link';
-        }
-
-        if ($user->hasVerifiedEmail()) {
-            return 'already_verified';
-        }
-
-        $user->markEmailAsVerified();
-
-        activity()->event('verified')
-            ->causedBy($user)
-            ->log('Email verified: '.$user->email);
-
-        return 'verified';
-    }
-
-    public function logPasswordReset(User $user): void
+    public function logPasswordReset(User $user, string $password): void
     {
         $user->forceFill([
-            'password' => Hash::make(request()->input('password')),
+            'password' => Hash::make($password),
+            'password_changed_at' => now(),
         ])->setRememberToken(Str::random(60));
         $user->save();
+
+        $user->tokens()->delete();
+
+        LoginAudit::create([
+            'user_id' => $user->id,
+            'email' => $user->email,
+            'event' => LoginEvent::PasswordReset,
+            'ip_address' => request()->ip(),
+            'user_agent' => request()->userAgent(),
+        ]);
 
         activity()->event('updated')
             ->performedOn($user)

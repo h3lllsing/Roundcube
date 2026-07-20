@@ -16,9 +16,10 @@ use Illuminate\Support\Facades\Route;
 
 // Public
 Route::post('/login', [App\Http\Controllers\Api\AuthController::class, 'login'])->middleware('throttle:5,1');
+Route::get('/health', App\Http\Controllers\Api\HealthController::class);
 
 // Authenticated
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware(['auth:sanctum', 'suspended', 'throttle:api'])->group(function () {
     Route::get('/user', fn (\Illuminate\Http\Request $r) => $r->user());
 
     Route::get('/domains', [App\Http\Controllers\Api\DomainController::class, 'index']);

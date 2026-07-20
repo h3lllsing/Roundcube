@@ -8,10 +8,12 @@
     </x-page-header>
 
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+        @if(isset($total_users))
         <div class="rounded-xl bg-gradient-to-br from-indigo-500/10 to-purple-500/5 dark:from-indigo-500/15 dark:to-purple-500/5 border border-indigo-200/50 dark:border-indigo-800/30 p-4" x-show="ready" x-cloak>
             <p class="text-xs font-semibold uppercase tracking-widest text-gray-500 dark:text-gray-400">Users</p>
-            <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ $total_users ?? '—' }}</p>
+            <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ $total_users }}</p>
         </div>
+        @endif
         <div class="rounded-xl bg-gradient-to-br from-amber-500/10 to-orange-500/5 dark:from-amber-500/15 dark:to-orange-500/5 border border-amber-200/50 dark:border-amber-800/30 p-4" x-show="ready" x-cloak>
             <p class="text-xs font-semibold uppercase tracking-widest text-gray-500 dark:text-gray-400">Notifications</p>
             <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ $total_notifications }}</p>
