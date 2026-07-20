@@ -5,23 +5,15 @@ $routeName = request()->route()?->getName();
 if (!$routeName) { return; }
 
 $labels = [
-    'dashboard' => 'Dashboard', 'calendar' => 'Calendar',
+    'dashboard' => 'Dashboard',
     'notifications' => 'Notifications',
-    'service-providers' => 'Service Providers', 'hostings' => 'Hosting',
-    'domains' => 'Domains', 'domain-emails' => 'Domain Emails',
-    'voip' => 'VoIP', 'vps' => 'VPS Accounts',
-    'other-services' => 'Other Services', 'expiry-trackers' => 'Renewals',
-    'vault' => 'Shared Credentials', 'vault.my' => 'My Credentials',
-    'tasks' => 'Task Management', 'tasks.my' => 'My Tasks',
-    'features' => 'Features', 'modules' => 'Modules',
-    'module-permissions' => 'Permissions', 'roles' => 'Roles',
-    'role-templates' => 'Role Templates', 'privileges' => 'Privileges',
-    'webhooks' => 'Webhooks', 'smtp-profiles' => 'SMTP Profiles',
-    'activity-logs' => 'Activity Logs', 'login-audits' => 'Login Audits',
-    'attachments' => 'Attachments', 'reports' => 'Reports',
-    'import' => 'Import', 'tokens' => 'API Access',
-    'users' => 'Users', 'my-permissions' => 'My Permissions',
-    'guide' => 'Help Center', 'profile' => 'My Profile',
+    'domains' => 'Domains',
+    'email_accounts' => 'Email Accounts',
+    'webmail' => 'Webmail',
+    'activity-logs' => 'Activity Logs',
+    'login-audits' => 'Login Audits',
+    'users' => 'Users',
+    'profile' => 'My Profile',
 ];
 
 $parts = explode('.', $routeName);

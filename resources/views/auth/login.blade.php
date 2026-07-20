@@ -41,7 +41,7 @@
                 </div>
                 <h1 class="text-xl font-bold text-gray-900 dark:text-white">{{ config('app.name', 'Dashboard') }}</h1>
                 <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Enterprise IT Operations Platform</p>
-                <p class="text-xs text-gray-400 dark:text-gray-500 mt-4 max-w-xs mx-auto leading-relaxed">Centralize infrastructure, domains, hosting, VPS, assets, credentials, renewals, monitoring, and security from a single enterprise workspace.</p>
+                <p class="text-xs text-gray-400 dark:text-gray-500 mt-4 max-w-xs mx-auto leading-relaxed">Centralize infrastructure, domains, hosting, VPS, assets, credentials, renewals, and security from a single enterprise workspace.</p>
             </div>
             @if ($errors->any())
                 <div class="mb-5 p-3 text-sm text-red-700 bg-red-50 dark:bg-red-900/20 dark:text-red-400 rounded-xl border border-red-100 dark:border-red-800/30 flex items-center gap-2">
