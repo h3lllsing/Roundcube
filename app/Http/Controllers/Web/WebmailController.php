@@ -29,6 +29,7 @@ class WebmailController extends Controller
                 ->where('status', AccountStatus::Active)
                 ->orderBy('email')
                 ->get();
+        }
 
         return view('webmail.index', compact('accounts'));
     }
@@ -55,6 +56,7 @@ class WebmailController extends Controller
                 ->where('status', AccountStatus::Active)
                 ->orderBy('email')
                 ->get();
+        }
 
         return view('webmail.launch', [
             'token' => $token,
