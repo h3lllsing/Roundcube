@@ -3,10 +3,7 @@
 namespace App\Services;
 
 use App\Models\EmailAccount;
-use App\Models\Feature;
-use App\Models\Module;
 use App\Models\User;
-use App\Services\EmailStatService;
 use Illuminate\Support\Facades\Cache;
 use Spatie\Activitylog\Models\Activity;
 
@@ -23,15 +20,12 @@ class DashboardService
 
     public function computeDashboardData(User $user): array
     {
-        $isSuperAdmin = $user->hasRole('super-admin');
+        $isSuperAdmin = $user->isSuperAdmin();
 
         $data = [];
 
         if ($isSuperAdmin) {
-            $data['total_features'] = Feature::count();
-            $data['total_modules'] = Module::count();
             $data['total_users'] = User::count();
-            $data['suspended_users'] = User::whereNotNull('suspended_at')->count();
         }
 
         $data['unread_notifications'] = $user->unreadNotifications()->count();
@@ -42,7 +36,32 @@ class DashboardService
             $data['total_email_accounts'] = EmailAccount::count();
         }
 
-        $canViewAudit = $isSuperAdmin || $user->hasPermission('audit.read');
+        // Email accounts for all users
+        if ($isSuperAdmin) {
+            $data['assigned_accounts'] = EmailAccount::with('domain')
+                ->where('status', 'active')
+                ->orderBy('email')
+                ->get();
+            $data['total_assigned'] = $data['assigned_accounts']->count();
+            $data['active_domains'] = $data['assigned_accounts']
+                ->pluck('domain')
+                ->unique('id')
+                ->values();
+        } else {
+            $accounts = $user->assignedEmailAccounts()
+                ->with('domain')
+                ->where('status', 'active')
+                ->orderBy('email')
+                ->get();
+            $data['assigned_accounts'] = $accounts;
+            $data['total_assigned'] = $accounts->count();
+            $data['active_domains'] = $accounts
+                ->pluck('domain')
+                ->unique('id')
+                ->values();
+        }
+
+        $canViewAudit = $isSuperAdmin;
         if ($canViewAudit) {
             $lastWeek = now()->subDays(7);
             $data['audit_actions'] = Activity::selectRaw('event, count(*) as c')

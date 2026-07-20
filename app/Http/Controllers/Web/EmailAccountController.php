@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\Domain;
 use App\Models\EmailAccount;
 use App\Models\User;
+use App\Services\SmtpAutoDiscover;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -15,7 +17,7 @@ class EmailAccountController extends Controller
 {
     public function __construct()
     {
-        $this->authorizeResource(EmailAccount::class, 'email_account');
+        $this->middleware(fn ($req, $next) => Auth::user()->isAdmin() ? $next($req) : abort(403));
     }
 
     public function index(Request $request): View
@@ -26,7 +28,7 @@ class EmailAccountController extends Controller
             $query = EmailAccount::query()->with('domain', 'creator');
         }
 
-        if (!Auth::user()->isSuperAdmin() && !Auth::user()->hasPermission('emails.manage')) {
+        if (!Auth::user()->isAdmin()) {
             $query->whereHas('assignedUsers', fn ($q) => $q->where('user_id', Auth::id()));
         }
 
@@ -53,11 +55,25 @@ class EmailAccountController extends Controller
         return view('email-accounts.create', compact('domains'));
     }
 
+    public function autoDiscover(Request $request): JsonResponse
+    {
+        $request->validate(['email' => 'required|email']);
+        $email = $request->input('email');
+
+        $result = (new SmtpAutoDiscover)->discoverAll($email);
+
+        if (isset($result['error'])) {
+            return response()->json($result, 422);
+        }
+
+        return response()->json($result);
+    }
+
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
             'domain_id' => 'required|exists:domains,id',
-            'email' => 'required|email|max:255|unique:email_accounts,email',
+            'email' => 'required|email|max:255|unique:email_accounts,email,NULL,id,deleted_at,NULL',
             'password' => 'required|string',
             'imap_host' => 'required|string|max:255',
             'imap_port' => 'required|integer|min:1|max:65535',
@@ -68,11 +84,17 @@ class EmailAccountController extends Controller
             'smtp_username' => 'nullable|string|max:255',
             'smtp_password' => 'nullable|string',
             'status' => 'required|in:active,suspended',
+            'sync_enabled' => 'boolean',
         ]);
 
         $validated['created_by'] = Auth::id();
+        $validated['sync_enabled'] = $request->boolean('sync_enabled');
 
         $account = EmailAccount::create($validated);
+
+        activity()->event('created')->performedOn($account)->causedBy(Auth::user())
+            ->withProperties(['email' => $account->email])
+            ->log('Email account created: '.$account->email);
 
         return to_route('email_accounts.show', $account)
             ->with('success', 'Email account created successfully.');
@@ -98,7 +120,7 @@ class EmailAccountController extends Controller
 
         $validated = $request->validate([
             'domain_id' => 'required|exists:domains,id',
-            'email' => 'required|email|max:255|unique:email_accounts,email,' . $emailAccount->id,
+            'email' => 'required|email|max:255|unique:email_accounts,email,' . $emailAccount->id . ',id,deleted_at,NULL',
             'password' => 'nullable|string',
             'imap_host' => 'required|string|max:255',
             'imap_port' => 'required|integer|min:1|max:65535',
@@ -109,6 +131,7 @@ class EmailAccountController extends Controller
             'smtp_username' => 'nullable|string|max:255',
             'smtp_password' => 'nullable|string',
             'status' => 'required|in:active,suspended',
+            'sync_enabled' => 'boolean',
         ]);
 
         if (empty($validated['password'])) {
@@ -117,8 +140,13 @@ class EmailAccountController extends Controller
         if (empty($validated['smtp_password'])) {
             $validated['smtp_password'] = null;
         }
+        $validated['sync_enabled'] = $request->boolean('sync_enabled');
 
         $emailAccount->update($validated);
+
+        activity()->event('updated')->performedOn($emailAccount)->causedBy(Auth::user())
+            ->withProperties(['email' => $emailAccount->email])
+            ->log('Email account updated: '.$emailAccount->email);
 
         return to_route('email_accounts.show', $emailAccount)
             ->with('success', 'Email account updated successfully.');
@@ -126,8 +154,6 @@ class EmailAccountController extends Controller
 
     public function destroy(EmailAccount $emailAccount): RedirectResponse
     {
-        $this->authorize('delete', $emailAccount);
-
         $emailAccount->deleted_by = Auth::id();
         $emailAccount->saveQuietly();
         $emailAccount->delete();
@@ -153,8 +179,6 @@ class EmailAccountController extends Controller
     {
         $account = EmailAccount::withTrashed()->findOrFail($id);
 
-        $this->authorize('restore', $account);
-
         $account->restore();
         $account->deleted_by = null;
         $account->saveQuietly();
@@ -177,8 +201,6 @@ class EmailAccountController extends Controller
     public function forceDelete(int $id): RedirectResponse
     {
         $account = EmailAccount::withTrashed()->findOrFail($id);
-
-        $this->authorize('forceDelete', $account);
 
         $account->forceDelete();
 

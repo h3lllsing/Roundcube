@@ -4,12 +4,7 @@ namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
 use App\Models\LoginAudit;
-use App\Models\Module;
-use App\Models\ModuleRolePermission;
 use App\Models\User;
-use App\Models\UserModulePermission;
-use App\Services\UserPermissionService;
-use App\Models\Role;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -19,14 +14,11 @@ use Illuminate\View\View;
 
 class UserController extends Controller
 {
-    public function __construct(
-        private readonly UserPermissionService $permissionService
-    ) {}
-
     public function index(Request $request): View
     {
-        abort_unless(Auth::user()->hasRole('super-admin'), 403);
-        $query = User::query()->select(['id', 'name', 'email', 'suspended_at', 'created_at'])->addSelect([
+        abort_unless(Auth::user()->isSuperAdmin(), 403);
+
+        $query = User::query()->select(['id', 'name', 'email', 'role', 'suspended_at', 'created_at'])->addSelect([
             'last_login_at' => LoginAudit::whereColumn('user_id', 'users.id')
                 ->where('event', 'login_success')
                 ->latest()
@@ -41,7 +33,7 @@ class UserController extends Controller
             });
         }
         if ($request->filled('role')) {
-            $query->whereHas('roles', fn ($q) => $q->where('slug', $request->role));
+            $query->where('role', $request->role);
         }
         if ($request->filled('status')) {
             if ($request->status === 'suspended') {
@@ -57,59 +49,35 @@ class UserController extends Controller
             $query->whereDate('created_at', '<=', $request->date_to);
         }
 
-        $users = $query->with('roles')->latest()->paginate(20);
+        $users = $query->latest()->paginate(20);
 
         return view('users.index', compact('users'));
     }
 
     public function create(): View
     {
-        abort_unless(Auth::user()->hasRole('super-admin'), 403);
+        abort_unless(Auth::user()->isSuperAdmin(), 403);
 
-        $roles = Role::whereNotIn('slug', ['*', 'super-admin'])->orderBy('name')->get();
-        $modules = $this->permissionService->getModulesWithFeatures();
-        $userOverrides = [];
-
-        $cloneUsers = User::orderBy('name')->get();
-
-        $roleSummaries = $this->permissionService->buildRoleSummaries($roles);
-
-        return view('users.create', compact('roles', 'modules', 'userOverrides', 'cloneUsers', 'roleSummaries'));
+        return view('users.create');
     }
 
     public function store(Request $request): RedirectResponse
     {
-        abort_unless(Auth::user()->hasRole('super-admin'), 403);
-        $this->permissionService->preventSuperAdminAssignment($request);
+        abort_unless(Auth::user()->isSuperAdmin(), 403);
 
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|max:255|unique:users,email',
             'password' => 'required|string|min:8|confirmed',
+            'role' => 'nullable|in:user,admin',
             'status' => 'nullable|in:active,suspended',
-            'roles' => 'nullable|array',
-            'roles.*' => 'exists:roles,id',
-            'permissions' => ['nullable', 'array', function ($attr, $value, $fail) {
-                $moduleIds = array_keys($value);
-                $validIds = Module::whereIn('id', $moduleIds)->pluck('id')->all();
-                $invalid = array_diff($moduleIds, $validIds);
-                if ($invalid) {
-                    $fail('Invalid module IDs: '.implode(', ', $invalid));
-                }
-            }],
-            'clone_user_id' => 'nullable|integer|exists:users,id',
-            'copy_roles' => 'nullable|boolean',
-            'copy_overrides' => 'nullable|boolean',
-            'copy_status' => 'nullable|boolean',
-            'clone_role_handling' => 'nullable|in:use_cloned,replace,merge',
         ]);
 
-        $superAdminRoleId = $this->permissionService->getSuperAdminRoleId();
-
-        $user = DB::transaction(function () use ($request, $superAdminRoleId) {
+        $user = DB::transaction(function () use ($request) {
             $user = User::create([
                 'name' => $request->name,
                 'email' => $request->email,
+                'role' => $request->input('role', 'user'),
                 'password' => Hash::make($request->password),
             ]);
 
@@ -118,51 +86,10 @@ class UserController extends Controller
                 $user->save();
             }
 
-            $finalRoles = [];
-
-            if ($request->filled('clone_user_id')) {
-                $sourceUser = User::findOrFail($request->input('clone_user_id'));
-
-                if ($request->boolean('copy_roles')) {
-                    $clonedRoleIds = $sourceUser->roles()->pluck('roles.id')->toArray();
-                    $clonedRoleIds = array_filter($clonedRoleIds, fn($id) => (int) $id !== (int) $superAdminRoleId);
-                    $finalRoles = $clonedRoleIds;
-                }
-
-                if ($request->boolean('copy_overrides')) {
-                    $this->permissionService->clonePermissions($sourceUser, $user);
-                }
-
-                if ($request->boolean('copy_status') && $sourceUser->suspended_at) {
-                    $user->suspended_at = $sourceUser->suspended_at;
-                    $user->save();
-                }
-
-                $roleHandling = $request->input('clone_role_handling', 'use_cloned');
-                $selectedRoles = $request->input('roles', []);
-
-                if ($roleHandling === 'replace') {
-                    $finalRoles = $selectedRoles;
-                } elseif ($roleHandling === 'merge') {
-                    $finalRoles = array_unique(array_merge($finalRoles, $selectedRoles));
-                }
-            } else {
-                $finalRoles = $request->input('roles', []);
-            }
-
-            if (!empty($finalRoles)) {
-                $user->roles()->sync($finalRoles);
-            }
-
-            $this->permissionService->saveUserModulePermissions($user, $request->input('permissions'));
-
             activity()->event('created')
                 ->performedOn($user)
                 ->causedBy(Auth::user())
-                ->withProperties([
-                    'roles' => $user->roles->pluck('slug')->toArray(),
-                    'clone_source_id' => $request->input('clone_user_id'),
-                ])
+                ->withProperties(['role' => $user->role])
                 ->log('User created: '.$user->email);
 
             return $user;
@@ -173,116 +100,30 @@ class UserController extends Controller
 
     public function show(int $id): View
     {
-        abort_unless(Auth::user()->hasRole('super-admin'), 403);
+        abort_unless(Auth::user()->isSuperAdmin(), 403);
 
         $user = User::findOrFail($id);
-        $modules = Module::with('feature')->orderBy('name')->get();
-        $moduleIds = $modules->pluck('id');
-        $roleIds = $user->roles()->pluck('roles.id')->toArray();
-
-        $rolePerms = ModuleRolePermission::whereIn('role_id', $roleIds)
-            ->whereIn('module_id', $moduleIds)
-            ->get()
-            ->groupBy('module_id');
-
-        $userOverrides = UserModulePermission::where('user_id', $user->id)
-            ->whereIn('module_id', $moduleIds)
-            ->get()
-            ->keyBy('module_id');
-
-        $permKeys = config('permissions.keys');
-
-        $modulePermissions = $modules->map(function ($module) use ($user, $permKeys, $rolePerms, $userOverrides) {
-            $rolePermRecords = $rolePerms->get($module->id, collect());
-            $userOverride = $userOverrides->get($module->id);
-
-            $effective = [];
-            foreach ($permKeys as $key) {
-                $roleVal = null;
-                foreach ($rolePermRecords as $rp) {
-                    if ($rp->$key !== null) {
-                        $roleVal = $rp->$key;
-                        break;
-                    }
-                }
-                $overrideVal = $userOverride ? $userOverride->$key : null;
-
-                if ($overrideVal !== null) {
-                    $effective[$key] = [
-                        'role' => $roleVal,
-                        'user_override' => $overrideVal,
-                        'effective' => $overrideVal,
-                        'source' => 'User Override',
-                    ];
-                } elseif ($roleVal !== null) {
-                    $effective[$key] = [
-                        'role' => $roleVal,
-                        'user_override' => null,
-                        'effective' => $roleVal,
-                        'source' => 'Role',
-                    ];
-                } else {
-                    $effective[$key] = [
-                        'role' => null,
-                        'user_override' => null,
-                        'effective' => false,
-                        'source' => 'None',
-                    ];
-                }
-            }
-
-            return (object) [
-                'module_name' => $module->name,
-                'feature' => $module->feature->name ?? null,
-                'permissions' => $effective,
-            ];
-        });
-
-        $inspectedIsSuperAdmin = $user->hasRole('super-admin');
-        $permsCollection = collect($modulePermissions);
-
-        $summary = [
-            'roles_count' => $user->roles->count(),
-            'accessible_modules' => $permsCollection->filter(fn ($mp) => $mp->permissions['can_read']['effective'])->count(),
-            'denied_modules' => $permsCollection->filter(fn ($mp) => !$mp->permissions['can_read']['effective'])->count(),
-            'overrides_count' => $permsCollection->sum(fn ($mp) => collect($mp->permissions)->filter(fn ($p) => $p['user_override'] !== null)->count()),
-            'allowed_permissions' => $permsCollection->sum(fn ($mp) => collect($mp->permissions)->filter(fn ($p) => $p['effective'])->count()),
-            'denied_permissions' => $permsCollection->sum(fn ($mp) => collect($mp->permissions)->filter(fn ($p) => !$p['effective'])->count()),
-        ];
 
         $lastLogin = LoginAudit::where('user_id', $user->id)
             ->where('event', 'login_success')
             ->latest()
             ->first();
 
-        $offboardingChecklist = [
-            'suspended_at' => $user->suspended_at,
-            'vault_entries_count' => 0,
-            'assigned_tasks_count' => 0,
-            'assigned_assets_count' => 0,
-            'activities_30d_count' => $user->activities()->where('created_at', '>=', now()->subDays(30))->count(),
-            'can_suspend' => !$user->suspended_at && Auth::user()->hasRole('super-admin'),
-            'can_unsuspend' => (bool)$user->suspended_at && Auth::user()->hasRole('super-admin'),
-        ];
-
-        return view('users.show', compact('user', 'modulePermissions', 'summary', 'inspectedIsSuperAdmin', 'lastLogin', 'offboardingChecklist'));
+        return view('users.show', compact('user', 'lastLogin'));
     }
 
     public function edit(int $id): View
     {
-        abort_unless(Auth::user()->hasRole('super-admin'), 403);
+        abort_unless(Auth::user()->isSuperAdmin(), 403);
 
         $user = User::findOrFail($id);
-        $roles = Role::whereNotIn('slug', ['*', 'super-admin'])->orderBy('name')->get();
-        $overrideCount = UserModulePermission::where('user_id', $user->id)->count();
 
-        return view('users.edit', compact('user', 'roles', 'overrideCount'));
+        return view('users.edit', compact('user'));
     }
 
     public function update(Request $request, int $id): RedirectResponse
     {
-        abort_unless(Auth::user()->hasRole('super-admin'), 403);
-        $this->permissionService->preventSuperAdminAssignment($request);
+        abort_unless(Auth::user()->isSuperAdmin(), 403);
 
         $user = User::findOrFail($id);
 
@@ -292,9 +133,8 @@ class UserController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|email|max:255|unique:users,email,'.$user->id,
             'password' => 'nullable|string|min:8|confirmed',
+            'role' => 'nullable|in:user,admin',
             'suspended_at' => 'nullable|date',
-            'roles' => 'nullable|array',
-            'roles.*' => 'exists:roles,id',
         ]);
 
         if ($request->filled('password')) {
@@ -303,193 +143,44 @@ class UserController extends Controller
             unset($validated['password']);
         }
 
-        if ($request->has('roles')) {
-            $currentRoleIds = $user->roles()->pluck('roles.id')->toArray();
-            if ($currentRoleIds !== $request->roles) {
-                $overrideCount = UserModulePermission::where('user_id', $user->id)->count();
-                if ($overrideCount > 0 && !$request->boolean('confirm_role_change')) {
-                    return back()->withErrors(['confirm_role_change' => 'Please confirm the role change. This user has ' . $overrideCount . ' active permission override(s).'])->withInput();
-                }
-            }
-        }
-
         $currentUser = Auth::user();
-        $superAdminRoleId = $this->permissionService->getSuperAdminRoleId();
 
-        DB::transaction(function () use ($user, $validated, $request, $currentUser, $superAdminRoleId) {
+        DB::transaction(function () use ($user, $validated, $request, $currentUser) {
             if (array_key_exists('suspended_at', $validated)) {
                 $suspendedAt = $validated['suspended_at'];
                 unset($validated['suspended_at']);
                 $user->forceFill(['suspended_at' => $suspendedAt])->save();
             }
-        $original = $user->getOriginal();
 
-        $user->update($validated);
-
-        if ($request->has('roles')) {
-            $newRoles = $request->roles;
-
-            // Prevent self-demotion: cannot remove own super-admin role
-            if ($currentUser->id === $user->id && $superAdminRoleId) {
-                $currentRoles = $user->roles()->pluck('roles.id')->toArray();
-                if (in_array($superAdminRoleId, $currentRoles) && ! in_array($superAdminRoleId, $newRoles)) {
+            if (isset($validated['role'])) {
+                if ($currentUser->id === $user->id && $user->role === 'super-admin' && $validated['role'] !== 'super-admin') {
                     abort(403, 'Cannot remove your own Super Admin role.');
                 }
             }
 
-            $user->roles()->sync($newRoles);
-        }
+            $original = $user->getOriginal();
+            $user->update($validated);
 
-        $changed = $user->getChanges();
-        $dirty = array_diff_key($changed, array_flip(['updated_at']));
-        $oldValues = array_intersect_key($original, $dirty);
+            $changed = $user->getChanges();
+            $dirty = array_diff_key($changed, array_flip(['updated_at']));
+            $oldValues = array_intersect_key($original, $dirty);
 
-        activity()->event('updated')
-            ->performedOn($user)
-            ->causedBy(Auth::user())
-            ->withProperties([
-                'old' => $oldValues,
-                'attributes' => $dirty,
-                'roles' => $request->has('roles') ? $user->roles->pluck('slug')->toArray() : null,
-            ])
-            ->log('User updated: '.$user->email);
-    });
+            activity()->event('updated')
+                ->performedOn($user)
+                ->causedBy(Auth::user())
+                ->withProperties([
+                    'old' => $oldValues,
+                    'attributes' => $dirty,
+                ])
+                ->log('User updated: '.$user->email);
+        });
 
-    return redirect()->route('users.index')->with('success', 'User updated successfully.');
-}
-
-    public function editPermissions(int $id): View
-    {
-        abort_unless(Auth::user()->hasRole('super-admin'), 403);
-
-        $user = User::findOrFail($id);
-        $modules = $this->permissionService->getModulesWithFeatures();
-        $userOverrides = $this->permissionService->getUserOverrideMap($user->id);
-
-        $importableSlugs = config('permissions.importable_modules', []);
-        $exportableSlugs = config('permissions.exportable_modules', []);
-
-        $overrideRows = UserModulePermission::where('user_id', $user->id)
-            ->get()
-            ->keyBy('module_id');
-
-        $categories = $modules->pluck('feature.name')
-            ->filter()
-            ->unique()
-            ->sort()
-            ->values()
-            ->toArray();
-
-        $moduleList = [];
-        foreach ($modules as $module) {
-            $overrideRow = $overrideRows->get($module->id);
-            $effective = $user->getEffectiveModulePermissions($module);
-
-            $baselinePerms = [];
-            $effectivePerms = [];
-            foreach (config('permissions.keys') as $key) {
-                $baselinePerms[$key] = $effective[$key]['role'] ?? null;
-                $effectivePerms[$key] = $effective[$key]['effective'] ?? false;
-            }
-
-            $controls = $this->permissionService->mapDbRowToControls($overrideRow, $module);
-            $isImportable = in_array($module->slug, $importableSlugs, true);
-            $isExportable = in_array($module->slug, $exportableSlugs, true);
-
-            $moduleList[] = [
-                'id' => $module->id,
-                'name' => $module->name,
-                'category' => $module->feature->name ?? 'Uncategorized',
-                'slug' => $module->slug,
-                'isImportable' => $isImportable,
-                'isExportable' => $isExportable,
-                'controls' => $controls,
-                'baselinePerms' => $baselinePerms,
-                'effectivePerms' => $effectivePerms,
-            ];
-        }
-
-        return view('users.permissions', compact('user', 'moduleList', 'categories', 'importableSlugs', 'exportableSlugs'));
-    }
-
-    public function updatePermissions(Request $request, int $id): RedirectResponse
-    {
-        abort_unless(Auth::user()->hasRole('super-admin'), 403);
-
-        $user = User::findOrFail($id);
-        $validControlValues = ['inherit', 'allow', 'deny'];
-
-        $request->validate([
-            'controls' => ['nullable', 'array', function ($attr, $value, $fail) use ($validControlValues) {
-                if (!is_array($value)) {
-                    return;
-                }
-                $moduleIds = array_keys($value);
-                $validIds = Module::whereIn('id', $moduleIds)->pluck('id')->all();
-                $invalid = array_diff($moduleIds, $validIds);
-                if ($invalid) {
-                    $fail('Invalid module IDs: '.implode(', ', $invalid));
-                }
-
-                foreach ($value as $moduleId => $ctrl) {
-                    if (!is_array($ctrl)) {
-                        $fail("Invalid control data for module {$moduleId}.");
-                        continue;
-                    }
-                    foreach (['access', 'manage', 'import', 'export'] as $key) {
-                        if (isset($ctrl[$key]) && !in_array($ctrl[$key], $validControlValues, true)) {
-                            $fail("Invalid value for {$key} on module {$moduleId}. Must be inherit, allow, or deny.");
-                        }
-                    }
-                }
-            }],
-        ]);
-
-        $controls = $request->input('controls', []);
-        $normalized = [];
-
-        foreach ($controls as $moduleId => $ctrl) {
-            if (!is_array($ctrl)) {
-                continue;
-            }
-            $module = Module::find($moduleId);
-            if (!$module) {
-                continue;
-            }
-            $access = $ctrl['access'] ?? 'inherit';
-            $manage = $ctrl['manage'] ?? 'inherit';
-            $import = $ctrl['import'] ?? 'inherit';
-            $export = $ctrl['export'] ?? 'inherit';
-            $normalized[$moduleId] = [
-                'access' => in_array($access, $validControlValues, true) ? $access : 'inherit',
-                'manage' => in_array($manage, $validControlValues, true) ? $manage : 'inherit',
-                'import' => in_array($import, $validControlValues, true) ? $import : 'inherit',
-                'export' => in_array($export, $validControlValues, true) ? $export : 'inherit',
-                'full_access' => !empty($ctrl['full_access']),
-                '_access_unchanged' => $ctrl['_access_unchanged'] ?? '1',
-                '_manage_unchanged' => $ctrl['_manage_unchanged'] ?? '1',
-            ];
-
-            // Inherit All convenience
-            if (!empty($ctrl['inherit_all'])) {
-                $normalized[$moduleId]['access'] = 'inherit';
-                $normalized[$moduleId]['manage'] = 'inherit';
-                $normalized[$moduleId]['import'] = 'inherit';
-                $normalized[$moduleId]['export'] = 'inherit';
-                $normalized[$moduleId]['full_access'] = false;
-                $normalized[$moduleId]['_access_unchanged'] = '0';
-                $normalized[$moduleId]['_manage_unchanged'] = '0';
-            }
-        }
-
-        $this->permissionService->saveUserControls($user, $normalized);
-
-        return redirect()->route('users.edit', $user->id)->with('success', 'Permission overrides updated successfully.');
+        return redirect()->route('users.index')->with('success', 'User updated successfully.');
     }
 
     public function suspend(Request $request, int $id): RedirectResponse
     {
-        abort_unless(Auth::user()->hasRole('super-admin'), 403);
+        abort_unless(Auth::user()->isSuperAdmin(), 403);
 
         $request->validate(['reason' => 'nullable|string|max:1000']);
 
@@ -512,7 +203,7 @@ class UserController extends Controller
 
     public function unsuspend(int $id): RedirectResponse
     {
-        abort_unless(Auth::user()->hasRole('super-admin'), 403);
+        abort_unless(Auth::user()->isSuperAdmin(), 403);
 
         $user = User::findOrFail($id);
         DB::transaction(function () use ($user) {
@@ -530,90 +221,14 @@ class UserController extends Controller
         return redirect()->route('users.show', $user->id)->with('success', 'User unsuspended successfully.');
     }
 
-    public function cloneForm(int $id): View
-    {
-        abort_unless(Auth::user()->hasRole('super-admin'), 403);
-
-        $sourceUser = User::findOrFail($id);
-        $roles = Role::whereNotIn('slug', ['*', 'super-admin'])->orderBy('name')->get();
-        $modules = $this->permissionService->getModulesWithFeatures();
-        $sourceRoles = $sourceUser->roles;
-        $overrideCount = UserModulePermission::where('user_id', $sourceUser->id)->count();
-
-        return view('users.clone', compact('sourceUser', 'roles', 'modules', 'sourceRoles', 'overrideCount'));
-    }
-
-    public function cloneStore(Request $request, int $id): RedirectResponse
-    {
-        abort_unless(Auth::user()->hasRole('super-admin'), 403);
-
-        $sourceUser = User::findOrFail($id);
-
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|email|max:255|unique:users,email',
-            'password' => 'required|string|min:8|confirmed',
-            'copy_roles' => 'boolean',
-            'copy_overrides' => 'boolean',
-            'copy_status' => 'boolean',
-        ]);
-
-        $hasSuperAdminRole = $sourceUser->hasRole('super-admin');
-        if ($hasSuperAdminRole && !$request->boolean('confirm_super_admin')) {
-            return back()->withErrors(['confirm_super_admin' => 'Please confirm cloning the Super Admin role.'])->withInput();
-        }
-
-        $validated['password'] = Hash::make($validated['password']);
-
-        $newUser = DB::transaction(function () use ($validated, $request, $sourceUser) {
-            $newUser = User::create([
-                'name' => $validated['name'],
-                'email' => $validated['email'],
-                'password' => $validated['password'],
-            ]);
-
-            if ($request->boolean('copy_status')) {
-                $newUser->forceFill(['suspended_at' => $sourceUser->suspended_at])->save();
-            }
-
-            if ($request->boolean('copy_roles')) {
-                $roleIds = $sourceUser->roles()->pluck('roles.id')->toArray();
-                $newUser->roles()->sync($roleIds);
-            }
-
-            if ($request->boolean('copy_overrides')) {
-                $this->permissionService->clonePermissions($sourceUser, $newUser);
-            }
-
-            activity()->event('cloned')
-                ->performedOn($sourceUser)
-                ->causedBy(Auth::user())
-                ->withProperties([
-                    'target_user_id' => $newUser->id,
-                    'target_user_name' => $newUser->name,
-                    'target_user_email' => $newUser->email,
-                    'copied_roles' => $request->boolean('copy_roles'),
-                    'copied_overrides' => $request->boolean('copy_overrides'),
-                    'copied_status' => $request->boolean('copy_status'),
-                ])
-                ->log('User cloned: '.$sourceUser->email.' -> '.$newUser->email);
-
-            return $newUser;
-        });
-
-        return redirect()->route('users.show', $newUser->id)
-            ->with('success', 'User cloned from '.$sourceUser->name.' successfully.');
-    }
-
     public function destroy(int $id): RedirectResponse
     {
-        abort_unless(Auth::user()->hasRole('super-admin'), 403);
+        abort_unless(Auth::user()->isSuperAdmin(), 403);
 
         $user = User::findOrFail($id);
 
-        $superAdminRoleId = $this->permissionService->getSuperAdminRoleId();
-        if ($superAdminRoleId && $user->roles()->where('roles.id', $superAdminRoleId)->exists()) {
-            $superAdminCount = User::whereHas('roles', fn ($q) => $q->where('roles.id', $superAdminRoleId))->count();
+        if ($user->role === 'super-admin') {
+            $superAdminCount = User::where('role', 'super-admin')->count();
             if ($superAdminCount <= 1) {
                 abort(403, 'Cannot delete the last Super Admin user.');
             }
@@ -640,7 +255,7 @@ class UserController extends Controller
 
     public function restore(int $id): RedirectResponse
     {
-        abort_unless(Auth::user()->hasRole('super-admin'), 403);
+        abort_unless(Auth::user()->isSuperAdmin(), 403);
 
         $user = User::withTrashed()->findOrFail($id);
         $user->restore();
@@ -656,7 +271,7 @@ class UserController extends Controller
 
     public function forceDelete(int $id): RedirectResponse
     {
-        abort_unless(Auth::user()->hasRole('super-admin'), 403);
+        abort_unless(Auth::user()->isSuperAdmin(), 403);
 
         $user = User::withTrashed()->findOrFail($id);
         $userEmail = $user->email;

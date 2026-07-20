@@ -2,7 +2,7 @@
 setlocal enabledelayedexpansion
 
 REM ============================================================
-REM deploy.bat — OpsPilot Production Build Script (Windows/XAMPP)
+REM deploy.bat — Alphaspace Production Build Script (Windows/XAMPP)
 REM Prepares a deployment-ready ZIP archive. Run from project root.
 REM ============================================================
 
@@ -53,14 +53,10 @@ echo   Next steps:
 echo   1. Upload %DEPLOY_DIR%.zip to your server via FTP/cPanel
 echo   2. Extract on server
 echo   3. Copy public/ contents to public_html/
-echo   4. Copy .env.example to .env and edit:
-echo      - Set APP_ENV=production, APP_DEBUG=false
-echo      - Set CACHE_STORE=redis (or keep file for single-server)
-echo   5. Run: php artisan key:generate
-echo   6. Run: php artisan migrate --force
-echo   7. Set permissions: chmod -R 775 storage bootstrap/cache
-echo   8. Set up cron: * * * * * php artisan schedule:run
-echo   9. Set up queue worker (Supervisord/Forge): php artisan queue:work
+echo   4. Copy .env.production to .env and edit DB + MAIL credentials
+echo   5. Run: bash deploy.sh --setup
+echo   6. Run: bash deploy.sh --cron  —-> add both cron jobs in cPanel
+echo   7. Verify: php artisan queue:monitor
 echo ============================================
 
 endlocal

@@ -1,24 +1,25 @@
 <?php
 
+use App\Models\LoginAudit;
 use Illuminate\Support\Facades\Schedule;
 
-Schedule::command('expiry:check')->dailyAt('08:00');
-
-Schedule::command('monitor:check')->hourly();
-
 Schedule::command('sanctum:prune-expired')->daily();
-
-Schedule::command('tasks:check-overdue')->dailyAt('09:00');
-
-Schedule::command('renewals:send-email-reminders')->dailyAt('02:00');
 
 Schedule::command('activitylog:clean')->daily();
 
 Schedule::call(function () {
-    \App\Models\LoginAudit::where('created_at', '<', now()->subYear())->delete();
+    LoginAudit::where('created_at', '<', now()->subYear())->delete();
 })->daily()->name('login-audits:clean')->onOneServer();
 
-Schedule::call(fn () => app(\App\Services\EmailStatService::class)->batchFetch())
-    ->name('email-stats:batch-fetch')
+// Run queue worker: processes all pending jobs, stops when empty (max 4 min)
+Schedule::command('queue:work --stop-when-empty --max-time=240 --sleep=3')
+    ->everyMinute()
+    ->name('queue:process')
+    ->withoutOverlapping()
+    ->runInBackground();
+
+// Dispatch IMAP sync jobs for all enabled accounts
+Schedule::command('email-sync:dispatch')
     ->everyTenMinutes()
+    ->name('email-sync:dispatch')
     ->withoutOverlapping();

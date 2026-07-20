@@ -27,9 +27,7 @@
             <x-sidebar-header />
             <div id="sidebarContents" class="flex flex-col flex-1 min-h-0 overflow-y-auto">
             <x-sidebar-search />
-            <x-sidebar-nav-groups
-                :show-monitoring="$showMonitoring"
-            />
+            <x-sidebar-nav-groups />
             <x-user-card />
             </div>
         </aside>
@@ -66,7 +64,6 @@
     <x-command-palette />
 
 
-    @vite('resources/js/help-center.js')
     @stack('scripts')
 </body>
 </html>

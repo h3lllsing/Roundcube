@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Web;
 use App\Http\Controllers\Controller;
 use App\Models\EmailAccount;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -17,7 +16,7 @@ class WebmailController extends Controller
     {
         $user = Auth::user();
 
-        if ($user->isSuperAdmin() || $user->hasPermission('emails.manage')) {
+        if ($user->isAdmin()) {
             $accounts = EmailAccount::with('domain')
                 ->where('status', 'active')
                 ->orderBy('email')
@@ -33,28 +32,54 @@ class WebmailController extends Controller
         return view('webmail.index', compact('accounts'));
     }
 
-    public function redirect(EmailAccount $emailAccount): RedirectResponse
+    public function redirect(EmailAccount $emailAccount): View
     {
         $user = Auth::user();
 
-        $canAccess = $user->isSuperAdmin()
-            || $user->hasPermission('emails.manage')
+        $canAccess = $user->isAdmin()
             || $emailAccount->assignedUsers()->where('user_id', $user->id)->exists();
 
         abort_unless($canAccess, 403);
 
         $token = $this->generateToken($emailAccount);
 
-        return view('webmail.launch', compact('token'));
+        if ($user->isAdmin()) {
+            $accounts = EmailAccount::with('domain')
+                ->where('status', 'active')
+                ->orderBy('email')
+                ->get();
+        } else {
+            $accounts = $user->assignedEmailAccounts()
+                ->with('domain')
+                ->where('status', 'active')
+                ->orderBy('email')
+                ->get();
+        }
+
+        return view('webmail.launch', [
+            'token' => $token,
+            'accounts' => $accounts,
+            'currentAccount' => $emailAccount,
+        ]);
     }
 
-    public function openAs(EmailAccount $emailAccount): RedirectResponse
+    public function openAs(EmailAccount $emailAccount): View
     {
-        $this->authorize('view', $emailAccount);
+        $user = Auth::user();
+        abort_unless($user->isAdmin(), 403);
 
         $token = $this->generateToken($emailAccount);
 
-        return view('webmail.launch', compact('token'));
+        $accounts = EmailAccount::with('domain')
+            ->where('status', 'active')
+            ->orderBy('email')
+            ->get();
+
+        return view('webmail.launch', [
+            'token' => $token,
+            'accounts' => $accounts,
+            'currentAccount' => $emailAccount,
+        ]);
     }
 
     public function resolve(Request $request): JsonResponse
@@ -94,6 +119,11 @@ class WebmailController extends Controller
             'imap_host' => $account->imap_host,
             'imap_port' => $account->imap_port,
             'imap_encryption' => $account->imap_encryption,
+            'smtp_host' => $account->smtp_host,
+            'smtp_port' => $account->smtp_port,
+            'smtp_encryption' => $account->smtp_encryption,
+            'smtp_username' => $account->smtp_username,
+            'smtp_password' => $account->smtp_password,
         ]);
     }
 

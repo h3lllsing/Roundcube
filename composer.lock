@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "ebe29dc0aae665a43ac83919829a53c3",
+    "content-hash": "af06e425f71f089b8265f8ed12c86bb4",
     "packages": [
         {
             "name": "brick/math",
@@ -1057,78 +1057,6 @@
                 }
             ],
             "time": "2026-06-12T21:33:43+00:00"
-        },
-        {
-            "name": "hasinhayder/tyro",
-            "version": "v1.6.0",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/hasinhayder/tyro.git",
-                "reference": "be0cdc820377966598e36d34ef650706318c1c77"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/hasinhayder/tyro/zipball/be0cdc820377966598e36d34ef650706318c1c77",
-                "reference": "be0cdc820377966598e36d34ef650706318c1c77",
-                "shasum": ""
-            },
-            "require": {
-                "illuminate/auth": "^12.0 || ^13.0",
-                "illuminate/database": "^12.0 || ^13.0",
-                "illuminate/http": "^12.0 || ^13.0",
-                "illuminate/support": "^12.0 || ^13.0",
-                "laravel/sanctum": "^4.0 || ^5.0",
-                "php": "^8.2"
-            },
-            "require-dev": {
-                "laravel/pint": "^1.27",
-                "nunomaduro/collision": "^8.6 || ^9.0",
-                "orchestra/testbench": "^10.0 || ^11.0",
-                "pestphp/pest": "^3.0",
-                "pestphp/pest-plugin-laravel": "^3.0"
-            },
-            "type": "library",
-            "extra": {
-                "laravel": {
-                    "providers": [
-                        "HasinHayder\\Tyro\\Providers\\TyroServiceProvider"
-                    ]
-                },
-                "branch-alias": {
-                    "dev-main": "1.5.x-dev"
-                }
-            },
-            "autoload": {
-                "psr-4": {
-                    "HasinHayder\\Tyro\\": "src/"
-                },
-                "classmap": [
-                    "database/seeders",
-                    "database/factories"
-                ]
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "license": [
-                "MIT"
-            ],
-            "description": "Tyro - The ultimate Authentication, Authorization, and Role & Privilege Management solution for Laravel 12 & 13",
-            "keywords": [
-                "Authentication",
-                "acl",
-                "api",
-                "authorization",
-                "laravel",
-                "permissions",
-                "privileges",
-                "rbac",
-                "roles",
-                "sanctum"
-            ],
-            "support": {
-                "issues": "https://github.com/hasinhayder/tyro/issues",
-                "source": "https://github.com/hasinhayder/tyro/tree/v1.6.0"
-            },
-            "time": "2026-04-14T09:49:39+00:00"
         },
         {
             "name": "laravel/framework",
@@ -2621,6 +2549,69 @@
                 }
             ],
             "time": "2025-12-27T19:41:33+00:00"
+        },
+        {
+            "name": "predis/predis",
+            "version": "v3.5.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/predis/predis.git",
+                "reference": "5c996db191ee2d9bafe651f454b1fca16754271b"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/predis/predis/zipball/5c996db191ee2d9bafe651f454b1fca16754271b",
+                "reference": "5c996db191ee2d9bafe651f454b1fca16754271b",
+                "shasum": ""
+            },
+            "require": {
+                "php": "^7.2 || ^8.0",
+                "psr/http-message": "^1.0|^2.0"
+            },
+            "require-dev": {
+                "friendsofphp/php-cs-fixer": "^3.3",
+                "phpstan/phpstan": "^1.9",
+                "phpunit/phpcov": "^6.0 || ^8.0",
+                "phpunit/phpunit": "^8.0 || ~9.4.4"
+            },
+            "suggest": {
+                "ext-relay": "Faster connection with in-memory caching (>=0.6.2)"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Predis\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Till Krüss",
+                    "homepage": "https://till.im",
+                    "role": "Maintainer"
+                }
+            ],
+            "description": "A flexible and feature-complete Redis/Valkey client for PHP.",
+            "homepage": "http://github.com/predis/predis",
+            "keywords": [
+                "nosql",
+                "predis",
+                "redis"
+            ],
+            "support": {
+                "issues": "https://github.com/predis/predis/issues",
+                "source": "https://github.com/predis/predis/tree/v3.5.1"
+            },
+            "funding": [
+                {
+                    "url": "https://github.com/sponsors/tillkruss",
+                    "type": "github"
+                }
+            ],
+            "time": "2026-06-11T16:56:53+00:00"
         },
         {
             "name": "psr/clock",

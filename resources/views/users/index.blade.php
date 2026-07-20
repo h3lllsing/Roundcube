@@ -6,8 +6,6 @@
 <div class="max-w-7xl mx-auto">
     <x-page-header title="Users" subtitle="Manage system users.">
         <x-slot:actions>
-            @if(auth()->user()->hasRole('super-admin'))
-            @endif
             <x-button href="{{ route('users.create') }}" variant="primary" size="sm">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                 Create
@@ -29,20 +27,15 @@
         @endif
     </form>
 
-    <form method="POST" action="{{ route('bulk-action') }}" class="mb-6" id="bulk-form">
-        @csrf
-        <input type="hidden" name="type" value="users">
-        <x-bulk-actions type="users" colspan="8" :statuses="[]" :actions="['suspend', 'unsuspend', 'delete', 'restore', 'force-delete']" :actionLabels="['suspend' => 'Suspend', 'unsuspend' => 'Unsuspend', 'delete' => 'Delete', 'restore' => 'Restore', 'force-delete' => 'Force Delete']" />
-    </form>
+
 
     <div class="bg-white dark:bg-black rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-x-auto w-full">
         <table class="w-full text-sm">
             <thead>
                 <tr class="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-black/50">
-                    <th scope="col" class="text-left px-4 py-3 w-10"><input type="checkbox" class="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500 bulk-select-all" data-bulk-select-all></th>
                     <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Name</th>
                     <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Email</th>
-                    <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Roles</th>
+                    <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Role</th>
                     <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Status</th>
                     <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Last Login</th>
                     <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Actions</th>
@@ -51,17 +44,10 @@
             <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
                 @forelse ($users as $user)
                     <tr class="{{ $user->suspended_at ? 'bg-red-50 dark:bg-red-900/10 hover:bg-red-100 dark:hover:bg-red-900/20' : 'hover:bg-gray-50 dark:hover:bg-gray-700/50' }}">
-                        <td class="px-4 py-3"><input type="checkbox" name="ids[]" value="{{ $user->id }}" aria-label="Select {{ $user->name }}" class="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500 bulk-item" form="bulk-form"></td>
                         <td class="px-6 py-3 font-medium"><a href="{{ route('users.show', $user->id) }}" class="text-indigo-600 dark:text-indigo-400 hover:underline">{{ $user->name }}</a></td>
                         <td class="px-6 py-3 text-gray-500">{{ $user->email }}</td>
                         <td class="px-6 py-3">
-                            <div class="flex flex-wrap gap-1">
-                                @forelse ($user->roles as $role)
-                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300">{{ $role->name }}</span>
-                                @empty
-                                    <span class="text-gray-400 dark:text-gray-500">—</span>
-                                @endforelse
-                            </div>
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300">{{ ucfirst($user->role) }}</span>
                         </td>
                         <td class="px-6 py-3">
                             @if ($user->suspended_at)
@@ -92,8 +78,7 @@
                                 </button>
                                 <div x-show="open" :style="style" x-cloak role="menu" x-transition:enter="transition ease-out duration-100" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100" class="bg-gray-50 dark:bg-black rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 py-1 w-48">
                                     <a href="{{ route('users.edit', $user->id) }}" class="block px-3 py-2 text-sm text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500/40" role="menuitem">Edit</a>
-                                    <a href="{{ route('users.permissions.edit', $user->id) }}" class="block px-3 py-2 text-sm text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500/40" role="menuitem">Permissions</a>
-                                    <a href="{{ route('users.clone', $user->id) }}" class="block px-3 py-2 text-sm text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500/40" role="menuitem">Clone</a>
+
                                     @if ($user->suspended_at)
                                         <form method="POST" action="{{ route('users.unsuspend', $user->id) }}" class="block">
                                             @csrf
@@ -117,7 +102,7 @@
                         </td>
                     </tr>
                 @empty
-                    <tr><x-empty-state :colspan="7" icon="user" title="No users found." message="Invite users to get started." /></tr>
+                    <tr><x-empty-state :colspan="6" icon="user" title="No users found." message="Invite users to get started." /></tr>
                 @endforelse
             </tbody>
         </table>

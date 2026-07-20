@@ -124,13 +124,6 @@ class AuthController extends Controller
             : back()->withErrors(['email' => __($status)]);
     }
 
-    public function myPermissions(): View
-    {
-        $viewData = $this->authService->getMyPermissions(Auth::user());
-
-        return view('auth.my-permissions', $viewData);
-    }
-
     public function profile(): View
     {
         return view('auth.profile', ['user' => Auth::user()]);

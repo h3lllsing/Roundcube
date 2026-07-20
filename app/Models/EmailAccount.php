@@ -83,4 +83,9 @@ class EmailAccount extends Model
     {
         return $this->belongsTo(User::class, 'deleted_by');
     }
+
+    public function scopeAssignedToActiveUsers($query): void
+    {
+        $query->whereHas('assignedUsers', fn ($q) => $q->whereNull('suspended_at'));
+    }
 }

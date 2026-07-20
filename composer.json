@@ -16,9 +16,9 @@
         "ext-pdo_mysql": "*",
         "ext-tokenizer": "*",
         "ext-xml": "*",
-        "hasinhayder/tyro": "^1.6",
         "laravel/framework": "^12.0",
         "laravel/sanctum": "^4.0",
+        "predis/predis": "^3.5",
         "spatie/laravel-activitylog": "^4.0",
         "webklex/php-imap": "^6.2"
     },

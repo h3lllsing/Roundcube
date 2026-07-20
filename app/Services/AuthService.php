@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Models\LoginAudit;
-use App\Models\Module;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -60,25 +59,6 @@ class AuthService
             ->log('Email verified: '.$user->email);
 
         return 'verified';
-    }
-
-    public function getMyPermissions(User $user): array
-    {
-        $roles = $user->roles;
-        $isSuperAdmin = $user->hasRole('super-admin');
-
-        if ($isSuperAdmin) {
-            $modules = Module::with('feature')->orderBy('name')->get();
-            $modulePermissions = [];
-        } else {
-            $modulePermissions = $user->getAllModulePermissions();
-            $modules = Module::with('feature')
-                ->whereIn('id', array_keys($modulePermissions))
-                ->orderBy('name')
-                ->get();
-        }
-
-        return compact('user', 'roles', 'isSuperAdmin', 'modules', 'modulePermissions');
     }
 
     public function logPasswordReset(User $user): void

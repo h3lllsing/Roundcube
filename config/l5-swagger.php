@@ -8,7 +8,7 @@ return [
     'documentations' => [
         'default' => [
             'api' => [
-                'title' => 'OpsPilot API',
+                'title' => 'Alphaspace API',
             ],
 
             'routes' => [

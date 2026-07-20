@@ -1,6 +1,5 @@
 <?php
 
-use App\Http\Middleware\LogApiRequests;
 use App\Providers\MorphMapServiceProvider;
 use App\Providers\RateLimiterServiceProvider;
 use App\Providers\ViewServiceProvider;
@@ -15,7 +14,6 @@ use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
-        api: __DIR__.'/../routes/api.php',
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )
@@ -29,16 +27,13 @@ return Application::configure(basePath: dirname(__DIR__))
     ])
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
-            'log.api' => LogApiRequests::class,
             'suspended' => \App\Http\Middleware\CheckSuspended::class,
             'security.headers' => \App\Http\Middleware\AddSecurityHeaders::class,
-            // Re-registered from vendor/hasinhayder/tyro for visibility
-            'role' => \HasinHayder\Tyro\Http\Middleware\EnsureTyroRole::class,
         ]);
 
         $middleware->append(\App\Http\Middleware\AddSecurityHeaders::class);
 
-        $middleware->validateCsrfTokens(except: ['api/login']);
+
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->dontFlash([

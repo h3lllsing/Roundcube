@@ -12,7 +12,6 @@ class DashboardController extends Controller
     public function index(): View
     {
         $user = Auth::user();
-        $user->loadMissing('roles');
         $data = app(DashboardService::class)->compute($user);
 
         return view('dashboard.index', $data);

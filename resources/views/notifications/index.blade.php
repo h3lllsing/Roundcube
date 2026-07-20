@@ -50,69 +50,12 @@
                         <input type="checkbox" name="ids[]" value="{{ $notification->id }}" class="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500 notif-item">
                     </div>
                     <div class="mt-1.5 shrink-0">
-                        @if ($type === 'task_assigned')
-                            <span class="w-2 h-2 rounded-full bg-indigo-500 inline-block"></span>
-                        @elseif ($type === 'note_added')
-                            <span class="w-2 h-2 rounded-full bg-green-500 inline-block"></span>
-                        @elseif ($type === 'expiring_soon')
-                            <span class="w-2 h-2 rounded-full bg-amber-500 inline-block"></span>
-                        @elseif ($type === 'vault_password_revealed')
-                            <span class="w-2 h-2 rounded-full bg-purple-500 inline-block"></span>
-                        @elseif ($type === 'monitor_check_failed')
-                            <span class="w-2 h-2 rounded-full bg-red-500 inline-block"></span>
-                        @else
-                            <span class="w-2 h-2 rounded-full {{ $notification->read_at ? 'bg-gray-300 dark:bg-black' : 'bg-indigo-500' }} inline-block"></span>
-                        @endif
+                        <span class="w-2 h-2 rounded-full {{ $notification->read_at ? 'bg-gray-300 dark:bg-black' : 'bg-indigo-500' }} inline-block"></span>
                     </div>
                     <div class="flex-1 min-w-0">
-                        @if ($type === 'task_assigned')
+                        @if ($type === 'email_sync_failed')
                             <p class="text-sm text-gray-900 dark:text-gray-100">
-                                Task <a href="{{ route('tasks.show', $data['task_id']) }}" class="text-indigo-600 hover:text-indigo-800 font-medium">{{ $data['title'] }}</a> assigned to you
-                                @if (!empty($data['assigned_by_name'])) by {{ $data['assigned_by_name'] }}@endif
-                            </p>
-                            <div class="flex gap-2 mt-1">
-                                @if (!empty($data['priority']))
-                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600 dark:bg-black dark:text-gray-300">{{ $data['priority'] }}</span>
-                                @endif
-                                @if (!empty($data['status']))
-                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300">{{ str_replace('_', ' ', $data['status']) }}</span>
-                                @endif
-                                @if (!empty($data['due_date']))
-                                    <span class="text-xs text-gray-500">Due {{ \Carbon\Carbon::parse($data['due_date'])->format('M j') }}</span>
-                                @endif
-                            </div>
-                        @elseif ($type === 'note_added')
-                            <p class="text-sm text-gray-900 dark:text-gray-100">
-                                @if (!empty($data['added_by_name'])){{ $data['added_by_name'] }}@else{{ 'A user' }}@endif added a note
-                                @if (!empty($data['notable_type']) && !empty($data['notable_id']))
-                                    on <a href="{{ route('notes.show', $data['note_id']) }}" class="text-indigo-600 hover:text-indigo-800">Note #{{ $data['note_id'] }}</a>
-                                @endif
-                            </p>
-                            @if (!empty($data['content']))
-                                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 truncate">{{ Str::limit($data['content'], 120) }}</p>
-                            @endif
-                        @elseif ($type === 'expiring_soon')
-                            <p class="text-sm text-gray-900 dark:text-gray-100">
-                                <span class="font-medium">{{ $data['entity_type'] ?? 'Service' }}</span>
-                                <span class="font-medium">{{ $data['name'] }}</span>
-                                @if (($data['days_remaining'] ?? 0) < 0)
-                                    expired {{ abs($data['days_remaining']) }} day(s) ago
-                                @elseif (($data['days_remaining'] ?? 0) === 0)
-                                    expires today
-                                @else
-                                    expires in {{ $data['days_remaining'] }} day(s)
-                                @endif
-                                @if (!empty($data['expiry_date']))
-                                    ({{ \Carbon\Carbon::parse($data['expiry_date'])->format('M j, Y') }})
-                                @endif
-                            </p>
-                        @elseif ($type === 'vault_password_revealed')
-                            <p class="text-sm text-gray-900 dark:text-gray-100">
-                                Vault password for <span class="font-medium">{{ $data['service'] }}</span> revealed by {{ $data['revealed_by'] }}
-                            </p>
-                        @elseif ($type === 'monitor_check_failed')
-                            <p class="text-sm text-gray-900 dark:text-gray-100">
-                                Monitor check failed for <span class="font-medium">{{ $data['resource_name'] }}</span>
+                                Email sync failed for <span class="font-medium">{{ $data['email'] ?? 'N/A' }}</span>
                             </p>
                             @if (!empty($data['error']))
                                 <p class="text-xs text-red-600 dark:text-red-400 mt-1">{{ $data['error'] }}</p>

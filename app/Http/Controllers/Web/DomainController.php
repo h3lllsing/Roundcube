@@ -13,7 +13,7 @@ class DomainController extends Controller
 {
     public function __construct()
     {
-        $this->authorizeResource(Domain::class, 'domain');
+        $this->middleware(fn ($req, $next) => Auth::user()->isSuperAdmin() ? $next($req) : abort(403));
     }
 
     public function index(Request $request): View
@@ -53,6 +53,10 @@ class DomainController extends Controller
 
         $domain = Domain::create($validated);
 
+        activity()->event('created')->performedOn($domain)->causedBy(Auth::user())
+            ->withProperties(['name' => $domain->name])
+            ->log('Domain created: '.$domain->name);
+
         return to_route('domains.show', $domain)
             ->with('success', 'Domain created successfully.');
     }
@@ -81,14 +85,16 @@ class DomainController extends Controller
 
         $domain->update($validated);
 
+        activity()->event('updated')->performedOn($domain)->causedBy(Auth::user())
+            ->withProperties(['name' => $domain->name])
+            ->log('Domain updated: '.$domain->name);
+
         return to_route('domains.show', $domain)
             ->with('success', 'Domain updated successfully.');
     }
 
     public function destroy(Domain $domain): RedirectResponse
     {
-        $this->authorize('delete', $domain);
-
         $domain->deleted_by = Auth::id();
         $domain->saveQuietly();
         $domain->delete();
@@ -114,8 +120,6 @@ class DomainController extends Controller
     {
         $domain = Domain::withTrashed()->findOrFail($id);
 
-        $this->authorize('restore', $domain);
-
         $domain->restore();
         $domain->deleted_by = null;
         $domain->saveQuietly();
@@ -138,8 +142,6 @@ class DomainController extends Controller
     public function forceDelete(int $id): RedirectResponse
     {
         $domain = Domain::withTrashed()->findOrFail($id);
-
-        $this->authorize('forceDelete', $domain);
 
         $domain->forceDelete();
 

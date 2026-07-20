@@ -7,7 +7,7 @@
     <x-page-header title="Dashboard" subtitle="Overview">
     </x-page-header>
 
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
         <div class="rounded-xl bg-gradient-to-br from-indigo-500/10 to-purple-500/5 dark:from-indigo-500/15 dark:to-purple-500/5 border border-indigo-200/50 dark:border-indigo-800/30 p-4">
             <p class="text-xs font-semibold uppercase tracking-widest text-gray-500 dark:text-gray-400">Users</p>
             <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ $total_users ?? '—' }}</p>
@@ -16,14 +16,12 @@
             <p class="text-xs font-semibold uppercase tracking-widest text-gray-500 dark:text-gray-400">Notifications</p>
             <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ $total_notifications }}</p>
         </div>
+        @if(isset($total_email_accounts))
         <div class="rounded-xl bg-gradient-to-br from-green-500/10 to-emerald-500/5 dark:from-green-500/15 dark:to-emerald-500/5 border border-green-200/50 dark:border-green-800/30 p-4">
-            <p class="text-xs font-semibold uppercase tracking-widest text-gray-500 dark:text-gray-400">Features</p>
-            <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ $total_features ?? '—' }}</p>
+            <p class="text-xs font-semibold uppercase tracking-widest text-gray-500 dark:text-gray-400">Email Accounts</p>
+            <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ $total_email_accounts }}</p>
         </div>
-        <div class="rounded-xl bg-gradient-to-br from-violet-500/10 to-purple-500/5 dark:from-violet-500/15 dark:to-purple-500/5 border border-violet-200/50 dark:border-violet-800/30 p-4">
-            <p class="text-xs font-semibold uppercase tracking-widest text-gray-500 dark:text-gray-400">Modules</p>
-            <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ $total_modules ?? '—' }}</p>
-        </div>
+        @endif
     </div>
 
     @if(isset($audit_actions) && count($audit_actions))
@@ -70,6 +68,47 @@
                 <p class="text-2xl font-bold text-green-600 dark:text-green-400">0</p>
                 <p class="text-xs text-gray-500 dark:text-gray-400">of {{ $total_email_accounts ?? '—' }} total</p>
             </div>
+        </div>
+    </div>
+    @endif
+
+    @if(!empty($assigned_accounts))
+    <div class="bg-white dark:bg-black rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 mb-6">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300">My Email Accounts</h3>
+            <a href="{{ route('webmail.index') }}" class="text-xs text-indigo-600 dark:text-indigo-400 hover:underline">Open Webmail →</a>
+        </div>
+        <div class="space-y-2">
+            @foreach($assigned_accounts as $account)
+            <a href="{{ route('webmail.open', $account) }}"
+               class="flex items-center gap-3 p-2.5 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group">
+                <span class="w-2 h-2 rounded-full {{ $account->status === 'active' ? 'bg-green-500' : 'bg-red-500' }} shrink-0"></span>
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{{ $account->email }}</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 truncate">
+                        {{ $account->domain->name }}
+                        @if($account->last_sync_at)
+                        · last sync {{ $account->last_sync_at->diffForHumans() }}
+                        @endif
+                    </p>
+                </div>
+                <span class="text-xs text-indigo-600 dark:text-indigo-400 opacity-0 group-hover:opacity-100 transition-opacity">Open →</span>
+            </a>
+            @endforeach
+        </div>
+    </div>
+    @endif
+
+    @if(!empty($active_domains))
+    <div class="bg-white dark:bg-black rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 mb-6">
+        <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Active Domains ({{ count($active_domains) }})</h3>
+        <div class="flex flex-wrap gap-2">
+            @foreach($active_domains as $domain)
+            <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 text-xs font-medium border border-indigo-200/50 dark:border-indigo-800/30">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/></svg>
+                {{ $domain->name }}
+            </span>
+            @endforeach
         </div>
     </div>
     @endif

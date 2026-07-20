@@ -6,12 +6,10 @@
 <div class="max-w-7xl mx-auto">
     <x-page-header title="Domains" subtitle="Manage email domains.">
         <x-slot:actions>
-            @can('create', App\Models\Domain::class)
-                <x-button href="{{ route('domains.create') }}" variant="primary" size="sm">
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-                    Create
-                </x-button>
-            @endcan
+            <x-button href="{{ route('domains.create') }}" variant="primary" size="sm">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                Create
+            </x-button>
         </x-slot:actions>
     </x-page-header>
 
@@ -72,19 +70,15 @@
                         @endif
                         <td class="px-6 py-3 whitespace-nowrap">
                             @if(request('trashed'))
-                                @can('restore', $domain)
-                                    <form method="POST" action="{{ route('domains.restore', $domain->id) }}" class="inline">
-                                        @csrf
-                                        <button type="submit" data-confirm="Restore this domain?" data-confirm-button="Restore" x-on:click="startLoading($el)" class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-lg text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 hover:bg-green-100 dark:hover:bg-green-900/40 transition-colors">Restore</button>
-                                    </form>
-                                @endcan
-                                @can('forceDelete', $domain)
-                                    <form method="POST" action="{{ route('domains.force-delete', $domain->id) }}" class="inline ml-1">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" data-confirm="Permanently delete this domain? This cannot be undone." data-confirm-button="Delete Permanently" x-on:click="startLoading($el)" class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-lg text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors">Delete Permanently</button>
-                                    </form>
-                                @endcan
+                                <form method="POST" action="{{ route('domains.restore', $domain->id) }}" class="inline">
+                                    @csrf
+                                    <button type="submit" data-confirm="Restore this domain?" data-confirm-button="Restore" x-on:click="startLoading($el)" class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-lg text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 hover:bg-green-100 dark:hover:bg-green-900/40 transition-colors">Restore</button>
+                                </form>
+                                <form method="POST" action="{{ route('domains.force-delete', $domain->id) }}" class="inline ml-1">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" data-confirm="Permanently delete this domain? This cannot be undone." data-confirm-button="Delete Permanently" x-on:click="startLoading($el)" class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-lg text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors">Delete Permanently</button>
+                                </form>
                             @else
                                 <div x-data="{ open: false, style: '' }" @click.away="open = false" class="relative inline-block">
                                     <button type="button" @click="
@@ -99,16 +93,12 @@
                                         <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>
                                     </button>
                                     <div x-show="open" :style="style" x-cloak role="menu" x-transition:enter="transition ease-out duration-100" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100" class="bg-gray-50 dark:bg-black rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 py-1 w-48">
-                                        @can('update', $domain)
-                                            <a href="{{ route('domains.edit', $domain) }}" class="block px-3 py-2 text-sm text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" role="menuitem">Edit</a>
-                                        @endcan
-                                        @can('delete', $domain)
-                                            <form method="POST" action="{{ route('domains.destroy', $domain) }}" class="block">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" data-confirm="Soft-delete this domain?" data-confirm-button="Delete" x-on:click="startLoading($el)" class="w-full text-left px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors" role="menuitem">Delete</button>
-                                            </form>
-                                        @endcan
+                                        <a href="{{ route('domains.edit', $domain) }}" class="block px-3 py-2 text-sm text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" role="menuitem">Edit</a>
+                                        <form method="POST" action="{{ route('domains.destroy', $domain) }}" class="block">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" data-confirm="Soft-delete this domain?" data-confirm-button="Delete" x-on:click="startLoading($el)" class="w-full text-left px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors" role="menuitem">Delete</button>
+                                        </form>
                                     </div>
                                 </div>
                             @endif

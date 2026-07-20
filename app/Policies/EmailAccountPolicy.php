@@ -9,43 +9,35 @@ class EmailAccountPolicy
 {
     public function viewAny(User $user): bool
     {
-        return $user->isSuperAdmin() || $user->hasPermission('emails.manage');
+        return $user->isSuperAdmin();
     }
 
-    public function view(User $user, EmailAccount $account): bool
+    public function view(User $user, EmailAccount $emailAccount): bool
     {
-        if ($user->isSuperAdmin()) {
-            return true;
-        }
-
-        if ($user->hasPermission('emails.manage')) {
-            return true;
-        }
-
-        return $account->assignedUsers()->where('user_id', $user->id)->exists();
+        return $user->isSuperAdmin();
     }
 
     public function create(User $user): bool
     {
-        return $user->isSuperAdmin() || $user->hasPermission('emails.manage');
+        return $user->isSuperAdmin();
     }
 
-    public function update(User $user, EmailAccount $account): bool
+    public function update(User $user, EmailAccount $emailAccount): bool
     {
-        return $user->isSuperAdmin() || $user->hasPermission('emails.manage');
+        return $user->isSuperAdmin();
     }
 
-    public function delete(User $user, EmailAccount $account): bool
+    public function delete(User $user, EmailAccount $emailAccount): bool
     {
-        return $user->isSuperAdmin() || $user->hasPermission('emails.manage');
+        return $user->isSuperAdmin();
     }
 
-    public function restore(User $user, EmailAccount $account): bool
+    public function restore(User $user, EmailAccount $emailAccount): bool
     {
-        return $user->isSuperAdmin() || $user->hasPermission('emails.manage');
+        return $user->isSuperAdmin();
     }
 
-    public function forceDelete(User $user, EmailAccount $account): bool
+    public function forceDelete(User $user, EmailAccount $emailAccount): bool
     {
         return $user->isSuperAdmin();
     }

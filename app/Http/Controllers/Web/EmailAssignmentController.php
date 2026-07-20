@@ -13,7 +13,7 @@ class EmailAssignmentController extends Controller
 {
     public function store(Request $request, EmailAccount $emailAccount): RedirectResponse
     {
-        $this->authorize('update', $emailAccount);
+        abort_unless(Auth::user()->isSuperAdmin(), 403);
 
         $validated = $request->validate([
             'user_id' => 'required|exists:users,id',
@@ -48,7 +48,7 @@ class EmailAssignmentController extends Controller
 
     public function destroy(EmailAccount $emailAccount, User $user): RedirectResponse
     {
-        $this->authorize('update', $emailAccount);
+        abort_unless(Auth::user()->isSuperAdmin(), 403);
 
         $emailAccount->assignedUsers()->detach($user);
 

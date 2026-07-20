@@ -29,17 +29,12 @@
         @endif
     </form>
 
-    <form method="POST" action="{{ route('bulk-action') }}" class="mb-6" id="bulk-form">
-        @csrf
-        <input type="hidden" name="type" value="login-audits">
-        <x-bulk-actions type="login-audits" colspan="7" :statuses="[]" :actions="['delete']" />
-    </form>
+
 
     <div class="bg-white dark:bg-black rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-x-auto w-full">
         <table class="w-full text-sm">
             <thead>
                 <tr class="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-black/50">
-                    <th scope="col" class="text-left px-4 py-3 w-10"><input type="checkbox" class="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500 bulk-select-all" data-bulk-select-all></th>
                     <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">User</th>
                     <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Email</th>
                     <th scope="col" class="text-left px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Event</th>
@@ -50,7 +45,6 @@
             <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
                 @forelse ($audits as $audit)
                     <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                        <td class="px-4 py-3"><input type="checkbox" name="ids[]" value="{{ $audit->id }}" class="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500 bulk-item" form="bulk-form"></td>
                         <td class="px-6 py-3 text-gray-500">{{ $audit->user->name ?? '—' }}</td>
                         <td class="px-6 py-3 font-medium">{{ $audit->email }}</td>
                         <td class="px-6 py-3">

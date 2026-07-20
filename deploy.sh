@@ -1,16 +1,18 @@
 #!/usr/bin/env bash
 # ============================================================
-# deploy.sh — OpsPilot cPanel Production Deployment
+# deploy.sh — Alphaspace cPanel Production Deployment
 # ============================================================
 # Usage:
 #   bash deploy.sh           Normal deployment (main branch)
 #   bash deploy.sh --check   Dry-run status check only
+#   bash deploy.sh --setup   First-time setup (env + queue tables)
+#   bash deploy.sh --cron    Print cron command instructions
 # ============================================================
 set -euo pipefail
 
 PROJECT_PATH="/home/whizzweb/alphaspacepro.online"
 PRODUCTION_BRANCH="main"
-APP_NAME="OpsPilot"
+APP_NAME="Alphaspace"
 
 # ---- Colors ----
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC='\033[0m'
@@ -130,17 +132,72 @@ print_summary() {
     echo "  Commit:    $(git rev-parse --short HEAD 2>/dev/null || echo 'unknown')"
     echo "  Branch:    $(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo 'unknown')"
     echo "  PHP:       $(php_version)"
-    echo "  App Env:   $(php -r 'echo config("app.env");' 2>/dev/null || echo 'unknown')"
+    echo "  App Env:   $(php artisan env 2>/dev/null | head -1 | sed 's/Current application environment: //' || echo 'unknown')"
     echo "  Migrated:  $(php artisan migrate:status 2>/dev/null | tail -1 || echo 'unknown')"
+    echo ""
+    echo -e "  ${YELLOW}Post-deploy:${NC}"
+    echo "  1. bash deploy.sh --cron   — set up cron jobs in cPanel"
+    echo "  2. Verify queue table has jobs: php artisan queue:monitor"
+    echo "  3. Monitor logs at storage/logs/laravel-\$(date +%F).log"
     echo -e "${CYAN}============================================${NC}"
     echo ""
 }
 
 # ============================================================
+# MODE: --cron (print cron instructions)
+# ============================================================
+if [ "${1:-}" = "--cron" ]; then
+    echo -e "${CYAN}Alphaspace — cPanel Cron Setup${NC}"
+    echo ""
+    echo "Add these two cron jobs in cPanel (Cron Jobs → Add New Cron Job):"
+    echo ""
+    echo -e "${YELLOW}1. Laravel Scheduler (every minute):${NC}"
+    echo "   * * * * * /usr/local/bin/php $PROJECT_PATH/artisan schedule:run >> /dev/null 2>&1"
+    echo ""
+    echo -e "${YELLOW}2. Queue Worker (every minute, stops when empty):${NC}"
+    echo "   * * * * * /usr/local/bin/php $PROJECT_PATH/artisan queue:work --stop-when-empty --max-time=240 --sleep=3 >> /dev/null 2>&1"
+    echo ""
+    echo -e "${GREEN}Both commands are idempotent — safe to run every minute.${NC}"
+    echo "The queue worker uses --stop-when-empty so multiple overlapping runs are harmless."
+    echo ""
+    echo "Note: If you use a different PHP path, run: which php"
+    exit 0
+fi
+
+# ============================================================
+# MODE: --setup (first-time setup — run once after deploy)
+# ============================================================
+if [ "${1:-}" = "--setup" ]; then
+    echo -e "${CYAN}Alphaspace — First-Time Setup${NC}"
+    echo ""
+    check_git
+    check_env
+    echo -e "${YELLOW}==>${NC} Generating APP_KEY..."
+    php artisan key:generate --force
+    ok "APP_KEY generated"
+    echo -e "${YELLOW}==>${NC} Running all migrations..."
+    php artisan migrate --force
+    ok "Migrations complete"
+    echo -e "${YELLOW}==>${NC} Caching config..."
+    php artisan config:cache && ok "Config cached"
+    echo -e "${YELLOW}==>${NC} Caching routes..."
+    php artisan route:cache && ok "Routes cached"
+    echo -e "${YELLOW}==>${NC} Caching views..."
+    php artisan view:cache && ok "Views cached"
+    echo -e "${YELLOW}==>${NC} Storage link..."
+    php artisan storage:link --force && ok "Storage linked"
+    check_writable
+    echo ""
+    echo "       Run 'bash deploy.sh --cron' to set up cron jobs."
+    echo "       Run 'bash deploy.sh' for future deployments."
+    exit 0
+fi
+
+# ============================================================
 # MODE: --check (dry-run status)
 # ============================================================
 if [ "${1:-}" = "--check" ]; then
-    echo -e "${CYAN}OpsPilot — Pre-Deployment Check${NC}"
+    echo -e "${CYAN}Alphaspace — Pre-Deployment Check${NC}"
     echo "  Path: $PROJECT_PATH"
     echo ""
     check_git
@@ -166,7 +223,7 @@ fi
 # ============================================================
 # MODE: Production deploy
 # ============================================================
-echo -e "${CYAN}OpsPilot — cPanel Production Deployment${NC}"
+echo -e "${CYAN}Alphaspace — cPanel Production Deployment${NC}"
 echo "  Target: $PROJECT_PATH"
 echo ""
 
