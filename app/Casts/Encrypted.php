@@ -9,11 +9,26 @@ class Encrypted implements CastsAttributes
 {
     public function get($model, string $key, $value, array $attributes): ?string
     {
-        return $value ? Crypt::decryptString($value) : null;
+        if (!$value) {
+            return null;
+        }
+        try {
+            return Crypt::decryptString($value);
+        } catch (\Throwable) {
+            return $value;
+        }
     }
 
     public function set($model, string $key, $value, array $attributes): ?string
     {
-        return $value ? Crypt::encryptString($value) : null;
+        if (!$value) {
+            return null;
+        }
+        try {
+            Crypt::decryptString($value);
+            return $value;
+        } catch (\Throwable) {
+            return Crypt::encryptString($value);
+        }
     }
 }
