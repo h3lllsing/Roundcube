@@ -59,7 +59,7 @@
                         </td>
                         <td class="px-6 py-3 max-w-sm truncate"><a href="{{ route('activity-logs.show', $activity->id) }}" class="hover:text-indigo-600 dark:hover:text-indigo-400">{{ $activity->description }}</a></td>
                         <td class="px-6 py-3 text-gray-500">{{ $activity->subject_type ? class_basename($activity->subject_type) . ' #' . $activity->subject_id : '—' }}</td>
-                        <td class="px-6 py-3 text-gray-500 text-nowrap">{{ $activity->created_at->format('Y-m-d H:i') }}</td>
+                        <td class="px-6 py-3 text-gray-500 whitespace-nowrap">{{ $activity->created_at->format('Y-m-d H:i') }}</td>
                     </tr>
                 @empty
                     <tr><x-empty-state :colspan="5" icon="activity" title="No activity logs found." message="Activity will appear as users interact with the system." /></tr>

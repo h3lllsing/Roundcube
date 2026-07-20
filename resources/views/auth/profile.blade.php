@@ -19,6 +19,8 @@
 
         <p class="text-sm text-gray-500 dark:text-gray-400">Leave blank to keep current password.</p>
 
+        <p class="text-xs text-gray-400">Min 8 characters, mixed case &amp; numbers recommended.</p>
+
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <x-form.input type="password" name="password" label="New Password" autocomplete="new-password" />
             <x-form.input type="password" name="password_confirmation" label="Confirm Password" autocomplete="new-password" />

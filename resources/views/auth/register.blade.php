@@ -50,6 +50,7 @@
                 <x-form.input name="email" label="Email" type="email" icon="email" :value="old('email')" required placeholder="you@example.com" class="bg-white dark:bg-black text-gray-900 dark:text-white" />
 
                 <x-form.input name="password" label="Password" type="password" icon="lock" required placeholder="&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;" class="bg-white dark:bg-black text-gray-900 dark:text-white" />
+                <p class="text-xs text-gray-400 -mt-3">Min 8 characters, mixed case &amp; numbers recommended.</p>
 
                 <x-form.input name="password_confirmation" label="Confirm Password" type="password" icon="lock" required placeholder="&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;" class="bg-white dark:bg-black text-gray-900 dark:text-white" />
 

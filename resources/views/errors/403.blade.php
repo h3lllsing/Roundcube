@@ -12,7 +12,7 @@
         <div class="text-8xl font-bold text-indigo-600 dark:text-indigo-400 mb-4">403</div>
         <h1 class="text-2xl font-semibold text-gray-900 dark:text-gray-100 mb-2">Forbidden</h1>
         <p class="text-gray-600 dark:text-gray-400 mb-8">
-            @if ($exception?->getMessage())
+            @if (app()->hasDebugModeEnabled() && $exception?->getMessage())
                 {{ $exception->getMessage() }}
             @else
                 You don't have permission to access this resource.

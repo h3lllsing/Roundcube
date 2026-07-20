@@ -20,8 +20,7 @@
 
     <form method="GET" class="flex flex-wrap gap-3 mb-4">
         <input type="hidden" name="unread" value="{{ request('unread') }}">
-        <input type="text" name="search" value="{{ request('search') }}" placeholder="Search notifications..."
-            class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm bg-white dark:bg-black text-gray-900 dark:text-white input-focus outline-none">
+        <x-filter-input name="search" placeholder="Search notifications..." />
         <x-button type="submit" variant="primary" size="sm" x-on:click="startLoading($el)">Search</x-button>
         @if(request()->filled('search'))
             <x-button href="{{ route('notifications.index', request()->only('unread')) }}" variant="outline" size="sm">Clear</x-button>

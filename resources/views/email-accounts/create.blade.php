@@ -88,7 +88,7 @@
         Object.values(statusEls).forEach(function(el) { if (el) el.textContent = 'detecting...'; });
         var controller = new AbortController();
         var timeoutId = setTimeout(function() { controller.abort(); }, 15000);
-        fetch('{{ route("email-accounts.auto-discover") }}?email=' + encodeURIComponent(email), { signal: controller.signal })
+        fetch('{{ route("email_accounts.auto-discover") }}?email=' + encodeURIComponent(email), { signal: controller.signal })
             .then(function(r) {
                 if (!r.ok) throw new Error('HTTP ' + r.status);
                 return r.json();

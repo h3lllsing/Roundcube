@@ -66,7 +66,7 @@ Route::middleware(['auth', 'suspended'])->group(function () {
     Route::delete('email-accounts/{id}/force-delete', [EmailAccountController::class, 'forceDelete'])->name('email-accounts.force-delete')->whereNumber('id');
     Route::post('email_accounts/{email_account}/assign', [EmailAssignmentController::class, 'store'])->name('email_accounts.assign');
     Route::delete('email_accounts/{email_account}/assign/{user}', [EmailAssignmentController::class, 'destroy'])->name('email_accounts.assign.revoke');
-    Route::get('email-accounts/auto-discover', [EmailAccountController::class, 'autoDiscover'])->name('email-accounts.auto-discover');
+    Route::get('email-accounts/auto-discover', [EmailAccountController::class, 'autoDiscover'])->name('email_accounts.auto-discover');
 
     Route::get('web-mail', [WebmailController::class, 'index'])->name('webmail.index');
     Route::get('web-mail/open/{email_account}', [WebmailController::class, 'redirect'])->name('webmail.open');
