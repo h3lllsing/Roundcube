@@ -2,17 +2,20 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Support\Facades\Crypt;
 
 class EmailAccount extends Model
 {
     use HasFactory, SoftDeletes;
+
+    protected $hidden = [
+        'password',
+        'smtp_password',
+    ];
 
     protected $fillable = [
         'domain_id',
@@ -36,6 +39,8 @@ class EmailAccount extends Model
     protected function casts(): array
     {
         return [
+            'password' => \App\Casts\Encrypted::class,
+            'smtp_password' => \App\Casts\Encrypted::class,
             'imap_port' => 'integer',
             'smtp_port' => 'integer',
             'sync_enabled' => 'boolean',
@@ -44,22 +49,6 @@ class EmailAccount extends Model
             'updated_at' => 'datetime',
             'deleted_at' => 'datetime',
         ];
-    }
-
-    protected function password(): Attribute
-    {
-        return Attribute::make(
-            set: fn (string $value) => Crypt::encryptString($value),
-            get: fn (string $value) => Crypt::decryptString($value),
-        );
-    }
-
-    protected function smtpPassword(): Attribute
-    {
-        return Attribute::make(
-            set: fn (?string $value) => $value ? Crypt::encryptString($value) : null,
-            get: fn (?string $value) => $value ? Crypt::decryptString($value) : null,
-        );
     }
 
     public function domain(): BelongsTo

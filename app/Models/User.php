@@ -30,6 +30,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'role',
         'password',
         'suspension_reason',
+        'deleted_by',
     ];
 
     protected $hidden = [
@@ -45,6 +46,11 @@ class User extends Authenticatable implements MustVerifyEmail
     public function activities(): \Illuminate\Database\Eloquent\Relations\MorphMany
     {
         return $this->morphMany(\Spatie\Activitylog\Models\Activity::class, 'causer');
+    }
+
+    public function deleter(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(User::class, 'deleted_by');
     }
 
     public function assignedEmailAccounts(): \Illuminate\Database\Eloquent\Relations\BelongsToMany

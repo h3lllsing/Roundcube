@@ -10,6 +10,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\View\View;
 
 class EmailAccountController extends Controller
@@ -98,6 +99,8 @@ class EmailAccountController extends Controller
             ->withProperties(['email' => $account->email])
             ->log('Email account created: '.$account->email);
 
+        Cache::increment('dashboard:version');
+
         return to_route('email_accounts.show', $account)
             ->with('success', 'Email account created successfully.');
     }
@@ -156,6 +159,8 @@ class EmailAccountController extends Controller
             ->withProperties(['email' => $emailAccount->email])
             ->log('Email account updated: '.$emailAccount->email);
 
+        Cache::increment('dashboard:version');
+
         return to_route('email_accounts.show', $emailAccount)
             ->with('success', 'Email account updated successfully.');
     }
@@ -180,6 +185,8 @@ class EmailAccountController extends Controller
                 'from_route' => url()->current(),
             ])
             ->log('soft deleted');
+
+        Cache::increment('dashboard:version');
 
         return to_route('email_accounts.index')
             ->with('success', 'Email account deleted successfully.');
@@ -206,6 +213,8 @@ class EmailAccountController extends Controller
             ])
             ->log('restored');
 
+        Cache::increment('dashboard:version');
+
         return to_route('email_accounts.index')
             ->with('success', 'Email account restored successfully.');
     }
@@ -217,6 +226,8 @@ class EmailAccountController extends Controller
         $account = EmailAccount::withTrashed()->findOrFail($id);
 
         $account->forceDelete();
+
+        Cache::increment('dashboard:version');
 
         activity()
             ->event('force_delete')

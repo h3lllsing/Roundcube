@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\View\View;
@@ -67,7 +68,7 @@ class UserController extends Controller
 
         $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|email|max:255|unique:users,email',
+            'email' => 'required|email|max:255|unique:users,email,NULL,id,deleted_at,NULL',
             'password' => 'required|string|min:8|confirmed',
             'role' => 'nullable|in:user,admin',
             'status' => 'nullable|in:active,suspended',
@@ -94,6 +95,8 @@ class UserController extends Controller
 
             return $user;
         });
+
+        Cache::increment('dashboard:version');
 
         return redirect()->route('users.show', $user->id)->with('success', 'User created successfully.');
     }
@@ -131,7 +134,7 @@ class UserController extends Controller
         $validated = $request->validate([
             'updated_at' => 'required|date',
             'name' => 'required|string|max:255',
-            'email' => 'required|email|max:255|unique:users,email,'.$user->id,
+            'email' => 'required|email|max:255|unique:users,email,'.$user->id.',id,deleted_at,NULL',
             'password' => 'nullable|string|min:8|confirmed',
             'role' => 'nullable|in:user,admin',
             'suspended_at' => 'nullable|date',
@@ -175,6 +178,8 @@ class UserController extends Controller
                 ->log('User updated: '.$user->email);
         });
 
+        Cache::increment('dashboard:version');
+
         return redirect()->route('users.index')->with('success', 'User updated successfully.');
     }
 
@@ -198,6 +203,8 @@ class UserController extends Controller
                 ->log('User suspended: '.$user->email);
         });
 
+        Cache::increment('dashboard:version');
+
         return redirect()->route('users.show', $user->id)->with('success', 'User suspended successfully.');
     }
 
@@ -217,6 +224,8 @@ class UserController extends Controller
                 ->causedBy(Auth::user())
                 ->log('User unsuspended: '.$user->email);
         });
+
+        Cache::increment('dashboard:version');
 
         return redirect()->route('users.show', $user->id)->with('success', 'User unsuspended successfully.');
     }
@@ -238,6 +247,8 @@ class UserController extends Controller
         $userName = $user->name;
 
         DB::transaction(function () use ($user, $userEmail, $userName) {
+            $user->deleted_by = Auth::id();
+            $user->saveQuietly();
             $user->delete();
 
             activity()->event('deleted')
@@ -249,6 +260,8 @@ class UserController extends Controller
                 ])
                 ->log('User deleted: '.$userEmail);
         });
+
+        Cache::increment('dashboard:version');
 
         return redirect()->route('users.index')->with('success', 'User deleted successfully.');
     }
@@ -265,6 +278,8 @@ class UserController extends Controller
             ->causedBy(Auth::user())
             ->withProperties(['email' => $user->email, 'name' => $user->name])
             ->log('User restored: '.$user->email);
+
+        Cache::increment('dashboard:version');
 
         return redirect()->route('users.index')->with('success', 'User restored successfully.');
     }
@@ -283,6 +298,8 @@ class UserController extends Controller
             ->causedBy(Auth::user())
             ->withProperties(['email' => $userEmail, 'name' => $userName])
             ->log('User permanently deleted: '.$userEmail);
+
+        Cache::increment('dashboard:version');
 
         return redirect()->route('users.index')->with('success', 'User permanently deleted.');
     }

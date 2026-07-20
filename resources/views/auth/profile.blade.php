@@ -11,6 +11,7 @@
         @csrf
         @method('PUT')
 
+        <input type="hidden" name="updated_at" value="{{ old('updated_at', $user->updated_at) }}">
         <x-form.input name="name" label="Name" :value="old('name', $user->name)" required />
         <x-form.input name="email" label="Email" type="email" :value="old('email', $user->email)" required />
 

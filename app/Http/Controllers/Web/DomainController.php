@@ -7,6 +7,7 @@ use App\Models\Domain;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\View\View;
 
 class DomainController extends Controller
@@ -44,7 +45,7 @@ class DomainController extends Controller
         abort_unless(Auth::user()->isSuperAdmin(), 403);
 
         $validated = $request->validate([
-            'name' => 'required|string|max:255|unique:domains,name',
+            'name' => 'required|string|max:255|unique:domains,name,NULL,id,deleted_at,NULL',
             'status' => 'required|in:active,suspended,expired',
             'notes' => 'nullable|string',
         ]);
@@ -56,6 +57,8 @@ class DomainController extends Controller
         activity()->event('created')->performedOn($domain)->causedBy(Auth::user())
             ->withProperties(['name' => $domain->name])
             ->log('Domain created: '.$domain->name);
+
+        Cache::increment('dashboard:version');
 
         return to_route('domains.show', $domain)
             ->with('success', 'Domain created successfully.');
@@ -84,7 +87,7 @@ class DomainController extends Controller
         $this->checkOptimisticLock($domain, $request);
 
         $validated = $request->validate([
-            'name' => 'required|string|max:255|unique:domains,name,' . $domain->id,
+            'name' => 'required|string|max:255|unique:domains,name,' . $domain->id . ',id,deleted_at,NULL',
             'status' => 'required|in:active,suspended,expired',
             'notes' => 'nullable|string',
         ]);
@@ -94,6 +97,8 @@ class DomainController extends Controller
         activity()->event('updated')->performedOn($domain)->causedBy(Auth::user())
             ->withProperties(['name' => $domain->name])
             ->log('Domain updated: '.$domain->name);
+
+        Cache::increment('dashboard:version');
 
         return to_route('domains.show', $domain)
             ->with('success', 'Domain updated successfully.');
@@ -120,6 +125,8 @@ class DomainController extends Controller
             ])
             ->log('soft deleted');
 
+        Cache::increment('dashboard:version');
+
         return to_route('domains.index')
             ->with('success', 'Domain deleted successfully.');
     }
@@ -145,6 +152,8 @@ class DomainController extends Controller
             ])
             ->log('restored');
 
+        Cache::increment('dashboard:version');
+
         return to_route('domains.index')
             ->with('success', 'Domain restored successfully.');
     }
@@ -167,6 +176,8 @@ class DomainController extends Controller
                 'resource_id' => $id,
             ])
             ->log('force deleted');
+
+        Cache::increment('dashboard:version');
 
         return to_route('domains.index')
             ->with('success', 'Domain permanently deleted.');

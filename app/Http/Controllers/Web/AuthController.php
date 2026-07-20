@@ -133,7 +133,10 @@ class AuthController extends Controller
     {
         $user = Auth::user();
 
+        $this->checkOptimisticLock($user, $request);
+
         $validated = $request->validate([
+            'updated_at' => 'required|date',
             'name' => 'required|string|max:255',
             'email' => 'required|email|max:255|unique:users,email,'.$user->id,
             'password' => 'nullable|string|min:8|regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/|confirmed',
