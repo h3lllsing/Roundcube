@@ -14,33 +14,18 @@
             </x-slot:actions>
         </x-page-header>
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            <div>
-                <label class="block text-sm font-medium text-gray-500 dark:text-gray-400">ID</label>
-                <p class="mt-1 text-sm text-gray-900 dark:text-gray-100">{{ $user->id }}</p>
-            </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-500 dark:text-gray-400">Email</label>
-                <p class="mt-1 text-sm text-gray-900 dark:text-gray-100">{{ $user->email }}</p>
-            </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-500 dark:text-gray-400">Role</label>
-                <p class="mt-1 text-sm text-gray-900 dark:text-gray-100">{{ ucfirst($user->role) }}</p>
-            </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-500 dark:text-gray-400">Status</label>
-                <p class="mt-1 text-sm">
-                    @if ($user->suspended_at)
-                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">Suspended</span>
-                    @else
-                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">Active</span>
-                    @endif
-                </p>
-            </div>
+            <x-field label="ID" value="{{ $user->id }}" />
+            <x-field label="Email" value="{{ $user->email }}" />
+            <x-field label="Role" value="{{ ucfirst($user->role) }}" />
+            <x-field label="Status">
+                @if ($user->suspended_at)
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">Suspended</span>
+                @else
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">Active</span>
+                @endif
+            </x-field>
             @if ($lastLogin)
-            <div>
-                <label class="block text-sm font-medium text-gray-500 dark:text-gray-400">Last Login</label>
-                <p class="mt-1 text-sm text-gray-900 dark:text-gray-100">{{ $lastLogin->created_at->format('Y-m-d H:i') }}</p>
-            </div>
+            <x-field label="Last Login" value="{{ $lastLogin->created_at->format('Y-m-d H:i') }}" />
             @endif
         </div>
         <div class="flex items-center gap-3 pt-4 mt-4 border-t border-gray-200 dark:border-gray-700">

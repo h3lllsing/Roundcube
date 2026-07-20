@@ -57,20 +57,20 @@
 
 @section('content')
 <div class="webmail-switcher" id="webmailSwitcher">
-    <button class="sidebar-toggle-btn" id="sidebarToggle" title="Toggle sidebar">☰</button>
+    <button class="sidebar-toggle-btn" id="sidebarToggle" title="Toggle sidebar" aria-label="Toggle sidebar">☰</button>
     <span class="text-gray-500 dark:text-gray-400 text-xs font-medium">Switch:</span>
-    <select id="accountSelect" onchange="switchAccount(this.value)">
+    <select id="accountSelect" onchange="switchAccount(this.value)" aria-label="Switch email account">
         @foreach($accounts as $acc)
         <option value="{{ $acc->id }}" {{ $acc->id == $currentAccount->id ? 'selected' : '' }}>
             {{ $acc->email }}
         </option>
         @endforeach
     </select>
-    <button class="close-btn" onclick="closeWebmail()">✕ Close</button>
+    <button class="close-btn" onclick="closeWebmail()" aria-label="Close webmail">✕ Close</button>
 </div>
 
 <div class="webmail-wrapper" id="webmailWrapper">
-    <iframe name="webmailIframe" src="about:blank" allow="fullscreen"></iframe>
+    <iframe name="webmailIframe" src="about:blank" allow="fullscreen" title="Webmail"></iframe>
 </div>
 
 <form id="webmailForm" action="{{ url('/') }}/webmail/plugins/roundcube_portal_auth/receive.php" method="POST" target="webmailIframe">

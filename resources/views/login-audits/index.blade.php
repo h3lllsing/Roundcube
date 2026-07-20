@@ -10,15 +10,12 @@
     </x-page-header>
 
     <form method="GET" class="flex flex-wrap gap-3 mb-6">
-        <input type="text" name="search" value="{{ request('search') }}" placeholder="Search email or IP..."
-            class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl input-focus outline-none">
-        <select name="event"
-            class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm bg-white dark:bg-black text-gray-900 dark:text-white input-focus outline-none">
-            <option value="">All events</option>
-            <option value="login_success" @selected(request('event') === 'login_success')>Success</option>
-            <option value="login_failed" @selected(request('event') === 'login_failed')>Failed</option>
-            <option value="logout" @selected(request('event') === 'logout')>Logout</option>
-        </select>
+        <x-filter-input name="search" placeholder="Search email or IP..." />
+        <x-filter-select name="event" placeholder="All events" :options="[
+            'login_success' => 'Success',
+            'login_failed' => 'Failed',
+            'logout' => 'Logout',
+        ]" />
         <input type="date" name="date_from" value="{{ request('date_from') }}" placeholder="From"
             class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl input-focus outline-none">
         <input type="date" name="date_to" value="{{ request('date_to') }}" placeholder="To"

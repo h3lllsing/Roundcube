@@ -3,27 +3,37 @@
 @section('title', 'Dashboard')
 
 @section('content')
-<div class="w-full fade-in-up">
+<div class="w-full fade-in-up" x-data="{ ready: false }" x-init="setTimeout(() => ready = true, 120)">
     <x-page-header title="Dashboard" subtitle="Overview">
     </x-page-header>
 
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-        <div class="rounded-xl bg-gradient-to-br from-indigo-500/10 to-purple-500/5 dark:from-indigo-500/15 dark:to-purple-500/5 border border-indigo-200/50 dark:border-indigo-800/30 p-4">
+        <div class="rounded-xl bg-gradient-to-br from-indigo-500/10 to-purple-500/5 dark:from-indigo-500/15 dark:to-purple-500/5 border border-indigo-200/50 dark:border-indigo-800/30 p-4" x-show="ready" x-cloak>
             <p class="text-xs font-semibold uppercase tracking-widest text-gray-500 dark:text-gray-400">Users</p>
             <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ $total_users ?? '—' }}</p>
         </div>
-        <div class="rounded-xl bg-gradient-to-br from-amber-500/10 to-orange-500/5 dark:from-amber-500/15 dark:to-orange-500/5 border border-amber-200/50 dark:border-amber-800/30 p-4">
+        <div class="rounded-xl bg-gradient-to-br from-amber-500/10 to-orange-500/5 dark:from-amber-500/15 dark:to-orange-500/5 border border-amber-200/50 dark:border-amber-800/30 p-4" x-show="ready" x-cloak>
             <p class="text-xs font-semibold uppercase tracking-widest text-gray-500 dark:text-gray-400">Notifications</p>
             <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ $total_notifications }}</p>
         </div>
         @if(isset($total_email_accounts))
-        <div class="rounded-xl bg-gradient-to-br from-green-500/10 to-emerald-500/5 dark:from-green-500/15 dark:to-emerald-500/5 border border-green-200/50 dark:border-green-800/30 p-4">
+        <div class="rounded-xl bg-gradient-to-br from-green-500/10 to-emerald-500/5 dark:from-green-500/15 dark:to-emerald-500/5 border border-green-200/50 dark:border-green-800/30 p-4" x-show="ready" x-cloak>
             <p class="text-xs font-semibold uppercase tracking-widest text-gray-500 dark:text-gray-400">Email Accounts</p>
             <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ $total_email_accounts }}</p>
         </div>
         @endif
+        <template x-if="!ready">
+            <div class="col-span-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div class="rounded-xl bg-gray-100 dark:bg-gray-800/50 p-4 animate-pulse"><div class="h-3 w-16 bg-gray-200 dark:bg-gray-700 rounded mb-3"></div><div class="h-7 w-12 bg-gray-200 dark:bg-gray-700 rounded"></div></div>
+                <div class="rounded-xl bg-gray-100 dark:bg-gray-800/50 p-4 animate-pulse"><div class="h-3 w-20 bg-gray-200 dark:bg-gray-700 rounded mb-3"></div><div class="h-7 w-12 bg-gray-200 dark:bg-gray-700 rounded"></div></div>
+                @if(isset($total_email_accounts))
+                <div class="rounded-xl bg-gray-100 dark:bg-gray-800/50 p-4 animate-pulse"><div class="h-3 w-24 bg-gray-200 dark:bg-gray-700 rounded mb-3"></div><div class="h-7 w-12 bg-gray-200 dark:bg-gray-700 rounded"></div></div>
+                @endif
+            </div>
+        </template>
     </div>
 
+    <div x-show="ready" x-cloak>
     @if(isset($audit_actions) && count($audit_actions))
     <div class="bg-white dark:bg-black rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 mb-6">
         <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Audit Actions (Last 7 Days)</h3>
@@ -127,5 +137,15 @@
         </div>
     </div>
     @endif
+    </div>
+
+    <template x-if="!ready">
+        <div class="space-y-4">
+            <div class="bg-gray-100 dark:bg-gray-800/50 rounded-xl p-5 animate-pulse"><div class="h-4 w-36 bg-gray-200 dark:bg-gray-700 rounded mb-4"></div><div class="flex gap-4"><div class="flex-1 text-center"><div class="h-8 w-12 bg-gray-200 dark:bg-gray-700 rounded mx-auto mb-2"></div><div class="h-3 w-16 bg-gray-200 dark:bg-gray-700 rounded mx-auto"></div></div><div class="flex-1 text-center"><div class="h-8 w-12 bg-gray-200 dark:bg-gray-700 rounded mx-auto mb-2"></div><div class="h-3 w-16 bg-gray-200 dark:bg-gray-700 rounded mx-auto"></div></div><div class="flex-1 text-center"><div class="h-8 w-12 bg-gray-200 dark:bg-gray-700 rounded mx-auto mb-2"></div><div class="h-3 w-16 bg-gray-200 dark:bg-gray-700 rounded mx-auto"></div></div></div></div>
+            <div class="bg-gray-100 dark:bg-gray-800/50 rounded-xl p-5 animate-pulse"><div class="h-4 w-28 bg-gray-200 dark:bg-gray-700 rounded mb-4"></div><div class="space-y-3"><div class="h-12 bg-gray-200 dark:bg-gray-700 rounded-lg"></div><div class="h-12 bg-gray-200 dark:bg-gray-700 rounded-lg"></div></div></div>
+            <div class="bg-gray-100 dark:bg-gray-800/50 rounded-xl p-5 animate-pulse"><div class="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded mb-3"></div><div class="flex flex-wrap gap-2"><div class="h-7 w-20 bg-gray-200 dark:bg-gray-700 rounded-lg"></div><div class="h-7 w-28 bg-gray-200 dark:bg-gray-700 rounded-lg"></div><div class="h-7 w-24 bg-gray-200 dark:bg-gray-700 rounded-lg"></div></div></div>
+            <div class="bg-gray-100 dark:bg-gray-800/50 rounded-xl p-5 animate-pulse"><div class="h-4 w-28 bg-gray-200 dark:bg-gray-700 rounded mb-3"></div><div class="space-y-3"><div class="h-5 bg-gray-200 dark:bg-gray-700 rounded"></div><div class="h-5 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div><div class="h-5 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div></div></div>
+        </div>
+    </template>
 </div>
 @endsection

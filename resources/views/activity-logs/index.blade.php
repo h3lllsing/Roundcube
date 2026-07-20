@@ -10,27 +10,18 @@
     </x-page-header>
 
     <form method="GET" class="flex flex-wrap gap-3 mb-6">
-        <input type="text" name="search" value="{{ request('search') }}" placeholder="Search description..."
-            class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl input-focus outline-none">
-            <select name="event"
-                class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm bg-white dark:bg-black text-gray-900 dark:text-white input-focus outline-none">
-                <option value="">All events</option>
-                <option value="created" @selected(request('event') === 'created')>Created</option>
-                <option value="updated" @selected(request('event') === 'updated')>Updated</option>
-                <option value="deleted" @selected(request('event') === 'deleted')>Deleted</option>
-                <option value="revealed" @selected(request('event') === 'revealed')>Revealed</option>
-                <option value="login" @selected(request('event') === 'login')>Login</option>
-                <option value="logout" @selected(request('event') === 'logout')>Logout</option>
-                <option value="imap_dns_fallback" @selected(request('event') === 'imap_dns_fallback')>IMAP DNS Fallback</option>
-                <option value="imap_fetch_failed" @selected(request('event') === 'imap_fetch_failed')>IMAP Fetch Failed</option>
-            </select>
-        <select name="causer_id"
-            class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm bg-white dark:bg-black text-gray-900 dark:text-white input-focus outline-none">
-            <option value="">All users</option>
-            @foreach ($users as $id => $name)
-                <option value="{{ $id }}" @selected(request('causer_id') == $id)>{{ $name }}</option>
-            @endforeach
-        </select>
+        <x-filter-input name="search" placeholder="Search description..." />
+        <x-filter-select name="event" placeholder="All events" :options="[
+            'created' => 'Created',
+            'updated' => 'Updated',
+            'deleted' => 'Deleted',
+            'revealed' => 'Revealed',
+            'login' => 'Login',
+            'logout' => 'Logout',
+            'imap_dns_fallback' => 'IMAP DNS Fallback',
+            'imap_fetch_failed' => 'IMAP Fetch Failed',
+        ]" />
+        <x-filter-select name="causer_id" placeholder="All users" :options="$users->toArray()" />
         <input type="date" name="date_from" value="{{ request('date_from') }}" placeholder="From"
             class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl input-focus outline-none">
         <input type="date" name="date_to" value="{{ request('date_to') }}" placeholder="To"
