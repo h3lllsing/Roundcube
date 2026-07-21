@@ -21,41 +21,40 @@
 
                 <x-form.password name="password" label="New Password" placeholder="Leave blank to keep current" />
 
-                <hr class="border-gray-200 dark:border-gray-700">
+                <x-form.checkbox name="sync_enabled" label="Enable Sync" {{ $emailAccount->sync_enabled ? 'checked' : '' }} />
 
-                <h3 class="text-sm font-semibold text-gray-900 dark:text-white">IMAP Settings</h3>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    <x-form.input name="imap_host" label="IMAP Host" value="{{ $emailAccount->imap_host }}" required />
-                    <x-form.input name="imap_port" label="IMAP Port" type="number" value="{{ $emailAccount->imap_port }}" required />
-                </div>
-
-                <x-form.select name="imap_encryption" label="IMAP Encryption" :options="['ssl' => 'SSL', 'tls' => 'TLS', 'none' => 'None']" value="{{ $emailAccount->imap_encryption }}" required />
-
-                <hr class="border-gray-200 dark:border-gray-700">
-
-                <h3 class="text-sm font-semibold text-gray-900 dark:text-white">SMTP Settings</h3>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    <x-form.input name="smtp_host" label="SMTP Host" value="{{ $emailAccount->smtp_host }}" />
-                    <x-form.input name="smtp_port" label="SMTP Port" type="number" value="{{ $emailAccount->smtp_port }}" />
-                </div>
-
-                <x-form.select name="smtp_encryption" label="SMTP Encryption" :options="['ssl' => 'SSL', 'tls' => 'TLS', 'none' => 'None']" value="{{ $emailAccount->smtp_encryption }}" />
-
-                <div class="grid grid-cols-1 gap-5">
-                    <x-form.input name="smtp_username" label="SMTP Username" value="{{ $emailAccount->smtp_username }}" placeholder="Same as email" />
-                </div>
                 <details class="text-sm text-gray-500 dark:text-gray-400 cursor-pointer">
-                    <summary class="hover:text-indigo-600">Advanced SMTP settings</summary>
-                    <div class="mt-3 grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <summary class="hover:text-indigo-600 font-medium">Advanced mail server settings</summary>
+                    <div class="mt-4 space-y-5 border border-gray-200 dark:border-gray-700 rounded-xl p-4">
+                        <h3 class="text-sm font-semibold text-gray-900 dark:text-white">IMAP Settings</h3>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                            <x-form.input name="imap_host" label="IMAP Host" value="{{ $emailAccount->imap_host }}" />
+                            <x-form.input name="imap_port" label="IMAP Port" type="number" value="{{ $emailAccount->imap_port }}" />
+                        </div>
+
+                        <x-form.select name="imap_encryption" label="IMAP Encryption" :options="['ssl' => 'SSL', 'tls' => 'TLS', 'none' => 'None']" value="{{ $emailAccount->imap_encryption }}" />
+
+                        <hr class="border-gray-200 dark:border-gray-700">
+
+                        <h3 class="text-sm font-semibold text-gray-900 dark:text-white">SMTP Settings</h3>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                            <x-form.input name="smtp_host" label="SMTP Host" value="{{ $emailAccount->smtp_host }}" />
+                            <x-form.input name="smtp_port" label="SMTP Port" type="number" value="{{ $emailAccount->smtp_port }}" />
+                        </div>
+
+                        <x-form.select name="smtp_encryption" label="SMTP Encryption" :options="['ssl' => 'SSL', 'tls' => 'TLS', 'none' => 'None']" value="{{ $emailAccount->smtp_encryption }}" />
+
+                        <div class="grid grid-cols-1 gap-5">
+                            <x-form.input name="smtp_username" label="SMTP Username" value="{{ $emailAccount->smtp_username }}" placeholder="Same as email" />
+                        </div>
+
                         <x-form.password name="smtp_password" label="New SMTP Password (leave empty to keep current or use IMAP password)" />
                     </div>
                 </details>
 
                 <hr class="border-gray-200 dark:border-gray-700">
-
-                <x-form.checkbox name="sync_enabled" label="Enable Sync" {{ $emailAccount->sync_enabled ? 'checked' : '' }} />
 
                 <x-form.select name="status" label="Status" :options="['active' => 'Active', 'suspended' => 'Suspended']" value="{{ $emailAccount->status?->value }}" required />
 

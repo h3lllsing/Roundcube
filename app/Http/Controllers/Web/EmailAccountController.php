@@ -93,6 +93,14 @@ class EmailAccountController extends Controller
             $validated['smtp_password'] = $validated['password'];
         }
 
+        if (empty($validated['imap_host']) && $validated['sync_enabled']) {
+            $discovered = (new SmtpAutoDiscover)->discoverAll($validated['email']);
+            if (isset($discovered['error'])) {
+                return back()->withInput()->withErrors(['imap_host' => 'Could not auto-detect mail server. Please enter IMAP/SMTP settings manually.']);
+            }
+            $validated = array_merge($validated, array_filter($discovered, fn ($v) => $v !== null));
+        }
+
         $account = EmailAccount::create($validated);
 
         event(new EmailAccountCreated($account));
@@ -142,6 +150,10 @@ class EmailAccountController extends Controller
         }
         $validated['smtp_username'] ??= $emailAccount->email;
         $validated['sync_enabled'] = $request->boolean('sync_enabled');
+
+        if (empty($validated['imap_host'])) {
+            unset($validated['imap_host'], $validated['imap_port'], $validated['imap_encryption']);
+        }
 
         $original = $emailAccount->getOriginal();
         $emailAccount->update($validated);

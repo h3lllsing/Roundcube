@@ -3,7 +3,7 @@
 @section('title', 'Create Email Account')
 
 @section('content')
-<x-page-header title="Create Email Account" subtitle="IMAP/SMTP settings auto-detected from email domain." backUrl="{{ route('email_accounts.index') }}" backLabel="Back to Email Accounts" />
+<x-page-header title="Create Email Account" subtitle="Just enter email and password — settings auto-detected when sync is enabled." backUrl="{{ route('email_accounts.index') }}" backLabel="Back to Email Accounts" />
 
 <div class="max-w-3xl">
     <x-card>
@@ -19,41 +19,40 @@
 
                 <x-form.password name="password" label="Password" required />
 
-                <hr class="border-gray-200 dark:border-gray-700">
+                <x-form.checkbox name="sync_enabled" label="Enable Sync" checked />
 
-                <h3 class="text-sm font-semibold text-gray-900 dark:text-white">IMAP Settings <span id="imap-status" class="text-xs font-normal text-green-600 dark:text-green-400"></span> <span id="imap-error" class="text-xs font-normal text-red-600 dark:text-red-400 hidden"></span></h3>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    <x-form.input name="imap_host" id="imap_host" label="IMAP Host" placeholder="Auto-detected" required />
-                    <x-form.input name="imap_port" id="imap_port" label="IMAP Port" type="number" value="993" required />
-                </div>
-
-                <x-form.select name="imap_encryption" id="imap_encryption" label="IMAP Encryption" :options="['ssl' => 'SSL', 'tls' => 'TLS', 'none' => 'None']" value="ssl" required />
-
-                <hr class="border-gray-200 dark:border-gray-700">
-
-                <h3 class="text-sm font-semibold text-gray-900 dark:text-white">SMTP Settings <span id="smtp-status" class="text-xs font-normal text-green-600 dark:text-green-400"></span> <span id="smtp-error" class="text-xs font-normal text-red-600 dark:text-red-400 hidden"></span></h3>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    <x-form.input name="smtp_host" id="smtp_host" label="SMTP Host" placeholder="Auto-detected" />
-                    <x-form.input name="smtp_port" id="smtp_port" label="SMTP Port" type="number" value="587" />
-                </div>
-
-                <x-form.select name="smtp_encryption" id="smtp_encryption" label="SMTP Encryption" :options="['ssl' => 'SSL', 'tls' => 'TLS', 'none' => 'None']" value="tls" />
-
-                <div class="grid grid-cols-1 gap-5">
-                    <x-form.input name="smtp_username" id="smtp_username" label="SMTP Username" placeholder="Auto-detected (same as email)" />
-                </div>
                 <details class="text-sm text-gray-500 dark:text-gray-400 cursor-pointer">
-                    <summary class="hover:text-indigo-600">Advanced SMTP settings</summary>
-                    <div class="mt-3 grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <summary class="hover:text-indigo-600 font-medium">Advanced mail server settings</summary>
+                    <div class="mt-4 space-y-5 border border-gray-200 dark:border-gray-700 rounded-xl p-4">
+                        <h3 class="text-sm font-semibold text-gray-900 dark:text-white">IMAP Settings <span id="imap-status" class="text-xs font-normal text-green-600 dark:text-green-400"></span></h3>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                            <x-form.input name="imap_host" id="imap_host" label="IMAP Host" placeholder="Auto-detected" />
+                            <x-form.input name="imap_port" id="imap_port" label="IMAP Port" type="number" value="993" />
+                        </div>
+
+                        <x-form.select name="imap_encryption" id="imap_encryption" label="IMAP Encryption" :options="['ssl' => 'SSL', 'tls' => 'TLS', 'none' => 'None']" value="ssl" />
+
+                        <hr class="border-gray-200 dark:border-gray-700">
+
+                        <h3 class="text-sm font-semibold text-gray-900 dark:text-white">SMTP Settings <span id="smtp-status" class="text-xs font-normal text-green-600 dark:text-green-400"></span></h3>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                            <x-form.input name="smtp_host" id="smtp_host" label="SMTP Host" placeholder="Auto-detected" />
+                            <x-form.input name="smtp_port" id="smtp_port" label="SMTP Port" type="number" value="587" />
+                        </div>
+
+                        <x-form.select name="smtp_encryption" id="smtp_encryption" label="SMTP Encryption" :options="['ssl' => 'SSL', 'tls' => 'TLS', 'none' => 'None']" value="tls" />
+
+                        <div class="grid grid-cols-1 gap-5">
+                            <x-form.input name="smtp_username" id="smtp_username" label="SMTP Username" placeholder="Same as email" />
+                        </div>
+
                         <x-form.password name="smtp_password" label="SMTP Password (leave empty to use IMAP password)" />
                     </div>
                 </details>
 
                 <hr class="border-gray-200 dark:border-gray-700">
-
-                <x-form.checkbox name="sync_enabled" label="Enable Sync" checked />
 
                 <x-form.select name="status" label="Status" :options="['active' => 'Active', 'suspended' => 'Suspended']" value="active" required />
 
@@ -99,9 +98,7 @@
         if (imapFields.some(function(f) { return !isFieldEmpty(f); })) return;
 
         var statusEls = {imap: document.getElementById('imap-status'), smtp: document.getElementById('smtp-status')};
-        var errorEls = {imap: document.getElementById('imap-error'), smtp: document.getElementById('smtp-error')};
 
-        Object.values(errorEls).forEach(function(el) { if (el) { el.textContent = ''; el.classList.add('hidden'); } });
         Object.values(statusEls).forEach(function(el) { if (el) el.textContent = 'detecting...'; });
 
         var controller = new AbortController();
