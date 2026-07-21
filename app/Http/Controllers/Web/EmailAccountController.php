@@ -88,6 +88,10 @@ class EmailAccountController extends Controller
 
         $validated['created_by'] = Auth::id();
         $validated['sync_enabled'] = $request->boolean('sync_enabled');
+        $validated['smtp_username'] ??= $validated['email'];
+        if (empty($validated['smtp_password'])) {
+            $validated['smtp_password'] = $validated['password'];
+        }
 
         $account = EmailAccount::create($validated);
 
@@ -131,8 +135,12 @@ class EmailAccountController extends Controller
             unset($validated['password']);
         }
         if (empty($validated['smtp_password'])) {
-            $validated['smtp_password'] = null;
+            unset($validated['smtp_password']);
         }
+        if (isset($validated['password']) && !isset($validated['smtp_password'])) {
+            $validated['smtp_password'] = $validated['password'];
+        }
+        $validated['smtp_username'] ??= $emailAccount->email;
         $validated['sync_enabled'] = $request->boolean('sync_enabled');
 
         $original = $emailAccount->getOriginal();
