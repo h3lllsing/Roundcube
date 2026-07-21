@@ -22,7 +22,7 @@
                 <div id="test-result" class="hidden text-sm"></div>
 
                 <div class="flex items-center gap-3">
-                    <x-button type="button" variant="primary" id="test-btn" x-on:click="testConnection()">
+                    <x-button type="button" variant="primary" id="test-btn">
                         <span id="test-btn-text">Test Connection</span>
                         <svg id="test-spinner" class="hidden animate-spin h-4 w-4 ml-2" fill="none" viewBox="0 0 24 24">
                             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
@@ -81,15 +81,15 @@
 @push('scripts')
 <script>
 (function() {
-    var emailInput = document.getElementById('email-input');
-    var passwordInput = document.getElementById('password');
+    var emailInput = document.getElementById('email');
+    var passwordInput = document.querySelector('input[name="password"]');
     var testBtn = document.getElementById('test-btn');
     var testResult = document.getElementById('test-result');
     var saveBtn = document.getElementById('save-btn');
     var testSpinner = document.getElementById('test-spinner');
     var testBtnText = document.getElementById('test-btn-text');
 
-    window.testConnection = function() {
+    function testConnection() {
         var email = emailInput.value.trim();
         var password = passwordInput.value;
 
@@ -149,7 +149,10 @@
             testResult.textContent = '✗ Network error. Try again.';
             testResult.classList.remove('hidden');
         });
-    };
+    }
+
+    window.testConnection = testConnection;
+    testBtn.addEventListener('click', testConnection);
 })();
 </script>
 @endpush
