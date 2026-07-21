@@ -55,9 +55,9 @@ class RoundcubePortalAuthPlugin extends \RainLoop\Plugins\AbstractPlugin
             $settings->port = (int)$data['imap_port'];
             switch ($data['imap_encryption'] ?? 'ssl') {
                 case 'ssl':
-                case 'tls':
                     $settings->type = \MailSo\Net\Enumerations\ConnectionSecurityType::SSL;
                     break;
+                case 'tls':
                 case 'starttls':
                     $settings->type = \MailSo\Net\Enumerations\ConnectionSecurityType::STARTTLS;
                     break;
@@ -76,9 +76,9 @@ class RoundcubePortalAuthPlugin extends \RainLoop\Plugins\AbstractPlugin
             $settings->port = (int)$data['smtp_port'];
             switch ($data['smtp_encryption'] ?? 'tls') {
                 case 'ssl':
-                case 'tls':
                     $settings->type = \MailSo\Net\Enumerations\ConnectionSecurityType::SSL;
                     break;
+                case 'tls':
                 case 'starttls':
                     $settings->type = \MailSo\Net\Enumerations\ConnectionSecurityType::STARTTLS;
                     break;
