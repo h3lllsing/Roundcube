@@ -22,6 +22,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Illuminate\View\View;
 
@@ -78,6 +79,42 @@ class EmailAccountController extends Controller
         }
 
         return response()->json($result);
+    }
+
+    public function testConnection(Request $request): JsonResponse
+    {
+        $this->authorize('create', EmailAccount::class);
+
+        $validated = $request->validate([
+            'email' => 'required|email',
+            'password' => 'required|string',
+        ]);
+
+        $discovered = (new SmtpAutoDiscover)->discoverAll($validated['email']);
+        if (isset($discovered['error'])) {
+            return response()->json(['success' => false, 'message' => 'Could not detect mail server for this domain.'], 422);
+        }
+
+        $host = $discovered['imap_host'];
+        $port = $discovered['imap_port'];
+        $enc = $discovered['imap_encryption'] === 'ssl' ? '/ssl' : '/tls';
+        $mailbox = '{' . $host . ':' . $port . '/imap' . $enc . '}INBOX';
+
+        $conn = @imap_open($mailbox, $validated['email'], $validated['password'], OP_HALFOPEN, 1);
+        if ($conn) {
+            imap_close($conn);
+            return response()->json([
+                'success' => true,
+                'message' => 'Connected successfully',
+                'settings' => $discovered,
+            ]);
+        }
+
+        $error = imap_last_error();
+        return response()->json([
+            'success' => false,
+            'message' => $error ?: 'Connection failed. Check your password.',
+        ], 422);
     }
 
     public function store(StoreEmailAccountRequest $request): RedirectResponse
