@@ -93,6 +93,11 @@ class RoundcubePortalAuthPlugin extends \RainLoop\Plugins\AbstractPlugin
 
     public function PluginImapBeforeLogin($account, $client, $settings): void
     {
+        $email = $account->Email();
+        $data = $this->getImapSettings($email);
+        if ($data && !empty($data['password'])) {
+            $settings->passphrase = new \SnappyMail\SensitiveString($data['password']);
+        }
     }
 
     public function PluginSmtpBeforeLogin($account, $client, $settings): void

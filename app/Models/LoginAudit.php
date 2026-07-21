@@ -38,7 +38,7 @@ class LoginAudit extends Model
             $previous = self::orderByDesc('id')->value('hash_chain');
             $audit->hash_chain = hash(
                 'sha256',
-                ($previous ?? 'genesis') . '|' . $audit->event . '|' . ($audit->created_at ?? now()->toIso8601String()),
+                ($previous ?? 'genesis') . '|' . $audit->event->value . '|' . ($audit->created_at ?? now()->toIso8601String()),
             );
         });
     }
