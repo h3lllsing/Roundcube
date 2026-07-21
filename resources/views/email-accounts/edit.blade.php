@@ -43,10 +43,15 @@
 
                 <x-form.select name="smtp_encryption" label="SMTP Encryption" :options="['ssl' => 'SSL', 'tls' => 'TLS', 'none' => 'None']" value="{{ $emailAccount->smtp_encryption }}" />
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    <x-form.input name="smtp_username" label="SMTP Username" value="{{ $emailAccount->smtp_username }}" />
-                    <x-form.password name="smtp_password" label="New SMTP Password" placeholder="Leave blank to keep current" />
+                <div class="grid grid-cols-1 gap-5">
+                    <x-form.input name="smtp_username" label="SMTP Username" value="{{ $emailAccount->smtp_username }}" placeholder="Same as email" />
                 </div>
+                <details class="text-sm text-gray-500 dark:text-gray-400 cursor-pointer">
+                    <summary class="hover:text-indigo-600">Advanced SMTP settings</summary>
+                    <div class="mt-3 grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <x-form.password name="smtp_password" label="New SMTP Password (leave empty to keep current or use IMAP password)" />
+                    </div>
+                </details>
 
                 <hr class="border-gray-200 dark:border-gray-700">
 
