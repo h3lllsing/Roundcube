@@ -9,7 +9,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->timestamp('password_changed_at')->nullable()->after('suspension_reason');
+            $table->timestamp('password_changed_at')->nullable()->after('remember_token');
         });
     }
 
