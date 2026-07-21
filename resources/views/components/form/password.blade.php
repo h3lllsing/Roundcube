@@ -11,6 +11,7 @@
             id="{{ $name }}"
             value="{{ old($name, $value) }}"
             placeholder="{{ $placeholder }}"
+            autocomplete="new-password"
             {{ $required ? 'required' : '' }}
             {{ $disabled ? 'disabled' : '' }}
             {{ $attributes->merge(['class' => 'w-full rounded-xl border bg-white dark:bg-black text-gray-900 dark:text-gray-100 px-3 py-2.5 text-sm input-focus outline-none disabled:opacity-60 disabled:cursor-not-allowed placeholder:text-gray-400 dark:placeholder:text-gray-500 pr-10 ' . ($hasError ? 'border-red-400 dark:border-red-500' : 'border-gray-300 dark:border-gray-600')]) }}
