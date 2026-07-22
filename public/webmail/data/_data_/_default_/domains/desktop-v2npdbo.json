@@ -58,7 +58,7 @@
             "disable_compression": true,
             "security_level": 1
         },
-        "useAuth": false,
+        "useAuth": true,
         "setSender": false,
         "usePhpMail": false
     },

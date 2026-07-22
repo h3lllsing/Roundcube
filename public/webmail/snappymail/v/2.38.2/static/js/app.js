@@ -4478,7 +4478,7 @@
 
 			fetchJSON(sAction, getURL(sGetAdd),
 				sGetAdd ? null : (params || {}),
-				pInt(iTimeout ?? 30000),
+				pInt(iTimeout ?? 180000),
 				async data => {
 					let iError = 0;
 					if (data) {
@@ -4535,7 +4535,7 @@
 
 		post(action, fTrigger, params, timeOut) {
 			this.setTrigger(fTrigger, true);
-			return fetchJSON(action, getURL(), params || {}, pInt(timeOut, 30000),
+			return fetchJSON(action, getURL(), params || {}, pInt(timeOut, 180000),
 				async data => {
 					abort(action, 0, 1);
 
@@ -11958,7 +11958,7 @@ body > * {
 									reloadDraftFolder();
 								},
 								params,
-								30000
+								180000
 							);
 						};
 
@@ -16481,6 +16481,14 @@ body > * {
 							]);
 
 							setRefreshFoldersInterval(SettingsGet('CheckMailInterval'));
+
+							setInterval(() => {
+								fetch('imap-idle-status.php?_=' + Date.now()).then(r => {
+									r.ok && r.json().then(d => {
+										d && d.has_new && folderInformation(getFolderInboxName());
+									});
+								}).catch(() => {});
+							}, 15000);
 
 							loadAccountsAndIdentities();
 

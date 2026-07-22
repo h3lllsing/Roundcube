@@ -69,6 +69,9 @@ class RoundcubePortalAuthPlugin extends \RainLoop\Plugins\AbstractPlugin
 
     public function PluginSmtpBeforeConnect($account, $smtpClient, $settings): void
     {
+        \set_time_limit(0);
+        $settings->useAuth = true;
+        $settings->timeout = 120;
         $email = $account->Email();
         $data = $this->getImapSettings($email);
         if ($data && !empty($data['smtp_host'])) {
