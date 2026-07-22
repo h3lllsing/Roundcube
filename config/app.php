@@ -161,4 +161,6 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
+    'notification_api_token' => env('NOTIFICATION_API_TOKEN'),
+
 ];

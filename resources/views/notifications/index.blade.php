@@ -52,17 +52,28 @@
                         <span class="w-2 h-2 rounded-full {{ $notification->read_at ? 'bg-gray-300 dark:bg-black' : 'bg-indigo-500' }} inline-block"></span>
                     </div>
                     <div class="flex-1 min-w-0">
-                        @if ($type === 'email_sync_failed')
+                        @if ($type === 'new_email')
+                            <a href="{{ route('webmail.open_as', $data['account_id'] ?? 0) }}" class="block hover:bg-indigo-100/50 dark:hover:bg-indigo-800/20 -mx-6 -my-4 px-6 py-4 rounded-lg transition-colors">
+                                <p class="text-sm text-gray-900 dark:text-gray-100">
+                                    <span class="font-medium">{{ $data['from'] ?? 'Unknown' }}</span>
+                                    <span class="text-gray-500 dark:text-gray-400 mx-1">&rarr;</span>
+                                    {{ $data['email'] ?? 'N/A' }}
+                                </p>
+                                <p class="text-sm text-gray-600 dark:text-gray-300 mt-0.5 truncate">{{ $data['subject'] ?? '(no subject)' }}</p>
+                                <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">{{ $notification->created_at->diffForHumans() }}</p>
+                            </a>
+                        @elseif ($type === 'email_sync_failed')
                             <p class="text-sm text-gray-900 dark:text-gray-100">
                                 Email sync failed for <span class="font-medium">{{ $data['email'] ?? 'N/A' }}</span>
                             </p>
                             @if (!empty($data['error']))
                                 <p class="text-xs text-red-600 dark:text-red-400 mt-1">{{ $data['error'] }}</p>
                             @endif
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ $notification->created_at->diffForHumans() }}</p>
                         @else
                             <p class="text-sm text-gray-900 dark:text-gray-100">{{ $data['message'] ?? $type }}</p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ $notification->created_at->diffForHumans() }}</p>
                         @endif
-                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ $notification->created_at->diffForHumans() }}</p>
                     </div>
                     <div class="flex items-center gap-2 shrink-0">
                         @if (! $notification->read_at)

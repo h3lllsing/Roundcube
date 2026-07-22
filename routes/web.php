@@ -87,6 +87,7 @@ Route::middleware(['auth', 'suspended'])->group(function () {
 // Public route - no auth required, validated by token
 Route::middleware('web')->group(function () {
     Route::get('webmail-auth/resolve', [WebmailController::class, 'resolve'])->name('webmail.resolve');
+    Route::post('new-mail-notification', [\App\Http\Controllers\Web\NewMailNotificationController::class, 'store'])->name('new-mail.notification');
 });
 
 Route::middleware(['auth', 'suspended'])->group(function () {
