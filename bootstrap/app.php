@@ -36,6 +36,9 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->appendToGroup('web', \App\Http\Middleware\ConcurrentSession::class);
         $middleware->appendToGroup('web', \App\Http\Middleware\CheckPasswordExpiry::class);
 
+        $middleware->validateCsrfTokens(except: [
+            'new-mail-notification',
+        ]);
 
     })
     ->withExceptions(function (Exceptions $exceptions): void {

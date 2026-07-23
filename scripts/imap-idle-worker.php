@@ -6,6 +6,26 @@
  */
 
 $projectRoot = dirname(__DIR__);
+
+// Load .env for CLI context (standalone script, not Laravel)
+$envFile = $projectRoot . '/.env';
+if (is_file($envFile)) {
+    foreach (file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {
+        if (str_starts_with(trim($line), '#')) continue;
+        if (str_contains($line, '=')) {
+            [$key, $val] = explode('=', $line, 2);
+            $key = trim($key);
+            $val = trim($val);
+            // Strip optional quotes
+            if ((str_starts_with($val, '"') && str_ends_with($val, '"')) || (str_starts_with($val, "'") && str_ends_with($val, "'"))) {
+                $val = substr($val, 1, -1);
+            }
+            $_ENV[$key] = $val;
+            putenv("$key=$val");
+        }
+    }
+}
+
 $settingsDir = $projectRoot . '/storage/app/webmail';
 $statusFile = $projectRoot . '/public/webmail/data/_data_/_default_/cache/imap-idle-status.json';
 $logFile = $projectRoot . '/public/webmail/data/_data_/_default_/logs/imap-idle-worker.log';

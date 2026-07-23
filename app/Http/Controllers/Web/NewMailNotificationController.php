@@ -46,7 +46,7 @@ class NewMailNotificationController extends Controller
             accountId: $account->id,
         );
 
-        $users = User::whereIn('id', $account->users()->pluck('users.id'))->get();
+        $users = $account->assignedUsers;
 
         foreach ($users as $user) {
             $user->notify($notification);
