@@ -28,14 +28,16 @@ if (is_file($envFile)) {
 }
 
 $settingsDir  = $projectRoot . '/storage/app/webmail';
-$statusDir    = $projectRoot . '/public/webmail/data/_data_/_default_/cache';
-$logDir       = $projectRoot . '/public/webmail/data/_data_/_default_/logs';
+$legacyStatusFile = $projectRoot . '/storage/app/webmail/cache/imap-idle-status.json'; // for JS polling
+$perAccountDir = $projectRoot . '/storage/app/webmail/cache';                          // per-account status
+$logDir       = $projectRoot . '/storage/app/webmail/logs';
 $logFile      = $logDir . '/imap-idle-worker.log';
 $apiToken     = getenv('NOTIFICATION_API_TOKEN') ?: 'dev-secret-token-change-in-production';
 $appUrl       = getenv('APP_URL') ?: 'http://localhost';
 
-if (!is_dir($logDir)) mkdir($logDir, 0777, true);
-if (!is_dir($statusDir)) mkdir($statusDir, 0777, true);
+foreach ([$logDir, $perAccountDir] as $d) {
+    if (!is_dir($d)) mkdir($d, 0777, true);
+}
 
 set_time_limit(0);
 
@@ -108,7 +110,9 @@ function imap_connect(array $acct): ?array {
         return null;
     }
 
-    stream_set_timeout($sock, 5);
+    // Blocking mode during initial handshake
+    stream_set_blocking($sock, true);
+    stream_set_timeout($sock, 10);
     $line = imap_read_line($sock);
     if ($line === false || $line === '') {
         log_msg("no greeting {$acct['email']}");
@@ -143,6 +147,9 @@ function imap_connect(array $acct): ?array {
         @fclose($sock);
         return null;
     }
+
+    // Switch to non-blocking mode for polling loop
+    stream_set_blocking($sock, false);
 
     log_msg("IDLE started {$acct['email']}");
 
@@ -197,19 +204,31 @@ function imap_idle_enter($sock, string $tag): bool {
     return ($cont !== false && str_starts_with($cont, '+'));
 }
 
+// ─── Non-blocking line reader for Windows reliability ──────────
+
+function imap_try_read_line($sock): string|false|null {
+    $line = '';
+    while (true) {
+        $char = @fgetc($sock);
+        if ($char === false) return false;       // error / closed
+        if ($char === '') return null;            // no data (non-blocking)
+        if ($char === "\n") return rtrim($line, "\r");
+        $line .= $char;
+    }
+}
+
 // ─── Main Event Loop ───────────────────────────────────────────
 
-$connections  = [];   // email => connection array
+$connections  = [];
 $lastScan     = 0;
 $healthTick   = 0;
-$scanInterval = 15;   // seconds between account re-scans
-$idleTimeout  = 1740; // 29 min, renew IDLE before server timeout
-$maxReconnects = 5;    // max consecutive reconnect attempts before backoff
+$scanInterval = 15;
+$idleTimeout  = 1740;
+$tagCounter   = 0;
 
 log_msg("=== WORKER STARTED ===");
 
-// Ctrl+C / shutdown handler
-function shutdown(array &$connections): void {
+function shutdown_cleanup(array &$connections): void {
     log_msg("Shutting down, closing " . count($connections) . " connection(s)...");
     foreach ($connections as $c) {
         @fwrite($c['sock'], "DONE\r\n");
@@ -219,30 +238,16 @@ function shutdown(array &$connections): void {
     exit(0);
 }
 
-if (function_exists('pcntl_signal')) {
-    pcntl_signal(SIGTERM, function () use (&$connections) { shutdown($connections); });
-    pcntl_signal(SIGINT, function () use (&$connections) { shutdown($connections); });
-}
+// Windows: Ctrl+C via SetConsoleCtrlHandler workaround
+// PHP doesn't natively catch Ctrl+C on Windows, but process kill will close sockets anyway
 
 while (true) {
-    if (function_exists('pcntl_signal_dispatch')) pcntl_signal_dispatch();
-
     $now = time();
 
     // ── Account re-scan ─────────────────────────────────────
     if ($now - $lastScan >= $scanInterval) {
         $lastScan = $now;
         $desired = scan_accounts($settingsDir);
-
-        // Add new accounts
-        foreach ($desired as $email => $acct) {
-            if (isset($connections[$email])) continue;
-            $conn = imap_connect($acct);
-            if ($conn) {
-                $connections[$email] = $conn;
-                log_msg("+ connected {$email}");
-            }
-        }
 
         // Remove accounts that no longer exist
         foreach (array_keys($connections) as $email) {
@@ -254,14 +259,14 @@ while (true) {
             }
         }
 
-        // Reconnect failed accounts
+        // Add / reconnect accounts
         foreach ($desired as $email => $acct) {
-            if (isset($connections[$email])) continue;
-            if ($acct['password'] === '') continue; // no password, skip
+            if (isset($connections[$email]) && $connections[$email]['sock'] !== null) continue;
+            if ($acct['password'] === '') continue;
             $conn = imap_connect($acct);
             if ($conn) {
                 $connections[$email] = $conn;
-                log_msg("reconnected {$email}");
+                log_msg("+ connected {$email}");
             }
         }
 
@@ -279,44 +284,23 @@ while (true) {
         log_msg("STATUS: " . count($emails) . " accounts — " . implode(', ', $emails));
     }
 
-    // ── Build select array ─────────────────────────────────
-    $read = [];
-    foreach ($connections as $c) $read[] = $c['sock'];
-    $write  = null;
-    $except = null;
+    // ── Poll all connections (non-blocking, works on Windows) ──
+    $reconnect_emails = [];
 
-    if (empty($read)) {
-        usleep(500000);
-        continue;
-    }
-
-    $result = @stream_select($read, $write, $except, 1);
-
-    if ($result === false) {
-        usleep(500000);
-        continue;
-    }
-
-    // ── Process readable sockets ───────────────────────────
-    $readable_keys = [];
-    foreach ($read as $sock) {
-        foreach ($connections as $email => $c) {
-            if ($c['sock'] === $sock) {
-                $readable_keys[] = $email;
-                break;
-            }
-        }
-    }
-
-    foreach ($readable_keys as $email) {
-        $c = &$connections[$email];
-
-        while (true) {
-            $line = imap_read_line($c['sock']);
-            if ($line === false || $line === '') {
+    foreach ($connections as $email => &$c) {
+        $maxReads = 50; // prevent infinite loop if server floods
+        while ($maxReads-- > 0) {
+            $line = imap_try_read_line($c['sock']);
+            if ($line === false) {
+                // Connection closed/error
                 log_msg("disconnected {$email}, will reconnect");
                 @fclose($c['sock']);
-                unset($connections[$email]);
+                $c['sock'] = null;
+                $reconnect_emails[] = $email;
+                break;
+            }
+            if ($line === null) {
+                // No data available, move to next connection
                 break;
             }
 
@@ -327,7 +311,11 @@ while (true) {
                     $c['lastExists'] = $exists;
                     log_msg("NEW MAIL {$email}: EXISTS=$exists");
 
-                    // Exit IDLE to fetch details
+                    // Switch to blocking mode for DONE + FETCH
+                    stream_set_blocking($c['sock'], true);
+                    stream_set_timeout($c['sock'], 15);
+
+                    // Exit IDLE
                     fwrite($c['sock'], "DONE\r\n");
                     $done = false;
                     while (true) {
@@ -338,15 +326,17 @@ while (true) {
                     }
 
                     if ($done) {
-                        // FETCH headers
-                        $fetchTag = 'A004';
+                        $tagCounter++;
+                        $fetchTag = 'F' . $tagCounter;
                         fwrite($c['sock'], "$fetchTag FETCH $exists (UID FLAGS BODY.PEEK[HEADER.FIELDS (FROM SUBJECT DATE)])\r\n");
                         $fetchResp = '';
+                        $timeout = 50;
                         while (true) {
                             $l = imap_read_line($c['sock']);
                             if ($l === false) break;
                             $fetchResp .= $l . "\n";
                             if (str_starts_with($l, "$fetchTag OK") || str_starts_with($l, "$fetchTag NO") || str_starts_with($l, "$fetchTag BAD")) break;
+                            if (--$timeout <= 0) break;
                         }
 
                         $subject = '';
@@ -356,9 +346,8 @@ while (true) {
                         if (preg_match('/^Subject:\s*(.+)$/im', $fetchResp, $m)) $subject = trim($m[1]);
                         if (preg_match('/^From:\s*(.+)$/im', $fetchResp, $m)) $from = trim($m[1]);
 
-                        // Per-account status file
-                        $safeFile = preg_replace('/[^a-z0-9]/i', '_', $email);
-                        $status = [
+                        // Legacy status file (for JS polling via imap-idle-status.php)
+                        $legacyStatus = [
                             'has_new'   => true,
                             'timestamp' => time(),
                             'uid'       => $msgUid,
@@ -367,66 +356,92 @@ while (true) {
                             'exists'    => $exists,
                             'email'     => $email,
                         ];
-                        file_put_contents("$statusDir/imap-new-$safeFile.json", json_encode($status));
-                        log_msg("status saved for {$email}: {$from} — {$subject}");
+                        file_put_contents($legacyStatusFile, json_encode($legacyStatus));
+
+                        // Per-account status file
+                        $safeFile = preg_replace('/[^a-z0-9]/i', '_', $email);
+                        file_put_contents("$perAccountDir/imap-new-$safeFile.json", json_encode($legacyStatus));
+                        log_msg("NEW {$email}: {$from} — {$subject}");
 
                         send_notification($email, $subject, $from);
                     }
 
-                    // Re-enter IDLE
-                    $c['idleTag'] = 'A005';
+                    // Re-enter IDLE (blocking mode needed for read)
+                    $tagCounter++;
+                    $c['idleTag'] = 'I' . $tagCounter;
                     $c['idleStart'] = time();
+                    stream_set_timeout($c['sock'], 10);
                     if (!imap_idle_enter($c['sock'], $c['idleTag'])) {
                         log_msg("IDLE re-enter FAIL {$email}");
                         @fclose($c['sock']);
-                        unset($connections[$email]);
+                        $c['sock'] = null;
+                        $reconnect_emails[] = $email;
                         break;
                     }
+                    // Back to non-blocking
+                    stream_set_blocking($c['sock'], false);
                     log_msg("IDLE restarted {$email}");
                 }
             }
 
-            // RECENT notification (informational)
+            // RECENT
             if (preg_match('/^\*\s+(\d+)\s+RECENT/i', $line, $m)) {
                 log_msg("RECENT {$email}: {$m[1]} new");
             }
-
-            // IDLE renewal complete
-            if (str_starts_with($line, $c['idleTag'] . ' OK')) {
-                // IDLE was ended by DONE, already handled above
-            }
         }
-        unset($c);
+    }
+    unset($c);
+
+    // ── Reconnect dropped connections ──────────────────────
+    foreach ($reconnect_emails as $email) {
+        if (isset($desired[$email])) {
+            $conn = imap_connect($desired[$email]);
+            if ($conn) $connections[$email] = $conn;
+            else unset($connections[$email]);
+        } else {
+            unset($connections[$email]);
+        }
     }
 
     // ── IDLE renew (every 28 min) ──────────────────────────
     foreach ($connections as $email => &$c) {
+        if ($c['sock'] === null) continue;
         if ($now - $c['idleStart'] >= $idleTimeout) {
             log_msg("Renewing IDLE {$email}");
+            stream_set_blocking($c['sock'], true);
+            stream_set_timeout($c['sock'], 15);
             fwrite($c['sock'], "DONE\r\n");
             $done = false;
+            $r_timeout = 30;
             while (true) {
                 $l = imap_read_line($c['sock']);
-                if ($l === false) { $done = false; break; }
+                if ($l === false) break;
                 if (str_starts_with($l, $c['idleTag'] . ' OK')) { $done = true; break; }
-                if (str_starts_with($l, $c['idleTag'] . ' NO') || str_starts_with($l, $c['idleTag'] . ' BAD')) { $done = false; break; }
+                if (str_starts_with($l, $c['idleTag'] . ' NO') || str_starts_with($l, $c['idleTag'] . ' BAD')) break;
+                if (--$r_timeout <= 0) break;
             }
             if (!$done) {
                 log_msg("IDLE renew FAIL {$email}, reconnecting");
                 @fclose($c['sock']);
-                unset($connections[$email]);
+                $c['sock'] = null;
                 continue;
             }
-            $c['idleTag'] = 'A006';
+            $tagCounter++;
+            $c['idleTag'] = 'I' . $tagCounter;
             $c['idleStart'] = time();
+            stream_set_timeout($c['sock'], 10);
             if (!imap_idle_enter($c['sock'], $c['idleTag'])) {
                 log_msg("IDLE re-enter FAIL after renew {$email}");
                 @fclose($c['sock']);
-                unset($connections[$email]);
+                $c['sock'] = null;
                 continue;
             }
+            stream_set_blocking($c['sock'], false);
             log_msg("IDLE renewed {$email}");
         }
     }
     unset($c);
+
+    // ── Small sleep to prevent busy-wait ───────────────────
+    usleep(200000); // 200ms
 }
