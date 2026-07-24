@@ -150,8 +150,9 @@ function imap_connect(array $acct): ?array {
         return null;
     }
 
-    // Switch to non-blocking mode for polling loop
-    stream_set_blocking($sock, false);
+    // Stay in blocking mode with short timeout for polling loop
+    stream_set_blocking($sock, true);
+    stream_set_timeout($sock, 1); // 1s per read attempt
 
     log_msg("IDLE started {$acct['email']}");
 
@@ -209,14 +210,16 @@ function imap_idle_enter($sock, string $tag): bool {
 // ─── Non-blocking line reader for Windows reliability ──────────
 
 function imap_try_read_line($sock): string|false|null {
-    $line = '';
-    while (true) {
-        $char = @fgetc($sock);
-        if ($char === false) return false;       // error / closed
-        if ($char === '') return null;            // no data (non-blocking)
-        if ($char === "\n") return rtrim($line, "\r");
-        $line .= $char;
+    // Blocking mode with 800ms timeout — reliable on Windows SSL
+    $line = @fgets($sock);
+    if ($line === false) {
+        $meta = stream_get_meta_data($sock);
+        if (!empty($meta['timed_out'])) {
+            return null; // no data, expected
+        }
+        return false; // real error / closed
     }
+    return rtrim($line, "\r\n");
 }
 
 // ─── Main Event Loop ───────────────────────────────────────────
@@ -391,8 +394,7 @@ while (true) {
                         $reconnect_emails[] = $email;
                         break;
                     }
-                    // Back to non-blocking
-                    stream_set_blocking($c['sock'], false);
+                    stream_set_timeout($c['sock'], 1);
                     log_msg("IDLE restarted {$email}");
                 }
             }
@@ -449,7 +451,7 @@ while (true) {
                 $c['sock'] = null;
                 continue;
             }
-            stream_set_blocking($c['sock'], false);
+            stream_set_timeout($c['sock'], 1);
             log_msg("IDLE renewed {$email}");
         }
     }
