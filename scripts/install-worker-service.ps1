@@ -47,9 +47,4 @@ Start-Sleep -Seconds 2
 # Start service
 & $nssm start $serviceName
 
-Write-Host "=== Service '$serviceName' installed and started ==="
-Write-Host "Manual commands:"
-Write-Host "  Stop:    & `"$nssm`" stop $serviceName"
-Write-Host "  Start:   & `"$nssm`" start $serviceName"
-Write-Host "  Restart: & `"$nssm`" restart $serviceName"
-Write-Host "  Remove:  & `"$nssm`" remove $serviceName confirm"
+Write-Host "=== Service $serviceName installed and started ==="
