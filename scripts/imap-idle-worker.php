@@ -1,7 +1,8 @@
 <?php
 /**
- * Parallel IMAP IDLE Worker — monitors all accounts simultaneously via stream_select
- * Run: php C:\roundcube\scripts\imap-idle-worker.php
+ * Parallel IMAP IDLE Worker — monitors all accounts simultaneously
+ * Install as NSSM service: scripts\install-worker-service.ps1
+ * Manual: php C:\roundcube\scripts\imap-idle-worker.php
  * Single process, non-blocking, handles unlimited accounts with low memory (~15MB)
  */
 
@@ -28,8 +29,9 @@ if (is_file($envFile)) {
 }
 
 $settingsDir  = $projectRoot . '/storage/app/webmail';
-$legacyStatusFile = $projectRoot . '/storage/app/webmail/cache/imap-idle-status.json'; // for JS polling
-$perAccountDir = $projectRoot . '/storage/app/webmail/cache';                          // per-account status
+$legacyStatusFile = $projectRoot . '/storage/app/webmail/cache/imap-idle-status.json';  // for JS polling
+$perAccountDir = $projectRoot . '/storage/app/webmail/cache';                           // per-account status
+$heartbeatFile = $projectRoot . '/storage/app/webmail/cache/imap-worker-heartbeat.json'; // worker alive signal
 $logDir       = $projectRoot . '/storage/app/webmail/logs';
 $logFile      = $logDir . '/imap-idle-worker.log';
 $apiToken     = getenv('NOTIFICATION_API_TOKEN') ?: 'dev-secret-token-change-in-production';
@@ -219,12 +221,13 @@ function imap_try_read_line($sock): string|false|null {
 
 // ─── Main Event Loop ───────────────────────────────────────────
 
-$connections  = [];
-$lastScan     = 0;
-$healthTick   = 0;
-$scanInterval = 15;
-$idleTimeout  = 1740;
-$tagCounter   = 0;
+$connections   = [];
+$lastScan      = 0;
+$healthTick    = 0;
+$lastHeartbeat = 0;
+$scanInterval  = 15;
+$idleTimeout   = 1740;
+$tagCounter    = 0;
 
 log_msg("=== WORKER STARTED ===");
 
@@ -282,6 +285,16 @@ while (true) {
         $healthTick = $now;
         $emails = array_keys($connections);
         log_msg("STATUS: " . count($emails) . " accounts — " . implode(', ', $emails));
+    }
+
+    // ── Heartbeat (every 30s) — proves worker is alive to imap-idle-status.php ──
+    if ($now - $lastHeartbeat >= 30) {
+        $lastHeartbeat = $now;
+        file_put_contents($heartbeatFile, json_encode([
+            'alive'     => true,
+            'timestamp' => $now,
+            'accounts'  => count($connections),
+        ]), LOCK_EX);
     }
 
     // ── Poll all connections (non-blocking, works on Windows) ──

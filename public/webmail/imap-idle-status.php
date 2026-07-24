@@ -1,8 +1,9 @@
 <?php
 /**
- * Dual-mode new mail monitor
- * Mode 1: IMAP IDLE Worker (VPS/Windows) — reads worker's status file
- * Mode 2: Direct IMAP STATUS (cPanel) — no worker needed
+ * 3-Layer New Mail Monitor
+ * Layer 1: IMAP IDLE Worker (real-time, persistent)
+ * Layer 2: Direct IMAP STATUS (fallback if worker dead)
+ * Layer 3: JS polling trigger (15s interval in app.js)
  */
 header('Content-Type: application/json');
 header('Cache-Control: no-cache, no-store, must-revalidate');
@@ -16,9 +17,21 @@ if ($origin && !str_contains($origin, $_SERVER['HTTP_HOST'] ?? '')) {
     exit;
 }
 
-// === Mode 1: IDLE Worker Status File ===
-$statusFile = dirname(__DIR__, 2) . '/storage/app/webmail/cache/imap-idle-status.json';
-if (is_file($statusFile) && time() - filemtime($statusFile) < 180) {
+$cacheDir = dirname(__DIR__, 2) . '/storage/app/webmail/cache';
+$heartbeatFile = $cacheDir . '/imap-worker-heartbeat.json';
+$statusFile = $cacheDir . '/imap-idle-status.json';
+
+// ── Heartbeat check: is worker alive? ─────────────────────────
+$workerAlive = false;
+if (is_file($heartbeatFile)) {
+    $hb = json_decode(file_get_contents($heartbeatFile), true);
+    if ($hb && !empty($hb['alive']) && time() - $hb['timestamp'] < 60) {
+        $workerAlive = true;
+    }
+}
+
+// ── Layer 1: Worker is alive, read its status file ────────────
+if ($workerAlive && is_file($statusFile) && time() - filemtime($statusFile) < 180) {
     $content = file_get_contents($statusFile);
     $data = json_decode($content, true);
     if ($data && !empty($data['has_new'])) {
@@ -29,7 +42,7 @@ if (is_file($statusFile) && time() - filemtime($statusFile) < 180) {
             'uid' => $data['uid'] ?? 0,
         ];
         $data['has_new'] = false;
-        file_put_contents($statusFile, json_encode($data));
+        file_put_contents($statusFile, json_encode($data), LOCK_EX);
         echo json_encode($response);
         exit;
     }
@@ -37,13 +50,13 @@ if (is_file($statusFile) && time() - filemtime($statusFile) < 180) {
     exit;
 }
 
-// === Mode 2: Direct IMAP STATUS (cPanel, no worker) ===
+// ── Layer 2: Direct IMAP STATUS (worker dead or no new mail flag) ──
 $settingsDir = dirname(__DIR__, 2) . '/storage/app/webmail';
 $anyNew = false;
 $totalUnseen = 0;
-$cachePrefix = __DIR__ . '/data/_data_/_default_/cache/imap-last-uidnext-';
+$cachePrefix = $cacheDir . '/imap-last-uidnext-';
 
-foreach (glob($settingsDir . '/sm_imap_*.json') as $settingsFile) {
+foreach (glob($settingsDir . '/sm_imap_*.json') ?: [] as $settingsFile) {
     $settings = json_decode(file_get_contents($settingsFile), true);
     if (!$settings || empty($settings['imap_host'])) continue;
 
@@ -65,12 +78,12 @@ foreach (glob($settingsDir . '/sm_imap_*.json') as $settingsFile) {
     $pass_quoted = str_replace(['\\', '"'], ['\\\\', '\\"'], $password);
     fwrite($sock, "a001 LOGIN \"$email\" \"$pass_quoted\"\r\n");
     $resp = '';
-    while ($l = fgets($sock)) { $resp .= $l; if (strpos($l, 'a001 OK') !== false) break; }
+    while ($l = fgets($sock)) { $resp .= $l; if (str_contains($l, 'a001 OK')) break; }
 
-    if (strpos($resp, 'a001 OK') !== false) {
+    if (str_contains($resp, 'a001 OK')) {
         fwrite($sock, "a002 STATUS INBOX (UIDNEXT UNSEEN MESSAGES)\r\n");
         $resp = '';
-        while ($l = fgets($sock)) { $resp .= $l; if (strpos($l, 'a002 OK') !== false) break; }
+        while ($l = fgets($sock)) { $resp .= $l; if (str_contains($l, 'a002 OK')) break; }
         fwrite($sock, "a003 LOGOUT\r\n");
 
         preg_match('/UIDNEXT\s+(\d+)/i', $resp, $m);
@@ -84,7 +97,7 @@ foreach (glob($settingsDir . '/sm_imap_*.json') as $settingsFile) {
         $totalUnseen += $unseen;
 
         if ($currentUidNext > 0 && $currentUidNext !== $prevUidNext) {
-            file_put_contents($cacheFile, (string)$currentUidNext);
+            file_put_contents($cacheFile, (string)$currentUidNext, LOCK_EX);
         }
     }
     fclose($sock);
