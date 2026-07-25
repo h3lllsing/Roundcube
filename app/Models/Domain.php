@@ -36,12 +36,21 @@ class Domain extends Model
         'notes',
         'created_by',
         'deleted_by',
+        'imap_host',
+        'imap_port',
+        'imap_encryption',
+        'smtp_host',
+        'smtp_port',
+        'smtp_encryption',
+        'smtp_username',
     ];
 
     protected function casts(): array
     {
         return [
             'status' => \App\Enums\DomainStatus::class,
+            'imap_port' => 'integer',
+            'smtp_port' => 'integer',
             'created_at' => 'datetime',
             'updated_at' => 'datetime',
             'deleted_at' => 'datetime',

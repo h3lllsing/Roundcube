@@ -37,7 +37,7 @@
                         <h3 class="text-sm font-semibold text-gray-900 dark:text-white">IMAP Settings <span id="imap-status" class="text-xs font-normal text-green-600 dark:text-green-400"></span></h3>
 
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-                            <x-form.input name="imap_host" id="imap_host" label="IMAP Host" placeholder="Auto-filled after test" />
+                            <x-form.input name="imap_host" id="imap_host" label="IMAP Host" placeholder="Auto-from domain / test" />
                             <x-form.input name="imap_port" id="imap_port" label="IMAP Port" type="number" value="993" />
                         </div>
 
@@ -48,7 +48,7 @@
                         <h3 class="text-sm font-semibold text-gray-900 dark:text-white">SMTP Settings <span id="smtp-status" class="text-xs font-normal text-green-600 dark:text-green-400"></span></h3>
 
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-                            <x-form.input name="smtp_host" id="smtp_host" label="SMTP Host" placeholder="Auto-filled after test" />
+                            <x-form.input name="smtp_host" id="smtp_host" label="SMTP Host" placeholder="Auto-from domain / test" />
                             <x-form.input name="smtp_port" id="smtp_port" label="SMTP Port" type="number" value="587" />
                         </div>
 
@@ -81,13 +81,34 @@
 @push('scripts')
 <script>
 (function() {
-    var emailInput = document.getElementById('email');
+    var emailInput = document.getElementById('email-input') || document.getElementById('email');
     var passwordInput = document.querySelector('input[name="password"]');
     var testBtn = document.getElementById('test-btn');
     var testResult = document.getElementById('test-result');
     var saveBtn = document.getElementById('save-btn');
     var testSpinner = document.getElementById('test-spinner');
     var testBtnText = document.getElementById('test-btn-text');
+    var domainSelect = document.getElementById('domain_id');
+
+    var domainSettings = {!! $domainSettings !!};
+
+    function fillFromDomain() {
+        var id = domainSelect.value;
+        var s = domainSettings[id] || {};
+        if (s.imap_host) {
+            document.getElementById('imap_host').value = s.imap_host;
+            document.getElementById('imap_port').value = s.imap_port || 993;
+            document.getElementById('imap_encryption').value = s.imap_encryption || 'ssl';
+        }
+        if (s.smtp_host) {
+            document.getElementById('smtp_host').value = s.smtp_host;
+            document.getElementById('smtp_port').value = s.smtp_port || 587;
+            document.getElementById('smtp_encryption').value = s.smtp_encryption || 'tls';
+            document.getElementById('smtp_username').value = s.smtp_username || '';
+        }
+    }
+
+    domainSelect.addEventListener('change', fillFromDomain);
 
     function testConnection() {
         var email = emailInput.value.trim();
@@ -153,6 +174,7 @@
 
     window.testConnection = testConnection;
     testBtn.addEventListener('click', testConnection);
+    fillFromDomain();
 })();
 </script>
 @endpush

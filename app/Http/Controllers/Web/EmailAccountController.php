@@ -61,10 +61,20 @@ class EmailAccountController extends Controller
         $this->authorize('create', EmailAccount::class);
 
         $domains = Cache::remember('domains:active', 300, fn () =>
-            Domain::where('status', DomainStatus::Active)->orderBy('name')->get(['id', 'name'])
+            Domain::where('status', DomainStatus::Active)->orderBy('name')->get()
         );
 
-        return view('email-accounts.create', compact('domains'));
+        $domainSettings = $domains->mapWithKeys(fn ($d) => [$d->id => [
+            'imap_host' => $d->imap_host,
+            'imap_port' => $d->imap_port,
+            'imap_encryption' => $d->imap_encryption,
+            'smtp_host' => $d->smtp_host,
+            'smtp_port' => $d->smtp_port,
+            'smtp_encryption' => $d->smtp_encryption,
+            'smtp_username' => $d->smtp_username,
+        ]])->toJson();
+
+        return view('email-accounts.create', compact('domains', 'domainSettings'));
     }
 
     public function autoDiscover(AutoDiscoverRequest $request): JsonResponse

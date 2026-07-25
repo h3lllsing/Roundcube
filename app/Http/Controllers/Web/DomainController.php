@@ -63,6 +63,7 @@ class DomainController extends Controller
         event(new DomainCreated($domain));
 
         Cache::increment('dashboard:version');
+        Cache::forget('domains:active');
 
         return to_route('domains.show', $domain)
             ->with('success', 'Domain created successfully.');
@@ -103,6 +104,7 @@ class DomainController extends Controller
         event(new DomainUpdated($domain, $oldValues, $dirty));
 
         Cache::increment('dashboard:version');
+        Cache::forget('domains:active');
 
         return to_route('domains.show', $domain)
             ->with('success', 'Domain updated successfully.');
@@ -119,6 +121,7 @@ class DomainController extends Controller
         event(new DomainDeleted($domain, Auth::id()));
 
         Cache::increment('dashboard:version');
+        Cache::forget('domains:active');
 
         return to_route('domains.index')
             ->with('success', 'Domain deleted successfully.');

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\BulkNotificationRequest;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -30,6 +31,36 @@ class NotificationController extends Controller
         $notifications = $query->select(['id', 'data', 'type', 'read_at', 'created_at'])->paginate(20);
 
         return view('notifications.index', compact('notifications'));
+    }
+
+    public function poll(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $unreadCount = $user->unread_notification_count;
+
+        $notifications = $user->notifications()
+            ->select(['id', 'data', 'type', 'read_at', 'created_at'])
+            ->latest()
+            ->take(10)
+            ->get()
+            ->map(function ($n) {
+                $data = $n->data;
+                return [
+                    'id' => $n->id,
+                    'type' => $data['type'] ?? 'unknown',
+                    'email' => $data['email'] ?? '',
+                    'subject' => $data['subject'] ?? '',
+                    'from' => $data['from'] ?? '',
+                    'account_id' => $data['account_id'] ?? null,
+                    'read' => !is_null($n->read_at),
+                    'created_at' => $n->created_at->diffForHumans(),
+                ];
+            });
+
+        return response()->json([
+            'unread_count' => $unreadCount,
+            'notifications' => $notifications,
+        ]);
     }
 
     public function markAsRead(string $id): RedirectResponse

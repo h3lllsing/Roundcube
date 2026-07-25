@@ -35,6 +35,7 @@ Route::middleware(['auth', 'suspended'])->group(function () {
 
 
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index')->middleware('throttle:search');
+    Route::get('/notifications/poll', [NotificationController::class, 'poll'])->name('notifications.poll');
     Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
     Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead'])->name('notifications.read-all');
     Route::delete('/notifications/{id}', [NotificationController::class, 'destroy'])->name('notifications.destroy');

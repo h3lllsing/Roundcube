@@ -209,17 +209,17 @@ function imap_idle_enter($sock, string $tag): bool {
 
 // ─── Non-blocking line reader for Windows reliability ──────────
 
-function imap_try_read_line($sock): string|false|null {
-    // Blocking mode with 800ms timeout — reliable on Windows SSL
+function imap_try_read_line($sock, string $email = ''): string|false|null {
+    stream_set_blocking($sock, false);
     $line = @fgets($sock);
+    stream_set_blocking($sock, true);
     if ($line === false) {
-        $meta = stream_get_meta_data($sock);
-        if (!empty($meta['timed_out'])) {
-            return null; // no data, expected
-        }
-        return false; // real error / closed
+        if (feof($sock)) return false;
+        return null;
     }
-    return rtrim($line, "\r\n");
+    $trimmed = rtrim($line, "\r\n");
+    if ($trimmed === '') return null;
+    return $trimmed;
 }
 
 // ─── Main Event Loop ───────────────────────────────────────────
@@ -306,7 +306,7 @@ while (true) {
     foreach ($connections as $email => &$c) {
         $maxReads = 50; // prevent infinite loop if server floods
         while ($maxReads-- > 0) {
-            $line = imap_try_read_line($c['sock']);
+            $line = imap_try_read_line($c['sock'], $email);
             if ($line === false) {
                 // Connection closed/error
                 log_msg("disconnected {$email}, will reconnect");
