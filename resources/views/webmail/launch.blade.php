@@ -128,6 +128,19 @@
     .notif-loading {
         padding:16px; text-align:center; font-size:11px; color:#9ca3af;
     }
+    .notif-item-actions {
+        display:none; position:absolute; right:8px; top:8px; gap:2px;
+    }
+    .notif-item:hover .notif-item-actions { display:flex; }
+    .notif-action-btn {
+        padding:2px 5px; border-radius:4px; border:none;
+        font-size:10px; cursor:pointer; line-height:1.4;
+        background:#f3f4f6; color:#6b7280;
+    }
+    .notif-action-btn:hover { background:#e5e7eb; color:#374151; }
+    .dark .notif-action-btn { background:#374151; color:#9ca3af; }
+    .dark .notif-action-btn:hover { background:#4b5563; color:#d1d5db; }
+    .notif-item-wrap { position:relative; }
 </style>
 @endpush
 
@@ -156,7 +169,11 @@
 <div class="notif-dropdown" id="notifDropdown">
     <div class="notif-dropdown-header">
         <span>Notifications</span>
-        <a href="{{ route('notifications.index') }}" target="_blank">View all</a>
+        <div class="flex items-center gap-2">
+            <a href="#" onclick="markAllRead(); return false" style="font-size:11px;color:#6366f1;text-decoration:none;font-weight:500">Mark all read</a>
+            <span class="text-gray-300 dark:text-gray-600">|</span>
+            <a href="{{ route('notifications.index') }}" target="_blank" style="font-size:11px;color:#6366f1;text-decoration:none;font-weight:500">View all</a>
+        </div>
     </div>
     <div id="notifList">
         <div class="notif-loading">Loading...</div>
@@ -216,6 +233,73 @@ document.addEventListener('click', function(e) {
     }
 });
 
+function markAsRead(notifId, callback) {
+    var token = document.querySelector('meta[name=csrf-token]');
+    if (!token) { if (callback) callback(); return; }
+    fetch('{{ url('notifications') }}/' + notifId + '/read', {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRF-TOKEN': token.getAttribute('content')
+        }
+    }).then(function() {
+        updateBadge();
+        if (callback) callback();
+    }).catch(function() {
+        if (callback) callback();
+    });
+}
+
+function markAllRead() {
+    var token = document.querySelector('meta[name=csrf-token]');
+    if (!token) return;
+    fetch('{{ route('notifications.read-all') }}', {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRF-TOKEN': token.getAttribute('content')
+        }
+    }).then(function() {
+        updateBadge();
+        fetchNotifications();
+    }).catch(function() {});
+}
+
+function deleteNotif(notifId, e) {
+    e.preventDefault();
+    e.stopPropagation();
+    var token = document.querySelector('meta[name=csrf-token]');
+    if (!token) return;
+    fetch('{{ url('notifications') }}/' + notifId, {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRF-TOKEN': token.getAttribute('content')
+        },
+        body: new URLSearchParams({ '_method': 'DELETE', '_token': token.getAttribute('content') })
+    }).then(function() {
+        updateBadge();
+        fetchNotifications();
+    }).catch(function() {});
+}
+
+function updateBadge() {
+    fetch('{{ route('notifications.poll') }}', {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        var count = data.unread_count || 0;
+        if (count > 0) {
+            notifBadge.style.display = 'flex';
+            notifBadge.textContent = count > 9 ? '9+' : count;
+        } else {
+            notifBadge.style.display = 'none';
+        }
+    })
+    .catch(function() {});
+}
+
 function fetchNotifications() {
     fetch('{{ route('notifications.poll') }}', {
         headers: { 'X-Requested-With': 'XMLHttpRequest' }
@@ -242,13 +326,21 @@ function fetchNotifications() {
                 var time = n.created_at || '';
                 var cls = n.read ? '' : ' unread';
                 var accountId = n.account_id || '';
-                var onclick = accountId ? 'switchAccount(' + accountId + ')' : '';
                 var href = accountId ? '{{ url('web-mail/open') }}/' + accountId : '#';
-                html += '<a href="' + href + '" class="notif-item' + cls + '">';
+                var readActions = '';
+                if (!n.read) {
+                    readActions += '<button class="notif-action-btn" onclick="markAsRead(\'' + n.id + '\', function(){fetchNotifications();})" title="Mark as read">✓</button>';
+                }
+                readActions += '<button class="notif-action-btn" onclick="deleteNotif(\'' + n.id + '\', event)" title="Delete">✕</button>';
+
+                html += '<div class="notif-item-wrap">';
+                html += '<a href="' + href + '" class="notif-item' + cls + '" onclick="return notifClick(event, \'' + n.id + '\', \'' + href + '\')">';
                 html += '<div class="notif-item-subject">' + escapeHtml(subject) + '</div>';
                 html += '<div class="notif-item-from">' + escapeHtml(from) + ' &middot; ' + escapeHtml(n.email) + '</div>';
                 html += '<div class="notif-item-time">' + escapeHtml(time) + '</div>';
                 html += '</a>';
+                html += '<div class="notif-item-actions">' + readActions + '</div>';
+                html += '</div>';
             });
         }
         notifList.innerHTML = html;
@@ -257,6 +349,13 @@ function fetchNotifications() {
         if (dropdownOpen) {
             notifList.innerHTML = '<div class="notif-empty">Failed to load.</div>';
         }
+    });
+}
+
+function notifClick(event, notifId, href) {
+    event.preventDefault();
+    markAsRead(notifId, function() {
+        window.location.href = href;
     });
 }
 
