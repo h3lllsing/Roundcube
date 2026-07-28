@@ -59,8 +59,8 @@
 
 | # | Task | Est. | Status |
 |---|------|------|--------|
-| 6.1 | Add `DB::listen()` in dev for query count tracking | 5m | ⬜ |
-| 6.2 | Check `storage/logs/laravel.log` for slow queries | ongoing | ⬜ |
+| 6.1 | Add `DB::listen()` in dev for query count tracking | 5m | ✅ |
+| 6.2 | Check `storage/logs/laravel.log` for slow queries | ongoing | ✅ |
 | 6.3 | Monthly: review notifications table size, add archive if needed | 10m | ⬜ |
 
 ---
