@@ -47,6 +47,7 @@ Route::middleware(['auth', 'suspended'])->group(function () {
     Route::get('domains/create', [DomainController::class, 'create'])->name('domains.create');
     Route::post('domains', [DomainController::class, 'store'])->name('domains.store')->middleware('throttle:import');
     Route::get('domains/{domain}', [DomainController::class, 'show'])->name('domains.show');
+    Route::match(['get', 'post'], 'domains/{domain}/bulk-import', [DomainController::class, 'bulkImport'])->name('domains.bulk-import');
     Route::get('domains/{domain}/edit', [DomainController::class, 'edit'])->name('domains.edit');
     Route::put('domains/{domain}', [DomainController::class, 'update'])->name('domains.update');
     Route::delete('domains/{domain}', [DomainController::class, 'destroy'])->name('domains.destroy');

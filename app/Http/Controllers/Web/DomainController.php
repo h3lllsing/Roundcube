@@ -2,16 +2,19 @@
 
 namespace App\Http\Controllers\Web;
 
+use App\Enums\AccountStatus;
 use App\Enums\DomainStatus;
 use App\Events\DomainCreated;
 use App\Events\DomainDeleted;
 use App\Events\DomainForceDeleted;
 use App\Events\DomainRestored;
 use App\Events\DomainUpdated;
+use App\Events\EmailAccountCreated;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreDomainRequest;
 use App\Http\Requests\UpdateDomainRequest;
 use App\Models\Domain;
+use App\Models\EmailAccount;
 use App\Services\CsvExportService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -183,6 +186,77 @@ class DomainController extends Controller
         Cache::increment('dashboard:version');
 
         return back()->with('success', "{$count} domains deleted.");
+    }
+
+    public function bulkImport(Request $request, Domain $domain): View|RedirectResponse
+    {
+        $this->authorize('bulkDelete', Domain::class);
+
+        if ($request->isMethod('post')) {
+            $validated = $request->validate([
+                'entries' => 'required|string',
+            ]);
+
+            $lines = explode("\n", str_replace("\r\n", "\n", $validated['entries']));
+            $imported = 0;
+            $skipped = 0;
+            $errors = [];
+
+            foreach ($lines as $line) {
+                $line = trim($line);
+                if (empty($line)) continue;
+
+                $parts = explode(':', $line, 2);
+                $identifier = trim($parts[0] ?? '');
+                $password = trim($parts[1] ?? '');
+
+                if (empty($identifier) || empty($password)) {
+                    $skipped++;
+                    $errors[] = "Invalid entry: '{$line}' — use format username:password";
+                    continue;
+                }
+
+                $email = str_contains($identifier, '@') ? $identifier : $identifier . '@' . $domain->name;
+
+                if (EmailAccount::where('email', $email)->exists()) {
+                    $skipped++;
+                    $errors[] = "Duplicate: {$email}";
+                    continue;
+                }
+
+                try {
+                    $account = EmailAccount::create([
+                        'domain_id' => $domain->id,
+                        'email' => $email,
+                        'password' => $password,
+                        'imap_host' => $domain->imap_host ?? 'mail.' . $domain->name,
+                        'imap_port' => $domain->imap_port ?? 993,
+                        'imap_encryption' => $domain->imap_encryption ?? 'ssl',
+                        'smtp_host' => $domain->smtp_host ?? 'mail.' . $domain->name,
+                        'smtp_port' => $domain->smtp_port ?? 465,
+                        'smtp_encryption' => $domain->smtp_encryption ?? 'ssl',
+                        'status' => AccountStatus::Active,
+                        'sync_enabled' => true,
+                        'created_by' => Auth::id(),
+                    ]);
+
+                    event(new EmailAccountCreated($account));
+                    $imported++;
+                } catch (\Exception $e) {
+                    $errors[] = "{$email}: {$e->getMessage()}";
+                }
+            }
+
+            Cache::increment('dashboard:version');
+            Cache::forget('domains:active');
+
+            return to_route('domains.show', $domain)->with(
+                'success',
+                "Imported {$imported} account(s). Skipped {$skipped}. Errors: " . count($errors)
+            )->with('import_errors', $errors);
+        }
+
+        return view('domains.bulk-import', compact('domain'));
     }
 
     public function export(): StreamedResponse

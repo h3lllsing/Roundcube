@@ -3,6 +3,16 @@
 @section('title', $domain->name)
 
 @section('content')
+@if(session('import_errors'))
+<div class="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
+    <p class="text-sm font-medium text-red-700 dark:text-red-400 mb-2">Import Errors:</p>
+    <ul class="list-disc list-inside space-y-1">
+        @foreach(session('import_errors') as $err)
+        <li class="text-xs text-red-600 dark:text-red-400">{{ $err }}</li>
+        @endforeach
+    </ul>
+</div>
+@endif
 <x-page-header title="{{ $domain->name }}" subtitle="Domain details and email accounts." backUrl="{{ route('domains.index') }}" backLabel="Back to Domains">
     <x-slot:actions>
         <x-button href="{{ route('domains.edit', $domain) }}" variant="outline" size="sm">
@@ -30,10 +40,16 @@
     <div class="lg:col-span-2">
         <div class="flex items-center justify-between mb-4">
             <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Email Accounts</h2>
-            <x-button href="{{ route('email_accounts.create', ['domain_id' => $domain->id]) }}" variant="primary" size="sm">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-                Add Account
-            </x-button>
+            <div class="flex items-center gap-2">
+                <x-button href="{{ route('domains.bulk-import', $domain) }}" variant="primary" size="sm">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                    Bulk Add
+                </x-button>
+                <x-button href="{{ route('email_accounts.create', ['domain_id' => $domain->id]) }}" variant="primary" size="sm">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                    Add Account
+                </x-button>
+            </div>
         </div>
 
         <x-card padding="none">
