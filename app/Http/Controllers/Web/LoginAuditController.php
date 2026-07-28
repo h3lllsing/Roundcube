@@ -36,7 +36,7 @@ class LoginAuditController extends Controller
             $query->whereDate('created_at', '<=', $request->date_to);
         }
 
-        $audits = $query->latest()->paginate(50);
+        $audits = $query->with('user')->latest()->paginate(50);
 
         return view('login-audits.index', compact('audits'));
     }
@@ -45,7 +45,7 @@ class LoginAuditController extends Controller
     {
         $this->authorize('view', LoginAudit::class);
 
-        $audit = LoginAudit::findOrFail($id);
+        $audit = LoginAudit::with('user')->findOrFail($id);
         return view('login-audits.show', compact('audit'));
     }
 

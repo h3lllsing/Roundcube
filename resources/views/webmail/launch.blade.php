@@ -368,7 +368,7 @@ function escapeHtml(str) {
 
 function startPolling() {
     fetchNotifications();
-    pollInterval = setInterval(fetchNotifications, 30000);
+    pollInterval = setInterval(fetchNotifications, 60000);
 }
 
 function stopPolling() {
