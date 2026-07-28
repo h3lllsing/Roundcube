@@ -13,8 +13,21 @@ return new class extends Migration
             $table->string('role')->default('user')->after('email');
         });
 
-        DB::statement('UPDATE users u JOIN user_roles ur ON u.id = ur.user_id JOIN roles r ON ur.role_id = r.id SET u.role = "super-admin" WHERE r.slug = "super-admin"');
-        DB::statement('UPDATE users u JOIN user_roles ur ON u.id = ur.user_id JOIN roles r ON ur.role_id = r.id SET u.role = "admin" WHERE u.role = "user" AND r.slug = "admin"');
+        $superRoleId = DB::table('roles')->where('slug', 'super-admin')->value('id');
+        $adminRoleId = DB::table('roles')->where('slug', 'admin')->value('id');
+
+        if ($superRoleId) {
+            DB::table('users')
+                ->whereIn('id', fn($q) => $q->select('user_id')->from('user_roles')->where('role_id', $superRoleId))
+                ->update(['role' => 'super-admin']);
+        }
+
+        if ($adminRoleId) {
+            DB::table('users')
+                ->where('role', 'user')
+                ->whereIn('id', fn($q) => $q->select('user_id')->from('user_roles')->where('role_id', $adminRoleId))
+                ->update(['role' => 'admin']);
+        }
     }
 
     public function down(): void

@@ -46,6 +46,10 @@ class AuthController extends Controller
 
         if ($user && $user->suspended_at) {
             $this->authService->logAudit($user->id, $credentials['email'], LoginEvent::LoginSuspended->value, $request);
+
+            return back()->withErrors([
+                'email' => 'This account has been suspended.',
+            ])->onlyInput('email');
         }
 
         if (Auth::attempt($credentials, $request->boolean('remember'))) {

@@ -55,6 +55,11 @@ php.ini required extensions:
 
 [Date]
 date.timezone = UTC
+
+; Production-optimized settings:
+display_errors = Off
+max_execution_time = 300
+memory_limit = 128M
 ```
 
 **php_imap.dll**: PHP 8.3.32 NTS x64 ke liye alag se download karo.
@@ -118,7 +123,7 @@ C:\roundcube\  (web root)
 ```
 APP_NAME=Alphaspace
 APP_ENV=local
-APP_DEBUG=true
+APP_DEBUG=false
 APP_URL=http://10.10.10.24
 
 DB_CONNECTION=mysql
@@ -127,6 +132,10 @@ DB_PORT=3306
 DB_DATABASE=roundportal
 DB_USERNAME=root
 DB_PASSWORD=admin123
+
+SESSION_DRIVER=redis
+CACHE_STORE=redis
+QUEUE_CONNECTION=database
 
 NOTIFICATION_API_TOKEN=dev-secret-token-change-in-production
 ```
@@ -299,10 +308,11 @@ Get-Content C:\roundcube\storage\app\webmail\cache\imap-worker-heartbeat.json
 ```
 New email arrives → IMAP IDLE Worker detects it
   → POST /new-mail-notification (with API token)
-  → NewEmailNotificationController creates Laravel notification
+  → NewEmailNotificationController dispatches queued notification
+  → QueueWorker (NSSM service) processes the job
   → Stored in notifications table
   → User's unread_notification_count increments
-  → Webmail view polls GET /notifications/poll every 30s
+  → Webmail view polls GET /notifications/poll every 60s
   → Notification bell shows unread count badge
   → Click bell → dropdown with recent notifications
   → Click notification → opens that email account in webmail
@@ -346,7 +356,85 @@ Worker sends this token as `X-API-Token` header.
 
 ---
 
-## 8. File Sync (Dev → Server)
+## 8. Redis (Cache & Session)
+
+### 8.1 Install Redis
+
+Download `Redis-x64-3.2.100.zip` from https://github.com/microsoftarchive/redis/releases.
+
+```
+Extract to: C:\Redis\
+```
+
+### 8.2 Service Setup
+
+```powershell
+# Install service with config
+& "C:\Redis\redis-server.exe" --service-uninstall --service-name Redis
+& "C:\Redis\redis-server.exe" --service-install --service-name Redis "C:\Redis\redis.conf"
+net start Redis
+```
+
+### 8.3 Configuration (`C:\Redis\redis.conf`)
+
+```
+port 6379
+bind 127.0.0.1
+maxmemory 268435456       # 256 MB limit
+maxmemory-policy allkeys-lru
+save 900 1
+save 300 10
+save 60 10000
+```
+
+### 8.4 Verify
+
+```powershell
+& "C:\Redis\redis-cli.exe" ping   # → PONG
+& "C:\Redis\redis-cli.exe" info keyspace
+```
+
+### 8.5 Fallback
+
+If Redis fails, switch back to database driver in `.env`:
+
+```
+CACHE_STORE=database
+SESSION_DRIVER=database
+```
+
+Then run `php artisan optimize`.
+
+---
+
+## 9. Queue Worker (NSSM Service)
+
+### 9.1 Install
+
+```powershell
+& "C:\roundcube\scripts\nssm.exe" install QueueWorker
+  Application: C:\php\php.exe
+  Arguments: C:\roundcube\artisan queue:work --tries=3 --backoff=3
+  Startup type: Automatic
+```
+
+### 9.2 Start / Status
+
+```powershell
+net start QueueWorker
+& "C:\roundcube\scripts\nssm.exe" status QueueWorker  # → SERVICE_RUNNING
+```
+
+### 9.3 Verify
+
+```powershell
+# Check jobs table
+& "C:\php\php.exe" C:\roundcube\artisan queue:monitor
+```
+
+---
+
+## 10. File Sync (Dev → Server)
 
 ### Manual Sync
 
@@ -364,9 +452,9 @@ Watches local changes and FTPS to server with 2 second debounce.
 
 ---
 
-## 9. Troubleshooting
+## 11. Troubleshooting
 
-### 9.1 White Page / 500 Error
+### 11.1 White Page / 500 Error
 
 ```
 # Check Laravel log
@@ -379,7 +467,7 @@ Get-Content C:\php\logs\php_error.log -Tail 20
 Get-EventLog -LogName Application -Source "php*" -Newest 5 | Format-Table TimeGenerated, Message -AutoSize -Wrap
 ```
 
-### 9.2 URL Rewrite Not Working
+### 11.2 URL Rewrite Not Working
 
 ```
 # Verify module is installed
@@ -390,7 +478,7 @@ Get-EventLog -LogName Application -Source "php*" -Newest 5 | Format-Table TimeGe
 & "C:\Windows\System32\inetsrv\appcmd.exe" list config "RoundcubePortal" -section:system.webServer/rewrite/rules
 ```
 
-### 9.3 SnappyMail 500 on SSO
+### 11.3 SnappyMail 500 on SSO
 
 ```
 # Check SnappyMail logs
@@ -401,7 +489,7 @@ icacls C:\roundcube\public\webmail\data
 # Must include IIS_IUSRS:(OI)(CI)(F)
 ```
 
-### 9.4 IMAP Worker Not Connecting
+### 11.4 IMAP Worker Not Connecting
 
 ```
 # Check PHP IMAP extension
@@ -414,7 +502,7 @@ Get-Content C:\roundcube\storage\app\webmail\logs\imap-idle-worker.log -Tail 20
 Get-Content C:\roundcube\storage\app\webmail\cache\imap-worker-heartbeat.json
 ```
 
-### 9.5 Notification Not Appearing
+### 11.5 Notification Not Appearing
 
 ```
 # Send test notification
@@ -427,16 +515,33 @@ curl -X POST http://10.10.10.24/new-mail-notification ^
 # Check /notifications/poll returns JSON
 ```
 
+### 11.6 Redis Not Connecting
+
+```
+# Check Redis service is running
+& "C:\Redis\redis-cli.exe" ping
+
+# Check Laravel cache is Redis-backed
+& "C:\Redis\redis-cli.exe" info keyspace
+# Expect db0:keys=N (Laravel keys)
+
+# Fallback to database driver in .env:
+#   CACHE_STORE=database
+#   SESSION_DRIVER=database
+```
+
 ---
 
-## 10. Quick Checklist After Fresh Deploy
+## 12. Quick Checklist After Fresh Deploy
 
-- [ ] PHP installed at `C:\php\`, php_imap enabled
+- [ ] PHP installed at `C:\php\`, php_imap enabled, `display_errors=Off`
 - [ ] MySQL running, database `roundportal` created
-- [ ] `.env` configured with correct DB creds and APP_URL
+- [ ] Redis installed at `C:\Redis\`, service running (port 6379)
+- [ ] `.env` configured: `APP_DEBUG=false`, `CACHE_STORE=redis`, `SESSION_DRIVER=redis`, `QUEUE_CONNECTION=database`
 - [ ] `composer install --no-dev --optimize-autoloader` done
 - [ ] `php artisan migrate` run
 - [ ] `php artisan storage:link` created
+- [ ] `php artisan optimize` run (config, route, view, event cache)
 - [ ] IIS site `RoundcubePortal` → `C:\roundcube\public` port 80
 - [ ] URL Rewrite Module installed and web.config present
 - [ ] `index.php` added as default document (first in list)
@@ -444,8 +549,27 @@ curl -X POST http://10.10.10.24/new-mail-notification ^
 - [ ] Permissions: `icacls ... /grant IIS_IUSRS:(OI)(CI)(F)` on:
   - `storage/`, `bootstrap/cache/`, `public/webmail/data/`, `storage/app/webmail/`
 - [ ] SnappyMail accessible at `http://10.10.10.24/webmail/`
-- [ ] Worker installed as NSSM `ImapIdleWorker` and running
+- [ ] NSSM services installed and running:
+  - `ImapIdleWorker` (IMAP IDLE)
+  - `QueueWorker` (queue:work)
 - [ ] Login test: `admin@localhost` / `admin123`
 - [ ] Webmail test: click any email account → loads SnappyMail via SSO
 - [ ] Send/receive test email
 - [ ] Notification bell visible in webmail, clicking shows notifications
+- [ ] Slow query monitoring active in dev (`DB::listen()` in AppServiceProvider)
+
+---
+
+## 13. Performance Optimization Summary
+
+| Component | Setting | Benefit |
+|-----------|---------|---------|
+| OPcache | `opcache.enable=On`, memory=128MB, files=10000 | 30-50% faster PHP execution |
+| APP_DEBUG | `false` | Disables debug overhead, hides errors |
+| Cache | Redis (db1) | In-memory, sub-millisecond reads vs disk I/O |
+| Session | Redis (db0) | No file locks, shared across requests |
+| Queue | Database worker (NSSM) | Non-blocking notification dispatch |
+| Notif poll | 60s (was 30s) | Halved JS polling requests |
+| N+1 queries | Eager-loaded `with('user')` | Eliminates redundant SQL queries |
+| FastCGI | maxInstances=4, maxRequests=500 | Prevents PHP process exhaustion |
+| display_errors | Off (production) | No PHP error leakage |
