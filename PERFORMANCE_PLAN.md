@@ -48,11 +48,11 @@
 
 | # | Task | Est. | Status |
 |---|------|------|--------|
-| 5.1 | Download & install Redis for Windows | 15m | ⬜ |
-| 5.2 | Start Redis service (automatic) | 5m | ⬜ |
-| 5.3 | `.env` → `CACHE_STORE=redis`, `SESSION_DRIVER=redis` | 1m | ⬜ |
-| 5.4 | Test full flow: login, dashboard, webmail, notifications | 10m | ⬜ |
-| 5.5 | Tune Redis: `maxmemory 256mb`, `maxmemory-policy allkeys-lru` | 5m | ⬜ |
+| 5.1 | Download & install Redis for Windows | 15m | ✅ |
+| 5.2 | Start Redis service (automatic) | 5m | ✅ |
+| 5.3 | `.env` → `CACHE_STORE=redis`, `SESSION_DRIVER=redis` | 1m | ✅ |
+| 5.4 | Test full flow: login, dashboard, webmail, notifications | 10m | ✅ |
+| 5.5 | Tune Redis: `maxmemory 256mb`, `maxmemory-policy allkeys-lru` | 5m | ✅ |
 | 5.6 | Fallback: if Redis fails → switch back to database driver | 5m | ⬜ |
 
 ## Phase 6 — Monitoring (ongoing)
